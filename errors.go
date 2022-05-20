@@ -1,7 +1,14 @@
 package azugo
 
 import (
+	"fmt"
 	"reflect"
+
+	"github.com/valyala/fasthttp"
+)
+
+const (
+	fieldErrMsg = "Key: '%s' Error:Field validation for '%s' failed on the '%s' tag"
 )
 
 // SafeError is an interface that error can implement to return message
@@ -16,6 +23,7 @@ type ResponseStatusCode interface {
 	StatusCode() int
 }
 
+// ErrorResponseError is an error response error details.
 type ErrorResponseError struct {
 	Type    string `json:"type" xml:"Type"`
 	Message string `json:"message" xml:"Message"`
@@ -43,6 +51,7 @@ func fromSafeError(err SafeError) *ErrorResponseError {
 	}
 }
 
+// NewErrorResponse creates an error response from the given error.
 func NewErrorResponse(err error) *ErrorResponse {
 	if err == nil {
 		return nil
@@ -65,4 +74,40 @@ func NewErrorResponse(err error) *ErrorResponse {
 	return &ErrorResponse{
 		Errors: errs,
 	}
+}
+
+// ErrParamRequired is an error that occurs when a required parameter is not provided.
+type ErrParamRequired struct {
+	Name string
+}
+
+func (e ErrParamRequired) Error() string {
+	return "parameter required"
+}
+
+func (e ErrParamRequired) SafeError() string {
+	return e.Error()
+}
+
+func (e ErrParamRequired) StatusCode() int {
+	return fasthttp.StatusBadRequest
+}
+
+// ErrParamInvalid is an error that occurs when a parameter is invalid.
+type ErrParamInvalid struct {
+	Name string
+	Tag  string
+	Err  error
+}
+
+func (e ErrParamInvalid) Error() string {
+	return e.Err.Error()
+}
+
+func (e ErrParamInvalid) SafeError() string {
+	return fmt.Sprintf(fieldErrMsg, e.Name, e.Name, e.Tag)
+}
+
+func (e ErrParamInvalid) StatusCode() int {
+	return fasthttp.StatusBadRequest
 }
