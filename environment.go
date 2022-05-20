@@ -9,19 +9,19 @@ type Environment string
 
 const (
 	EnvironmentDevelopment Environment = "Development"
-	EnvironmentStaging                 = "Staging"
-	EnvironmentProduction              = "Production"
+	EnvironmentStaging     Environment = "Staging"
+	EnvironmentProduction  Environment = "Production"
 )
 
 // NewEnvironment creates new Environment instance.
-func NewEnvironment(defaultMode string) Environment {
-	env := os.Getenv("ENVIRONMENT")
+func NewEnvironment(defaultMode Environment) Environment {
+	env := Environment(os.Getenv("ENVIRONMENT"))
 	if len(env) == 0 {
 		env = defaultMode
 	}
 
 	if env == EnvironmentProduction || env == EnvironmentStaging {
-		return Environment(env)
+		return env
 	}
 
 	return EnvironmentDevelopment
