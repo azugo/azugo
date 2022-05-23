@@ -7,6 +7,10 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+type TestRequest struct {
+	Name string `json:"name" validate:"required,max=50"`
+}
+
 func main() {
 	a := azugo.New()
 	a.AppName = "REST API Example"
@@ -14,8 +18,19 @@ func main() {
 	a.Use(middleware.RealIP)
 	a.Use(middleware.RequestLogger(a.Log().Named("http")))
 
-	a.Get("/", func(ctx *azugo.Context) {
+	a.Get("/hello", func(ctx *azugo.Context) {
+		ctx.ContentType("application/json")
 		ctx.StatusCode(fasthttp.StatusOK).Text("Hello, world!")
+	})
+	a.Post("/test", func(ctx *azugo.Context) {
+		req := &TestRequest{}
+		if err := ctx.Body.JSON(req); err != nil {
+			ctx.Error(err)
+			return
+		}
+		ctx.JSON(struct {
+			ID int `json:"id"`
+		}{1})
 	})
 	if err := a.Start(); err != nil {
 		panic(err)

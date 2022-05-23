@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"azugo.io/azugo/internal/radix"
+	"azugo.io/azugo/validation"
 
 	"github.com/dgrr/http2"
 	"github.com/valyala/fasthttp"
@@ -26,6 +27,9 @@ type App struct {
 	globalAllowed string
 	// Request context pool
 	ctxPool sync.Pool
+
+	// Validate instance
+	validate *validation.Validate
 
 	RouterOptions RouterOptions
 
@@ -56,6 +60,8 @@ func New() *App {
 		registeredPaths:    make(map[string][]string),
 		middlewares:        make([]RequestHandlerFunc, 0, 10),
 
+		validate: validation.New(),
+
 		RouterOptions: RouterOptions{
 			ProxyOptions:           defaultProxyOptions,
 			SaveMatchedRoutePath:   true,
@@ -77,6 +83,11 @@ func (a *App) SetVersion(version, builtWith string) {
 // Env returns the current application environment
 func (a *App) Env() Environment {
 	return a.env
+}
+
+// Validate returns validation service instance.
+func (a *App) Validate() *validation.Validate {
+	return a.validate
 }
 
 // BackgroundContext returns global background context

@@ -23,6 +23,8 @@ type Context struct {
 	Header Header
 	// Query access methods
 	Query Query
+	// Body access methods
+	Body Body
 }
 
 func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
@@ -35,6 +37,8 @@ func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
 		ctx.Header.ctx = ctx
 		ctx.Query.app = a
 		ctx.Query.ctx = ctx
+		ctx.Body.app = a
+		ctx.Body.ctx = ctx
 	} else {
 		ctx = v.(*Context)
 	}

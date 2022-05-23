@@ -1,9 +1,11 @@
 package azugo
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/valyala/fasthttp"
 )
 
@@ -57,14 +59,24 @@ func NewErrorResponse(err error) *ErrorResponse {
 		return nil
 	}
 
-	serr, ok := err.(SafeError)
-	if !ok {
-		return nil
+	errs := make([]*ErrorResponseError, 0, 1)
+
+	// Detect validation errors
+	var verr validator.ValidationErrors
+	if errors.As(err, &verr) {
+		for _, e := range verr {
+			errs = append(errs, &ErrorResponseError{
+				Type:    "FieldError",
+				Message: e.Error(),
+			})
+		}
 	}
 
-	errs := make([]*ErrorResponseError, 0, 1)
-	if r := fromSafeError(serr); r != nil {
-		errs = append(errs, r)
+	// Detect safe error
+	if serr, ok := err.(SafeError); ok {
+		if r := fromSafeError(serr); r != nil {
+			errs = append(errs, r)
+		}
 	}
 
 	if len(errs) == 0 {

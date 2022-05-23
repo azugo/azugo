@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/rand"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -12,6 +13,7 @@ import (
 	"azugo.io/azugo/internal/router"
 	"azugo.io/azugo/internal/utils"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-json"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
@@ -306,6 +308,9 @@ func (r *App) handleError(ctx *Context, err error) {
 		rerr, ok := err.(ResponseStatusCode)
 		if ok {
 			ctx.StatusCode(rerr.StatusCode())
+		} else if errors.As(err, &validator.ValidationErrors{}) {
+			// Validation errors return a 422 (unprocessable entity) status code
+			ctx.StatusCode(fasthttp.StatusUnprocessableEntity)
 		} else {
 			ctx.StatusCode(fasthttp.StatusInternalServerError)
 		}
