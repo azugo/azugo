@@ -226,6 +226,50 @@ func TestRouterAPI(t *testing.T) {
 	}
 }
 
+func TestRouterBasePath(t *testing.T) {
+	a := NewTestApp()
+	a.RouterOptions.BasePath = "/TEST"
+	a.Start(t)
+	defer a.Stop()
+
+	routed := false
+
+	a.Get("/user", func(ctx *Context) {
+		routed = true
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	resp, err := a.TestClient().Get("/test/user")
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+
+	assert.True(t, routed, "routing failed")
+	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+}
+
+func TestRouterBasePathMatchWithStrippedBase(t *testing.T) {
+	a := NewTestApp()
+	a.RouterOptions.BasePath = "test/"
+	a.Start(t)
+	defer a.Stop()
+
+	routed := false
+
+	a.Get("/p", func(ctx *Context) {
+		routed = true
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	resp, err := a.TestClient().Get("/p")
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+
+	assert.True(t, routed, "routing failed")
+	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+}
+
 func TestRouterInvalidInput(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)

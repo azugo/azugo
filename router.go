@@ -41,6 +41,15 @@ type RouterOptions struct {
 	// ProxyOptions is the options to describe the trusted proxies.
 	ProxyOptions ProxyOptions
 
+	// Host is the hostname to be used for URL generation. If not set
+	// it will be automatically detected from the request.
+	Host string
+
+	// BasePath is the base path for router.
+	//
+	// This is useful when deploying the application in a subdirectory.
+	BasePath string
+
 	// If enabled, adds the matched route path onto the ctx.UserValue context
 	// before invoking the handler.
 	// The matched route path is only added to handlers of routes that were
@@ -428,6 +437,19 @@ func (a *App) Handler(ctx *fasthttp.RequestCtx) {
 	path := ""
 	if ctx != nil && ctx.Request.URI() != nil {
 		path = utils.B2S(ctx.Request.URI().PathOriginal())
+	}
+
+	// Remove base path from request path
+	basePath := a.basePath()
+	l := len(basePath)
+	if l > len(path) {
+		l = len(path)
+	}
+	if l > 0 && strings.EqualFold(basePath, path[:l]) {
+		path = path[l:]
+		if len(path) == 0 || path[0] != '/' {
+			path = "/" + path
+		}
 	}
 
 	if a.RouterOptions.PanicHandler != nil {

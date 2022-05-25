@@ -12,6 +12,11 @@ Opinionated GoLang web framework for microservices based on FastHTTP.
 * Data structure validation using [go-playground/validator](https://github.com/go-playground/validator)
 * Built-in web app testing framework
 
+### Special Environment variables used by the Azugo framework
+
+* `ENVIRONMENT` - An App environment setting (allowed values are `Development`, `Staging` and `Production`).
+* `BASE_PATH` - Base path for an App if it's deployed in subdirectory.
+
 ### Special thanks to
 
 * Router largely based on [fasthttp/router](https://github.com/fasthttp/router)

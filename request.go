@@ -1,11 +1,21 @@
 package azugo
 
 import (
+	"bytes"
 	"net"
 
 	"azugo.io/azugo/internal/utils"
 
+	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
+)
+
+var (
+	protocolHTTP          = []byte("http")
+	protocolHTTPS         = []byte("https")
+	protocolSeparator     = []byte("://")
+	headerXForwardedProto = []byte("X-Forwarded-Proto")
+	headerXForwardedHost  = []byte("X-Forwarded-Host")
 )
 
 type Context struct {
@@ -109,9 +119,66 @@ func (ctx *Context) Method() string {
 	return ctx.method
 }
 
+// IsTLS returns true if the underlying connection is TLS.
+//
+// If the request comes from trusted proxy it will use X-Forwarded-Proto header.
+func (ctx *Context) IsTLS() bool {
+	if ctx.IsTrustedProxy() {
+		if bytes.Equal(ctx.Request().Header.PeekBytes(headerXForwardedProto), protocolHTTPS) {
+			return true
+		} else if bytes.Equal(ctx.Request().Header.PeekBytes(headerXForwardedProto), protocolHTTP) {
+			return false
+		}
+	}
+	return ctx.context.IsTLS()
+}
+
+// Host returns requested host.
+//
+// If the request comes from trusted proxy it will use X-Forwarded-Host header.
+func (ctx *Context) Host() string {
+	// Check if custom host is set
+	if len(ctx.app.RouterOptions.Host) > 0 {
+		return ctx.app.RouterOptions.Host
+	}
+	// Use proxy set header
+	if ctx.IsTrustedProxy() {
+		return utils.B2S(ctx.context.Request.Header.PeekBytes(headerXForwardedHost))
+	}
+	// Detect from request
+	return utils.B2S(ctx.context.Host())
+}
+
+// BasePath returns the base path.
+func (ctx *Context) BasePath() string {
+	return ctx.app.basePath()
+}
+
+// BaseURL returns the base URL for the request.
+func (ctx *Context) BaseURL() string {
+	url := bytebufferpool.Get()
+	defer bytebufferpool.Put(url)
+
+	if ctx.IsTLS() {
+		_, _ = url.Write(protocolHTTP)
+	} else {
+		_, _ = url.Write(protocolHTTPS)
+	}
+	_, _ = url.Write(protocolSeparator)
+	_, _ = url.WriteString(ctx.Host())
+	_, _ = url.WriteString(ctx.BasePath())
+
+	return url.String()
+}
+
 // Path returns the path part of the request URL.
 func (ctx *Context) Path() string {
 	return ctx.path
+}
+
+// UserAgent returns the client's User-Agent, if sent in the request.
+func (ctx *Context) UserAgent() string {
+	return utils.B2S(ctx.context.Request.Header.UserAgent())
 }
 
 // SetUserValue stores the given value (arbitrary object)

@@ -3,6 +3,7 @@ package azugo
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 
 	"azugo.io/azugo/internal/radix"
@@ -28,9 +29,16 @@ type App struct {
 	// Request context pool
 	ctxPool sync.Pool
 
+	// Pointer to the originally set base path in RouterOptions
+	originalBasePath *string
+	// Cached value of base path
+	fixedBasePath string
+	pathLock      sync.RWMutex
+
 	// Validate instance
 	validate *validation.Validate
 
+	// Router options
 	RouterOptions RouterOptions
 
 	// Logger
@@ -69,6 +77,7 @@ func New() *App {
 			RedirectFixedPath:      true,
 			HandleMethodNotAllowed: true,
 			HandleOPTIONS:          true,
+			BasePath:               os.Getenv("BASE_PATH"),
 		},
 	}
 	return a
@@ -93,6 +102,32 @@ func (a *App) Validate() *validation.Validate {
 // BackgroundContext returns global background context
 func (a *App) BackgroundContext() context.Context {
 	return a.bgctx
+}
+
+// basePath returns base path of the application
+func (a *App) basePath() string {
+	a.pathLock.RLock()
+	defer a.pathLock.RUnlock()
+
+	if a.originalBasePath == nil || *a.originalBasePath != a.RouterOptions.BasePath {
+		a.pathLock.RUnlock()
+		a.pathLock.Lock()
+
+		a.originalBasePath = &a.RouterOptions.BasePath
+		a.fixedBasePath = a.RouterOptions.BasePath
+		// Add leading slash
+		if len(a.fixedBasePath) > 0 && a.fixedBasePath[0] != '/' {
+			a.fixedBasePath = "/" + a.fixedBasePath
+		}
+		// Strip trailing slash
+		if len(a.fixedBasePath) > 1 && a.fixedBasePath[len(a.fixedBasePath)-1] == '/' {
+			a.fixedBasePath = a.fixedBasePath[:len(a.fixedBasePath)-1]
+		}
+
+		a.pathLock.Unlock()
+		a.pathLock.RLock()
+	}
+	return a.fixedBasePath
 }
 
 // Start web application
