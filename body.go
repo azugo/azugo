@@ -4,7 +4,6 @@ import (
 	"encoding/xml"
 	"io"
 
-	"azugo.io/azugo/internal/utils"
 	"github.com/goccy/go-json"
 )
 
@@ -22,13 +21,8 @@ func (b *Body) Bytes() []byte {
 }
 
 // Copy copies the request raw body to the provided writer.
-func (b *Body) Copy(w io.Writer) (int64, error) {
-	if b.ctx.Request().IsBodyStream() {
-		return utils.CopyZeroAlloc(w, b.ctx.context.RequestBodyStream())
-	}
-
-	n, err := w.Write(b.ctx.Request().Body())
-	return int64(n), err
+func (b *Body) WriteTo(w io.Writer) error {
+	return b.ctx.context.Request.BodyWriteTo(w)
 }
 
 // JSON unmarshals the request body into provided structure.

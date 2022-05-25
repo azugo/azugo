@@ -40,9 +40,11 @@ func NewTestApp(app ...*App) *TestApp {
 // Start starts testing web server instance
 func (a *TestApp) Start(t *testing.T) {
 	server := &fasthttp.Server{
-		NoDefaultServerHeader: true,
-		Handler:               a.App.Handler,
-		Logger:                zap.NewStdLog(a.App.Log().Named("http")),
+		NoDefaultServerHeader:        true,
+		Handler:                      a.App.Handler,
+		Logger:                       zap.NewStdLog(a.App.Log().Named("http")),
+		StreamRequestBody:            true,
+		DisablePreParseMultipartForm: true,
 	}
 	ln := fasthttputil.NewInmemoryListener()
 	go func() {
@@ -58,9 +60,11 @@ func (a *TestApp) StartBenchmark() {
 	}
 
 	server := &fasthttp.Server{
-		NoDefaultServerHeader: true,
-		Handler:               a.App.Handler,
-		Logger:                zap.NewStdLog(a.App.Log().Named("http")),
+		NoDefaultServerHeader:        true,
+		Handler:                      a.App.Handler,
+		Logger:                       zap.NewStdLog(a.App.Log().Named("http")),
+		StreamRequestBody:            true,
+		DisablePreParseMultipartForm: true,
 	}
 	ln := fasthttputil.NewInmemoryListener()
 	go func() {

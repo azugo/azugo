@@ -47,6 +47,11 @@ func (h *Header) Set(key, value string) {
 	h.ctx.Response().Header.Set(key, value)
 }
 
+// SetContentType sets Content-Type header value.
+func (h *Header) SetContentType(value string) {
+	h.ctx.Response().Header.SetContentType(value)
+}
+
 // Add adds the key, value pair to the response header. It appends to any existing values associated with key.
 func (h *Header) Add(key, value string) {
 	h.ctx.Response().Header.Add(key, value)

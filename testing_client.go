@@ -1,6 +1,7 @@
 package azugo
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -54,7 +55,9 @@ func (c *TestClient) CallRaw(method, endpoint, body []byte, options ...TestClien
 
 	c.applyOptions(req, options)
 
-	if len(body) > 0 {
+	if len(body) > fasthttp.DefaultMaxRequestBodySize {
+		req.SetBodyStream(bytes.NewReader(body), len(body))
+	} else if len(body) > 0 {
 		req.SetBodyRaw(body)
 	}
 	defer fasthttp.ReleaseRequest(req)
