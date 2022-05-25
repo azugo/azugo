@@ -22,19 +22,19 @@ func TestQueryValidParams(t *testing.T) {
 		assert.Equal(t, "test", s, "Query parameter s should be equal to test")
 
 		i, err := ctx.Query.Int("i")
-		require.NoError(t, err, "Query parameter i should be present")
+		assert.NoError(t, err, "Query parameter i should be present")
 		assert.Equal(t, 1, i, "Query parameter i should be equal to 1")
 
 		l, err := ctx.Query.Int64("l")
-		require.NoError(t, err, "Query parameter l should be present")
+		assert.NoError(t, err, "Query parameter l should be present")
 		assert.Equal(t, int64(500), l, "Query parameter l should be equal to 500")
 
 		b, err := ctx.Query.Bool("b")
-		require.NoError(t, err, "Query parameter b should be present")
+		assert.NoError(t, err, "Query parameter b should be present")
 		assert.True(t, b, "Query parameter b should be true")
 
 		b, err = ctx.Query.Bool("bb")
-		require.NoError(t, err, "Query parameter bb should be present")
+		assert.NoError(t, err, "Query parameter bb should be present")
 		assert.False(t, b, "Query parameter bb should be false")
 
 		ctx.StatusCode(fasthttp.StatusOK)
@@ -99,7 +99,119 @@ func TestQueryInvalidValueError(t *testing.T) {
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
-	resp, err := a.TestClient().Get("/user?i=test&l=test")
+	c := a.TestClient()
+	resp, err := c.Get("/user", c.WithQuery(map[string]interface{}{
+		"i": "test",
+		"l": "test",
+	}))
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+
+	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+}
+
+func TestQueryOptionalValidParams(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		s := ctx.Query.StringOptional("s")
+		assert.NotNil(t, s, "Query parameter s should not be nil")
+		if s != nil {
+			assert.Equal(t, "test", *s, "Query parameter s should be equal to test")
+		}
+
+		i, err := ctx.Query.IntOptional("i")
+		assert.NoError(t, err, "Query parameter i should not be nil")
+		if i != nil {
+			assert.Equal(t, 1, *i, "Query parameter i should be equal to 1")
+		}
+
+		l, err := ctx.Query.Int64Optional("l")
+		assert.NoError(t, err, "Query parameter l should not be nil")
+		if l != nil {
+			assert.Equal(t, int64(500), *l, "Query parameter l should be equal to 500")
+		}
+
+		b, err := ctx.Query.BoolOptional("b")
+		assert.NoError(t, err, "Query parameter b should not be nil")
+		if b != nil {
+			assert.True(t, *b, "Query parameter b should be true")
+		}
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user", c.WithQuery(map[string]interface{}{
+		"s": "test",
+		"i": 1,
+		"l": 500,
+		"b": true,
+	}))
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+
+	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+}
+
+func TestQueryOptionalNoValues(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		v := ctx.Query.Values("multi")
+		assert.Len(t, v, 0, "Query parameter multi should be empty")
+
+		s := ctx.Query.StringOptional("s")
+		assert.Nil(t, s, "Query parameter s should be nil")
+
+		i, err := ctx.Query.IntOptional("i")
+		assert.NoError(t, err)
+		assert.Nil(t, i, "Query parameter i should be nil")
+
+		l, err := ctx.Query.Int64Optional("l")
+		assert.NoError(t, err)
+		assert.Nil(t, l, "Query parameter l should be nil")
+
+		b, err := ctx.Query.BoolOptional("b")
+		assert.NoError(t, err)
+		assert.Nil(t, b, "Query parameter b should be nil")
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	resp, err := a.TestClient().Get("/user")
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+
+	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+}
+
+func TestQueryOptionalInvalidValueError(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		_, err := ctx.Query.IntOptional("i")
+		assert.ErrorAs(t, err, &ErrParamInvalid{}, "Query parameter i should result in invalid parameter error")
+		assert.Equal(t, "Key: 'i' Error:Field validation for 'i' failed on the 'numeric' tag", err.(SafeError).SafeError())
+
+		_, err = ctx.Query.Int64Optional("l")
+		assert.ErrorAs(t, err, &ErrParamInvalid{}, "Query parameter i should result in invalid parameter error")
+		assert.Equal(t, "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag", err.(SafeError).SafeError())
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user", c.WithQuery(map[string]interface{}{
+		"i": "test",
+		"l": "test",
+	}))
 	defer fasthttp.ReleaseResponse(resp)
 	require.NoError(t, err)
 
