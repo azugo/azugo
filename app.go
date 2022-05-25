@@ -156,9 +156,11 @@ func (a *App) Start( /*config *server.Configuration*/ ) error {
 	a.Log().Info(fmt.Sprintf("Listening on %s:%d...", "0.0.0.0", 3000)) // config.Address, config.Port)
 
 	server := &fasthttp.Server{
-		NoDefaultServerHeader: true,
-		Handler:               a.Handler,
-		Logger:                zap.NewStdLog(a.Log().Named("http")),
+		NoDefaultServerHeader:        true,
+		Handler:                      a.Handler,
+		Logger:                       zap.NewStdLog(a.Log().Named("http")),
+		StreamRequestBody:            true,
+		DisablePreParseMultipartForm: true,
 	}
 
 	http2.ConfigureServer(server, http2.ServerConfig{})

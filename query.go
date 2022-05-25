@@ -103,3 +103,26 @@ func (q *Query) IntOptional(key string) (*int, error) {
 	iv := int(*v)
 	return &iv, nil
 }
+
+// Bool returns the value of the parameter as bool.
+//
+// Valid values ar "true", "false", "1" and "0".
+func (q *Query) Bool(key string) (bool, error) {
+	v, err := q.String(key)
+	if err != nil {
+		return false, err
+	}
+	return strings.ToLower(v) == "true" || v == "1", nil
+}
+
+// BoolOptional returns the value of the parameter as optional bool or null if value is empty.
+//
+// Valid values ar "true", "false", "1" and "0".
+func (q *Query) BoolOptional(key string) (*bool, error) {
+	v := q.StringOptional(key)
+	if v == nil {
+		return nil, nil
+	}
+	iv := strings.ToLower(*v) == "true" || *v == "1"
+	return &iv, nil
+}

@@ -98,7 +98,7 @@ func (e ErrParamRequired) Error() string {
 }
 
 func (e ErrParamRequired) SafeError() string {
-	return e.Error()
+	return fmt.Sprintf(fieldErrMsg, e.Name, e.Name, "required")
 }
 
 func (e ErrParamRequired) StatusCode() int {
@@ -113,6 +113,9 @@ type ErrParamInvalid struct {
 }
 
 func (e ErrParamInvalid) Error() string {
+	if e.Err == nil {
+		return "invalid parameter value"
+	}
 	return e.Err.Error()
 }
 
