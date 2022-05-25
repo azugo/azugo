@@ -127,17 +127,17 @@ func (a *App) Mutable(v bool) {
 	}
 }
 
-func (r *App) chain(handler RequestHandler) RequestHandler {
-	for i := len(r.middlewares) - 1; i >= 0; i-- {
-		handler = r.middlewares[i](handler)
+func (a *App) chain(handler RequestHandler) RequestHandler {
+	for i := len(a.middlewares) - 1; i >= 0; i-- {
+		handler = a.middlewares[i](handler)
 	}
 	return handler
 }
 
-func (r *App) wrapHandler(path string, handler RequestHandler) fasthttp.RequestHandler {
+func (a *App) wrapHandler(path string, handler RequestHandler) fasthttp.RequestHandler {
 	return func(ctx *fasthttp.RequestCtx) {
-		c := r.acquireCtx(path, ctx)
-		defer r.releaseCtx(c)
+		c := a.acquireCtx(path, ctx)
+		defer a.releaseCtx(c)
 		handler(c)
 	}
 }
@@ -150,7 +150,7 @@ func (r *App) wrapHandler(path string, handler RequestHandler) fasthttp.RequestH
 // This function is intended for bulk loading and to allow the usage of less
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
-func (r *App) Handle(method, path string, handler RequestHandler) {
+func (a *App) Handle(method, path string, handler RequestHandler) {
 	switch {
 	case len(method) == 0:
 		panic("method must not be empty")
@@ -160,34 +160,34 @@ func (r *App) Handle(method, path string, handler RequestHandler) {
 		panic("handler must not be nil")
 	}
 
-	r.registeredPaths[method] = append(r.registeredPaths[method], path)
+	a.registeredPaths[method] = append(a.registeredPaths[method], path)
 
-	methodIndex := r.methodIndexOf(method)
+	methodIndex := a.methodIndexOf(method)
 	if methodIndex == -1 {
 		tree := radix.New()
-		tree.Mutable = r.treeMutable
+		tree.Mutable = a.treeMutable
 
-		r.trees = append(r.trees, tree)
-		methodIndex = len(r.trees) - 1
-		r.customMethodsIndex[method] = methodIndex
+		a.trees = append(a.trees, tree)
+		methodIndex = len(a.trees) - 1
+		a.customMethodsIndex[method] = methodIndex
 	}
 
-	tree := r.trees[methodIndex]
+	tree := a.trees[methodIndex]
 	if tree == nil {
 		tree = radix.New()
-		tree.Mutable = r.treeMutable
+		tree.Mutable = a.treeMutable
 
-		r.trees[methodIndex] = tree
-		r.globalAllowed = r.allowed("*", "")
+		a.trees[methodIndex] = tree
+		a.globalAllowed = a.allowed("*", "")
 	}
 
-	if r.RouterOptions.SaveMatchedRoutePath {
-		handler = r.saveMatchedRoutePath(path, handler)
+	if a.RouterOptions.SaveMatchedRoutePath {
+		handler = a.saveMatchedRoutePath(path, handler)
 	}
 
 	optionalPaths := router.GetOptionalPaths(path)
 
-	wrappedHandler := r.wrapHandler(path, r.chain(handler))
+	wrappedHandler := a.wrapHandler(path, a.chain(handler))
 
 	// if does not have optional paths, adds the original
 	if len(optionalPaths) == 0 {
@@ -199,20 +199,20 @@ func (r *App) Handle(method, path string, handler RequestHandler) {
 	}
 }
 
-func (r *App) saveMatchedRoutePath(path string, handler RequestHandler) RequestHandler {
+func (a *App) saveMatchedRoutePath(path string, handler RequestHandler) RequestHandler {
 	return func(ctx *Context) {
 		ctx.SetUserValue(MatchedRoutePathParam, path)
 		handler(ctx)
 	}
 }
 
-func (r *App) allowed(path, reqMethod string) (allow string) {
+func (a *App) allowed(path, reqMethod string) (allow string) {
 	allowed := make([]string, 0, 9)
 
 	if path == "*" || path == "/*" { // server-wide{ // server-wide
 		// empty method is used for internal calls to refresh the cache
 		if reqMethod == "" {
-			for method := range r.registeredPaths {
+			for method := range a.registeredPaths {
 				if method == fasthttp.MethodOptions {
 					continue
 				}
@@ -220,16 +220,16 @@ func (r *App) allowed(path, reqMethod string) (allow string) {
 				allowed = append(allowed, method)
 			}
 		} else {
-			return r.globalAllowed
+			return a.globalAllowed
 		}
 	} else { // specific path
-		for method := range r.registeredPaths {
+		for method := range a.registeredPaths {
 			// Skip the requested method - we already tried this one
 			if method == reqMethod || method == fasthttp.MethodOptions {
 				continue
 			}
 
-			handle, _ := r.trees[r.methodIndexOf(method)].Get(path, nil)
+			handle, _ := a.trees[a.methodIndexOf(method)].Get(path, nil)
 			if handle != nil {
 				// Add request method to list of allowed methods
 				allowed = append(allowed, method)
@@ -256,7 +256,7 @@ func (r *App) allowed(path, reqMethod string) (allow string) {
 	return
 }
 
-func (r *App) methodIndexOf(method string) int {
+func (a *App) methodIndexOf(method string) int {
 	switch method {
 	case fasthttp.MethodGet:
 		return 0
@@ -280,24 +280,24 @@ func (r *App) methodIndexOf(method string) int {
 		return 9
 	}
 
-	if i, ok := r.customMethodsIndex[method]; ok {
+	if i, ok := a.customMethodsIndex[method]; ok {
 		return i
 	}
 
 	return -1
 }
 
-func (r *App) recv(path string, ctx *fasthttp.RequestCtx) {
+func (a *App) recv(path string, ctx *fasthttp.RequestCtx) {
 	if rcv := recover(); rcv != nil {
-		c := r.acquireCtx(path, ctx)
-		defer r.releaseCtx(c)
-		r.RouterOptions.PanicHandler(c, rcv)
+		c := a.acquireCtx(path, ctx)
+		defer a.releaseCtx(c)
+		a.RouterOptions.PanicHandler(c, rcv)
 	}
 }
 
-func (r *App) handleError(ctx *Context, err error) {
-	if r.RouterOptions.ErrorHandler != nil {
-		r.RouterOptions.ErrorHandler(ctx, err)
+func (a *App) handleError(ctx *Context, err error) {
+	if a.RouterOptions.ErrorHandler != nil {
+		a.RouterOptions.ErrorHandler(ctx, err)
 	} else {
 		// If there is no error, we don't need to do anything
 		if err == nil {
@@ -317,7 +317,7 @@ func (r *App) handleError(ctx *Context, err error) {
 
 		// Log the error only if it's server error
 		if ctx.Response().StatusCode()/100 == 5 {
-			r.Log().Error(err.Error(), zap.Error(err))
+			a.Log().Error(err.Error(), zap.Error(err))
 		}
 
 		// Check that the error implements method to for safe error message
@@ -330,14 +330,14 @@ func (r *App) handleError(ctx *Context, err error) {
 		if bytes.HasPrefix(ct, []byte("application/json")) {
 			data, ierr := json.Marshal(resp)
 			if ierr != nil {
-				r.Log().Error("error marshalling error response", zap.Error(ierr))
+				a.Log().Error("error marshalling error response", zap.Error(ierr))
 				return
 			}
 			ctx.Response().SetBodyRaw(data)
 		} else if bytes.HasPrefix(ct, []byte("application/xml")) {
 			data, ierr := xml.Marshal(resp)
 			if ierr != nil {
-				r.Log().Error("error marshalling error response", zap.Error(ierr))
+				a.Log().Error("error marshalling error response", zap.Error(ierr))
 				return
 			}
 			ctx.Response().SetBodyRaw(data)
@@ -347,13 +347,13 @@ func (r *App) handleError(ctx *Context, err error) {
 	}
 }
 
-func (r *App) internalRedirect(path string, ctx *fasthttp.RequestCtx, uri []byte, code int) {
-	r.wrapHandler(path, r.chain(func(c *Context) {
+func (a *App) internalRedirect(path string, ctx *fasthttp.RequestCtx, uri []byte, code int) {
+	a.wrapHandler(path, a.chain(func(c *Context) {
 		c.context.RedirectBytes(uri, code)
 	}))(ctx)
 }
 
-func (r *App) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, method, path string) bool {
+func (a *App) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, method, path string) bool {
 	// Moved Permanently, request with GET method
 	code := fasthttp.StatusMovedPermanently
 	if method != fasthttp.MethodGet {
@@ -361,7 +361,7 @@ func (r *App) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, 
 		code = fasthttp.StatusPermanentRedirect
 	}
 
-	if tsr && r.RouterOptions.RedirectTrailingSlash {
+	if tsr && a.RouterOptions.RedirectTrailingSlash {
 		uri := bytebufferpool.Get()
 
 		if len(path) > 1 && path[len(path)-1] == '/' {
@@ -377,7 +377,7 @@ func (r *App) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, 
 			_, _ = uri.Write(queryBuf)
 		}
 
-		r.internalRedirect(path, ctx, uri.Bytes(), code)
+		a.internalRedirect(path, ctx, uri.Bytes(), code)
 
 		bytebufferpool.Put(uri)
 
@@ -385,13 +385,13 @@ func (r *App) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, 
 	}
 
 	// Try to fix the request path
-	if r.RouterOptions.RedirectFixedPath {
+	if a.RouterOptions.RedirectFixedPath {
 		path := utils.B2S(ctx.Request.URI().Path())
 
 		uri := bytebufferpool.Get()
 		found := tree.FindCaseInsensitivePath(
 			router.CleanPath(path),
-			r.RouterOptions.RedirectTrailingSlash,
+			a.RouterOptions.RedirectTrailingSlash,
 			uri,
 		)
 
@@ -402,7 +402,7 @@ func (r *App) tryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, 
 				_, _ = uri.Write(queryBuf)
 			}
 
-			r.internalRedirect(path, ctx, uri.Bytes(), code)
+			a.internalRedirect(path, ctx, uri.Bytes(), code)
 
 			bytebufferpool.Put(uri)
 
@@ -424,26 +424,26 @@ func (a *App) Group(path string) *RouteGroup {
 }
 
 // Handler makes the router implement the fasthttp.Handler interface.
-func (r *App) Handler(ctx *fasthttp.RequestCtx) {
+func (a *App) Handler(ctx *fasthttp.RequestCtx) {
 	path := ""
 	if ctx != nil && ctx.Request.URI() != nil {
 		path = utils.B2S(ctx.Request.URI().PathOriginal())
 	}
 
-	if r.RouterOptions.PanicHandler != nil {
-		defer r.recv(path, ctx)
+	if a.RouterOptions.PanicHandler != nil {
+		defer a.recv(path, ctx)
 	}
 
 	method := utils.B2S(ctx.Request.Header.Method())
-	methodIndex := r.methodIndexOf(method)
+	methodIndex := a.methodIndexOf(method)
 
 	if methodIndex > -1 {
-		if tree := r.trees[methodIndex]; tree != nil {
+		if tree := a.trees[methodIndex]; tree != nil {
 			if handler, tsr := tree.Get(path, ctx); handler != nil {
 				handler(ctx)
 				return
 			} else if method != fasthttp.MethodConnect && path != "/" {
-				if ok := r.tryRedirect(ctx, tree, tsr, method, path); ok {
+				if ok := a.tryRedirect(ctx, tree, tsr, method, path); ok {
 					return
 				}
 			}
@@ -451,37 +451,37 @@ func (r *App) Handler(ctx *fasthttp.RequestCtx) {
 	}
 
 	// Try to search in the wild method tree
-	if tree := r.trees[r.methodIndexOf(MethodWild)]; tree != nil {
+	if tree := a.trees[a.methodIndexOf(MethodWild)]; tree != nil {
 		if handler, tsr := tree.Get(path, ctx); handler != nil {
 			handler(ctx)
 			return
 		} else if method != fasthttp.MethodConnect && path != "/" {
-			if ok := r.tryRedirect(ctx, tree, tsr, method, path); ok {
+			if ok := a.tryRedirect(ctx, tree, tsr, method, path); ok {
 				return
 			}
 		}
 	}
 
-	if r.RouterOptions.HandleOPTIONS && method == fasthttp.MethodOptions {
+	if a.RouterOptions.HandleOPTIONS && method == fasthttp.MethodOptions {
 		// Handle OPTIONS requests
 
-		if allow := r.allowed(path, fasthttp.MethodOptions); allow != "" {
+		if allow := a.allowed(path, fasthttp.MethodOptions); allow != "" {
 			ctx.Response.Header.Set("Allow", allow)
-			if r.RouterOptions.GlobalOPTIONS != nil {
-				r.wrapHandler(path, r.chain(r.RouterOptions.GlobalOPTIONS))(ctx)
+			if a.RouterOptions.GlobalOPTIONS != nil {
+				a.wrapHandler(path, a.chain(a.RouterOptions.GlobalOPTIONS))(ctx)
 			}
 			return
 		}
-	} else if r.RouterOptions.HandleMethodNotAllowed {
+	} else if a.RouterOptions.HandleMethodNotAllowed {
 		// Handle 405
 
-		if allow := r.allowed(path, method); allow != "" {
+		if allow := a.allowed(path, method); allow != "" {
 			ctx.Response.Header.Set("Allow", allow)
-			if r.RouterOptions.MethodNotAllowed != nil {
-				r.wrapHandler(path, r.chain(r.RouterOptions.MethodNotAllowed))(ctx)
+			if a.RouterOptions.MethodNotAllowed != nil {
+				a.wrapHandler(path, a.chain(a.RouterOptions.MethodNotAllowed))(ctx)
 			} else {
 				// TODO: move as default value?
-				r.wrapHandler(path, r.chain(func(c *Context) {
+				a.wrapHandler(path, a.chain(func(c *Context) {
 					c.StatusCode(fasthttp.StatusMethodNotAllowed).Text(fasthttp.StatusMessage(fasthttp.StatusMethodNotAllowed))
 				}))(ctx)
 			}
@@ -490,11 +490,11 @@ func (r *App) Handler(ctx *fasthttp.RequestCtx) {
 	}
 
 	// Handle 404
-	if r.RouterOptions.NotFound != nil {
-		r.wrapHandler(path, r.chain(r.RouterOptions.NotFound))(ctx)
+	if a.RouterOptions.NotFound != nil {
+		a.wrapHandler(path, a.chain(a.RouterOptions.NotFound))(ctx)
 	} else {
 		// TODO: move as default value?
-		r.wrapHandler(path, r.chain(func(c *Context) {
+		a.wrapHandler(path, a.chain(func(c *Context) {
 			c.StatusCode(fasthttp.StatusNotFound).Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
 		}))(ctx)
 	}
