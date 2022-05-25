@@ -7,6 +7,11 @@ import (
 	"azugo.io/azugo/internal/utils"
 )
 
+const (
+	ContentTypeJSON string = "application/json"
+	ContentTypeXML  string = "application/xml"
+)
+
 // Header represents the key-value pairs in an HTTP header.
 type Header struct {
 	noCopy noCopy //nolint:unused,structcheck
@@ -45,11 +50,6 @@ func (h *Header) Values(key string) []string {
 // It replaces any existing values associated with key.
 func (h *Header) Set(key, value string) {
 	h.ctx.Response().Header.Set(key, value)
-}
-
-// SetContentType sets Content-Type header value.
-func (h *Header) SetContentType(value string) {
-	h.ctx.Response().Header.SetContentType(value)
 }
 
 // Add adds the key, value pair to the response header. It appends to any existing values associated with key.

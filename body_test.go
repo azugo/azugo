@@ -134,7 +134,7 @@ func TestBodyJSONValidationError(t *testing.T) {
 	expect := testBodyUser{Name: "test1234567890"}
 
 	a.Patch("/user", func(ctx *Context) {
-		ctx.Header.SetContentType("application/json")
+		ctx.ContentType(ContentTypeJSON)
 
 		var user testBodyUser
 		if err := ctx.Body.JSON(&user); err != nil {
