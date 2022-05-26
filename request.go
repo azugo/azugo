@@ -160,9 +160,9 @@ func (ctx *Context) BaseURL() string {
 	defer bytebufferpool.Put(url)
 
 	if ctx.IsTLS() {
-		_, _ = url.Write(protocolHTTP)
-	} else {
 		_, _ = url.Write(protocolHTTPS)
+	} else {
+		_, _ = url.Write(protocolHTTP)
 	}
 	_, _ = url.Write(protocolSeparator)
 	_, _ = url.WriteString(ctx.Host())
