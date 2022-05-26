@@ -28,6 +28,9 @@ func NewTestApp(app ...*App) *TestApp {
 		a = app[0]
 	}
 
+	// Trust all proxy headers for test app
+	a.RouterOptions.ProxyOptions.TrustAll = true
+
 	observedZapCore, observedLogs := observer.New(zap.InfoLevel)
 	a.logger = zap.New(observedZapCore)
 

@@ -143,7 +143,9 @@ func (ctx *Context) Host() string {
 	}
 	// Use proxy set header
 	if ctx.IsTrustedProxy() {
-		return utils.B2S(ctx.context.Request.Header.PeekBytes(headerXForwardedHost))
+		if host := ctx.context.Request.Header.PeekBytes(headerXForwardedHost); len(host) > 0 {
+			return utils.B2S(host)
+		}
 	}
 	// Detect from request
 	return utils.B2S(ctx.context.Host())
