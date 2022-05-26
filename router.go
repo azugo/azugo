@@ -25,7 +25,7 @@ const MethodWild = "*"
 
 var (
 	contentTypeText = []byte("text/plain; charset=utf-8")
-	contentTypeJSON = []byte("application/json; charset=utf-8")
+	contentTypeJSON = []byte("application/json")
 	questionMark    = byte('?')
 
 	// MatchedRoutePathParam is the param name under which the path of the matched

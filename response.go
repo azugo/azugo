@@ -12,11 +12,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const (
-	HeaderTotalCount string = "X-Total-Count"
-	HeaderLink       string = "Link"
-)
-
 // Response return the *fasthttp.Response object
 // This allows you to use all fasthttp response methods
 // https://godoc.org/github.com/valyala/fasthttp#Response
@@ -57,6 +52,13 @@ func (ctx *Context) JSON(obj interface{}) {
 func (ctx *Context) Text(text string) {
 	ctx.Response().Header.SetContentTypeBytes(contentTypeText)
 	ctx.Response().SetBodyString(text)
+}
+
+// Raw sets response body, but without copying it.
+//
+// WARNING: From this point onward the body argument must not be changed.
+func (ctx *Context) Raw(data []byte) {
+	ctx.Response().SetBodyRaw(data)
 }
 
 // Error return the error response. Calls either custom ErrorHandler or default if not specified.

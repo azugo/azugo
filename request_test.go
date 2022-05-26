@@ -5,6 +5,8 @@ import (
 	"net/netip"
 	"testing"
 
+	"azugo.io/azugo/paginator"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -117,6 +119,47 @@ func TestRequestIP(t *testing.T) {
 		if ctx.IP() != nil {
 			assert.Equal(t, "1.1.1.1", ctx.IP().String(), "Client IP should be equal to 1.1.1.1")
 		}
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user")
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+}
+
+func TestRequestPaging(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		p := ctx.Paging()
+		assert.Equal(t, 2, p.Current(), "Page should be 2")
+		assert.Equal(t, 10, p.PageSize(), "Page size should be 10")
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user", c.WithQuery(map[string]interface{}{
+		paginator.QueryParameterPage:    2,
+		paginator.QueryParameterPerPage: 10,
+	}))
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+}
+
+func TestRequestDefaultPaging(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		p := ctx.Paging()
+		assert.Equal(t, 1, p.Current(), "Page should be 1")
+		assert.Equal(t, 20, p.PageSize(), "Page size should be 20")
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
