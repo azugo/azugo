@@ -5,10 +5,13 @@ import (
 	"net"
 
 	"azugo.io/azugo/internal/utils"
+	"azugo.io/azugo/paginator"
 
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 )
+
+const defaultPageSize = 20
 
 var (
 	protocolHTTP          = []byte("http")
@@ -201,4 +204,17 @@ func (ctx *Context) SetUserValue(name string, value interface{}) {
 // UserValue returns the value stored via SetUserValue under the given key.
 func (ctx *Context) UserValue(name string) interface{} {
 	return ctx.context.UserValue(name)
+}
+
+// Returns Paginator with page size from query parameters
+func (ctx *Context) Paging() *paginator.Paginator {
+	page, err := ctx.Query.Int(paginator.QueryParameterPage)
+	if err != nil || page <= 0 {
+		page = 1
+	}
+	pageSize, err := ctx.Query.Int(paginator.QueryParameterPerPage)
+	if err != nil || pageSize <= 0 {
+		pageSize = defaultPageSize
+	}
+	return paginator.New(page*pageSize, pageSize, page)
 }

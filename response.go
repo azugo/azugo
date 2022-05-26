@@ -1,8 +1,20 @@
 package azugo
 
 import (
+	"net/url"
+	"strconv"
+	"strings"
+
+	"azugo.io/azugo/paginator"
+
 	"github.com/goccy/go-json"
 	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
+)
+
+const (
+	HeaderTotalCount string = "X-Total-Count"
+	HeaderLink       string = "Link"
 )
 
 // Response return the *fasthttp.Response object
@@ -50,4 +62,27 @@ func (ctx *Context) Text(text string) {
 // Error return the error response. Calls either custom ErrorHandler or default if not specified.
 func (ctx *Context) Error(err error) {
 	ctx.app.handleError(ctx, err)
+}
+
+func (ctx *Context) SetPaging(values map[string]string, paginator *paginator.Paginator) {
+	ctx.Header.Set(HeaderTotalCount, strconv.Itoa(paginator.Total()))
+	ctx.Header.AppendAccessControlExposeHeaders(HeaderTotalCount)
+	route, ok := ctx.UserValue(MatchedRoutePathParam).(string)
+	if !ok || len(route) == 0 {
+		return
+	}
+	for k, v := range values {
+		route = strings.Replace(route, "{"+k+"}", url.PathEscape(v), 1)
+	}
+	curl, err := url.Parse(ctx.BaseURL() + route)
+	if err != nil {
+		ctx.app.Log().Error("Failed to prepare paging header", zap.Error((err)))
+		return
+	}
+	paginator.SetURL(curl)
+	links := paginator.Links()
+	if len(links) > 0 {
+		ctx.Header.Set(HeaderLink, strings.Join(links, ","))
+		ctx.Header.AppendAccessControlExposeHeaders(HeaderLink)
+	}
 }

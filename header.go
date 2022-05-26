@@ -2,6 +2,7 @@ package azugo
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 
 	"azugo.io/azugo/internal/utils"
@@ -10,6 +11,7 @@ import (
 const (
 	ContentTypeJSON string = "application/json"
 	ContentTypeXML  string = "application/xml"
+	headerAccessControlExposeHeaders string = "Access-Control-Expose-Headers"
 )
 
 // Header represents the key-value pairs in an HTTP header.
@@ -61,4 +63,14 @@ func (h *Header) Add(key, value string) {
 func (h *Header) Del(key string) {
 	h.ctx.Request().Header.Del(key)
 	h.ctx.Response().Header.Del(key)
+}
+
+// AppendAccessControlExposeHeaders appends the given headers to the Access-Control-Expose-Headers header.
+func (h *Header) AppendAccessControlExposeHeaders(names ...string) {
+	val := h.ctx.Response().Header.Peek(headerAccessControlExposeHeaders)
+	if len(val) != 0 {
+		h.ctx.Response().Header.Set(headerAccessControlExposeHeaders, fmt.Sprintf("%s, %s", val, strings.Join(names, ", ")))
+	} else {
+		h.ctx.Response().Header.Set(headerAccessControlExposeHeaders, strings.Join(names, ", "))
+	}
 }
