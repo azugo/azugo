@@ -109,6 +109,14 @@ func (a *App) BackgroundContext() context.Context {
 	return a.bgctx
 }
 
+func (a *App) String() string {
+	bw := a.AppBuiltWith
+	if len(bw) > 0 {
+		bw = fmt.Sprintf(" (built with %s)", bw)
+	}
+	return fmt.Sprintf("%s %s%s", a.AppName, a.AppVer, bw)
+}
+
 // basePath returns base path of the application
 func (a *App) basePath() string {
 	a.pathLock.RLock()
@@ -137,11 +145,6 @@ func (a *App) basePath() string {
 
 // Start web application
 func (a *App) Start( /*config *server.Configuration*/ ) error {
-	bw := a.AppBuiltWith
-	if len(bw) > 0 {
-		bw = fmt.Sprintf(" (built with %s)", bw)
-	}
-
 	if err := a.initLogger(); err != nil {
 		return err
 	}
@@ -156,7 +159,7 @@ func (a *App) Start( /*config *server.Configuration*/ ) error {
 		name = "Azugo"
 	}
 
-	a.Log().Info(fmt.Sprintf("%s server %s%s", name, a.AppVer, bw))
+	a.Log().Info(a.String())
 
 	a.Log().Info(fmt.Sprintf("Listening on %s:%d...", "0.0.0.0", 3000)) // config.Address, config.Port)
 

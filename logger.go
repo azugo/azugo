@@ -32,11 +32,15 @@ func (a *App) initLogger() error {
 		conf := zap.NewDevelopmentEncoderConfig()
 		conf.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
-		a.logger = zap.New(zapcore.NewCore(
-			zapcore.NewConsoleEncoder(conf),
-			zapcore.AddSync(colorable.NewColorableStdout()),
-			zap.DebugLevel,
-		)).With(fields...)
+		a.logger = zap.New(
+			zapcore.NewCore(
+				zapcore.NewConsoleEncoder(conf),
+				zapcore.AddSync(colorable.NewColorableStdout()),
+				zap.DebugLevel,
+			),
+			zap.AddCaller(),
+			zap.AddStacktrace(zap.ErrorLevel),
+		).With(fields...)
 
 		return nil
 	}
