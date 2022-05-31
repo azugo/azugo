@@ -4,7 +4,7 @@ import (
 	"net/url"
 
 	"azugo.io/azugo"
-	"azugo.io/azugo/middleware"
+	"azugo.io/azugo/server"
 
 	"github.com/valyala/fasthttp"
 )
@@ -14,12 +14,12 @@ type TestRequest struct {
 }
 
 func main() {
-	a := azugo.New()
-	a.AppName = "REST API Example"
-
-	a.Use(middleware.RealIP)
-	a.Use(middleware.RequestLogger(a.Log().Named("http")))
-	a.Use(middleware.Metrics(azugo.DefaultMetricPath))
+	a, err := server.New(nil, server.ServerOptions{
+		AppName: "REST API Example",
+	})
+	if err != nil {
+		panic(err)
+	}
 
 	a.Get("/hello", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")

@@ -228,7 +228,7 @@ func TestRouterAPI(t *testing.T) {
 
 func TestRouterBasePath(t *testing.T) {
 	a := NewTestApp()
-	a.RouterOptions.BasePath = "/TEST"
+	a.Config().Server.Path = "/TEST"
 	a.Start(t)
 	defer a.Stop()
 
@@ -250,7 +250,7 @@ func TestRouterBasePath(t *testing.T) {
 
 func TestRouterBasePathMatchWithStrippedBase(t *testing.T) {
 	a := NewTestApp()
-	a.RouterOptions.BasePath = "test/"
+	a.Config().Server.Path = "test/"
 	a.Start(t)
 	defer a.Stop()
 

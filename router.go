@@ -45,11 +45,6 @@ type RouterOptions struct {
 	// it will be automatically detected from the request.
 	Host string
 
-	// BasePath is the base path for router.
-	//
-	// This is useful when deploying the application in a subdirectory.
-	BasePath string
-
 	// If enabled, adds the matched route path onto the ctx.UserValue context
 	// before invoking the handler.
 	// The matched route path is only added to handlers of routes that were

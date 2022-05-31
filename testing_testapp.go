@@ -4,6 +4,8 @@ import (
 	"net"
 	"testing"
 
+	"azugo.io/azugo/config"
+
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
 	"github.com/valyala/fasthttp/fasthttputil"
@@ -33,6 +35,10 @@ func NewTestApp(app ...*App) *TestApp {
 
 	observedZapCore, observedLogs := observer.New(zap.InfoLevel)
 	a.logger = zap.New(observedZapCore)
+
+	conf := config.New()
+	a.SetConfig(nil, conf)
+	_ = conf.Load(conf, string(EnvironmentDevelopment))
 
 	return &TestApp{
 		App:  a,

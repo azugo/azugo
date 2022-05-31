@@ -8,10 +8,12 @@ import (
 	"sync"
 	"syscall"
 
+	"azugo.io/azugo/config"
 	"azugo.io/azugo/internal/radix"
 	"azugo.io/azugo/validation"
 
 	"github.com/dgrr/http2"
+	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -45,6 +47,9 @@ type App struct {
 
 	// Logger
 	logger *zap.Logger
+
+	// Configuration
+	config *config.Configuration
 
 	// Background context
 	bgctx  context.Context
@@ -82,7 +87,6 @@ func New() *App {
 			RedirectFixedPath:      true,
 			HandleMethodNotAllowed: true,
 			HandleOPTIONS:          true,
-			BasePath:               os.Getenv("BASE_PATH"),
 		},
 
 		MetricsOptions: defaultMetricsOptions,
@@ -124,18 +128,18 @@ func (a *App) basePath() string {
 	a.pathLock.RLock()
 	defer a.pathLock.RUnlock()
 
-	if a.originalBasePath == nil || *a.originalBasePath != a.RouterOptions.BasePath {
+	if a.originalBasePath == nil || *a.originalBasePath != a.Config().Server.Path {
 		a.pathLock.RUnlock()
 		a.pathLock.Lock()
 
-		a.originalBasePath = &a.RouterOptions.BasePath
-		a.fixedBasePath = a.RouterOptions.BasePath
+		a.originalBasePath = &a.Config().Server.Path
+		a.fixedBasePath = a.Config().Server.Path
 		// Add leading slash
 		if len(a.fixedBasePath) > 0 && a.fixedBasePath[0] != '/' {
 			a.fixedBasePath = "/" + a.fixedBasePath
 		}
 		// Strip trailing slash
-		if len(a.fixedBasePath) > 1 && a.fixedBasePath[len(a.fixedBasePath)-1] == '/' {
+		if len(a.fixedBasePath) > 0 && a.fixedBasePath[len(a.fixedBasePath)-1] == '/' {
 			a.fixedBasePath = a.fixedBasePath[:len(a.fixedBasePath)-1]
 		}
 
@@ -145,13 +149,37 @@ func (a *App) basePath() string {
 	return a.fixedBasePath
 }
 
-// Start web application
-func (a *App) Start( /*config *server.Configuration*/ ) error {
+// SetConfig binds application configuration to the application
+func (a *App) SetConfig(cmd *cobra.Command, conf *config.Configuration) {
+	if a.config != nil && a.config.Ready() {
+		return
+	}
+
+	a.config = conf
+	if cmd != nil {
+		a.config.BindCmd(cmd)
+	}
+}
+
+// Config returns application configuration.
+//
+// Panics if configuration is not loaded.
+func (a *App) Config() *config.Configuration {
+	if a.config == nil || !a.config.Ready() {
+		panic("configuration is not loaded")
+	}
+	return a.config
+}
+
+// Start web application.
+func (a *App) Start() error {
 	if err := a.initLogger(); err != nil {
 		return err
 	}
 
-	addr := "0.0.0.0" // config.Address
+	config := a.Config().Server
+
+	addr := config.Address
 	if addr == "0.0.0.0" {
 		addr = ""
 	}
@@ -163,7 +191,7 @@ func (a *App) Start( /*config *server.Configuration*/ ) error {
 
 	a.Log().Info(a.String())
 
-	a.Log().Info(fmt.Sprintf("Listening on %s:%d...", "0.0.0.0", 3000)) // config.Address, config.Port)
+	a.Log().Info(fmt.Sprintf("Listening on %s:%d...", config.Address, config.Port))
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
@@ -175,7 +203,7 @@ func (a *App) Start( /*config *server.Configuration*/ ) error {
 
 	http2.ConfigureServer(server, http2.ServerConfig{})
 
-	err := server.ListenAndServe(fmt.Sprintf("%s:%d", addr, 3000)) // config.Port))
+	err := server.ListenAndServe(fmt.Sprintf("%s:%d", addr, config.Port))
 	if err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}

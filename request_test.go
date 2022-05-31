@@ -52,7 +52,7 @@ func TestRequestBaseURLRoot(t *testing.T) {
 
 func TestRequestBaseURLWithBasePath(t *testing.T) {
 	a := NewTestApp()
-	a.RouterOptions.BasePath = "/test"
+	a.Config().Server.Path = "/test"
 	a.Start(t)
 	defer a.Stop()
 
