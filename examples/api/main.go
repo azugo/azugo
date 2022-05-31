@@ -17,6 +17,7 @@ func main() {
 
 	a.Use(middleware.RealIP)
 	a.Use(middleware.RequestLogger(a.Log().Named("http")))
+	a.Use(middleware.Metrics(azugo.DefaultMetricPath))
 
 	a.Get("/hello", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")

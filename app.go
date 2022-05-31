@@ -52,6 +52,9 @@ type App struct {
 	AppVer       string
 	AppBuiltWith string
 	AppName      string
+
+	// Metrics options
+	MetricsOptions MetricsOptions
 }
 
 func New() *App {
@@ -79,6 +82,8 @@ func New() *App {
 			HandleOPTIONS:          true,
 			BasePath:               os.Getenv("BASE_PATH"),
 		},
+
+		MetricsOptions: defaultMetricsOptions,
 	}
 	return a
 }
