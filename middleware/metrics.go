@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"azugo.io/azugo"
+
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/valyala/fasthttp"
@@ -48,21 +49,21 @@ func Metrics(path string, options ...MetricsOption) azugo.RequestHandlerFunc {
 }
 
 // Idea is from https://github.com/DanielHeckrath/gin-prometheus/blob/master/gin_prometheus.go and https://github.com/zsais/go-gin-prometheus/blob/master/middleware.go
-func computeApproximateRequestSize(ctx *fasthttp.Request, out chan int) {
+func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
 	s := 0
-	if ctx.URI() != nil {
-		s += len(ctx.URI().Path())
-		s += len(ctx.URI().Host())
+	if req.URI() != nil {
+		s += len(req.URI().Path())
+		s += len(req.URI().Host())
 	}
-	s += len(ctx.Header.Method())
+	s += len(req.Header.Method())
 	s += len("HTTP/1.1")
-	ctx.Header.VisitAll(func(key, value []byte) {
+	req.Header.VisitAll(func(key, value []byte) {
 		if !bytes.Equal(key, []byte("Host")) {
 			s += len(key) + len(value)
 		}
 	})
-	if ctx.Header.ContentLength() != -1 {
-		s += ctx.Header.ContentLength()
+	if req.Header.ContentLength() != -1 {
+		s += req.Header.ContentLength()
 	}
 	out <- s
 }
@@ -88,7 +89,10 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 		reqSize := make(chan int)
 		frc := acquireRequestFromPool()
 		ctx.Request().CopyTo(frc)
-		go computeApproximateRequestSize(frc, reqSize)
+		go func() {
+			defer releaseRequestToPool(frc)
+			computeApproximateRequestSize(frc, reqSize)
+		}()
 		h(ctx)
 		status := ctx.Response().StatusCode()
 		if status == fasthttp.StatusNotFound {
@@ -159,9 +163,14 @@ func (p *metricsHandler) registerMetrics() {
 }
 
 func acquireRequestFromPool() *fasthttp.Request {
-	rp := requestHandlerPool.Get()
-	if rp == nil {
-		return new(fasthttp.Request)
+	v := requestHandlerPool.Get()
+	if v == nil {
+		return &fasthttp.Request{}
 	}
-	return rp.(*fasthttp.Request)
+	return v.(*fasthttp.Request)
+}
+
+func releaseRequestToPool(req *fasthttp.Request) {
+	req.Reset()
+	requestHandlerPool.Put(req)
 }

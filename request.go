@@ -9,6 +9,7 @@ import (
 
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
 )
 
 const defaultPageSize = 20
@@ -81,6 +82,17 @@ func (a *App) releaseCtx(ctx *Context) {
 // must be limited.
 type RequestHandler func(ctx *Context)
 
+// Handler is an adapter to process incoming requests using object method.
+type Handler interface {
+	Handler(*Context)
+}
+
+// Handle allows to use object method that implements Handler interface to
+// handle incoming requests.
+func Handle(h Handler) RequestHandler {
+	return h.Handler
+}
+
 func (ctx *Context) reset() {
 	ctx.context = nil
 }
@@ -88,6 +100,11 @@ func (ctx *Context) reset() {
 // App returns the application.
 func (ctx *Context) App() *App {
 	return ctx.app
+}
+
+// Log returns the logger.
+func (ctx *Context) Log() *zap.Logger {
+	return ctx.app.Log()
 }
 
 // Env returns the application environment.

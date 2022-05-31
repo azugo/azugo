@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/url"
+
 	"azugo.io/azugo"
 	"azugo.io/azugo/middleware"
 
@@ -33,7 +35,12 @@ func main() {
 			ID int `json:"id"`
 		}{1})
 	})
-	if err := a.Start(); err != nil {
+
+	u, err := url.Parse("https://example.com/")
+	if err != nil {
 		panic(err)
 	}
+	a.Proxy("/example", azugo.ProxyUpstream(u))
+
+	azugo.Run(a)
 }

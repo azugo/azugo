@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 
 	"azugo.io/azugo/internal/radix"
 	"azugo.io/azugo/validation"
@@ -183,4 +185,28 @@ func (a *App) Start( /*config *server.Configuration*/ ) error {
 // Stop application and its services
 func (a *App) Stop() {
 	a.bgstop()
+}
+
+// Runnable provides methods to run application that will gracefully stop
+type Runnable interface {
+	Start() error
+	Log() *zap.Logger
+	Stop()
+}
+
+// Run starts an application and waits for it to finish
+func Run(a Runnable) {
+	// Catch interrupts for gracefully stopping background node proecess
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		if err := a.Start(); err != nil {
+			a.Log().With(zap.Error(err)).Fatal("failed to start service")
+		}
+	}()
+
+	<-done
+
+	a.Stop()
 }

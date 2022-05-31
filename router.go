@@ -580,6 +580,16 @@ func (a *App) Trace(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodTrace, path, handler)
 }
 
+// Proxy is helper to proxy requests to another host
+func (a *App) Proxy(path string, options ...ProxyOption) {
+	if len(path) > 0 && path[len(path)-1] != '/' {
+		path += "/"
+	}
+	p := newUpstreamProxy(path, options...)
+	a.Any(path+"{path:*}", Handle(p))
+	a.Any(path, Handle(p))
+}
+
 // Any is a shortcut for all HTTP methods handler
 //
 // WARNING: Use only for routes where the request method is not important
