@@ -56,13 +56,32 @@ type App struct {
 	bgctx  context.Context
 	bgstop context.CancelFunc
 
-	// AppVer settings
+	// App settings
 	AppVer       string
 	AppBuiltWith string
 	AppName      string
 
 	// Metrics options
 	MetricsOptions MetricsOptions
+
+	// Server options
+	ServerOptions ServerOptions
+}
+
+type ServerOptions struct {
+	// Per-connection buffer size for requests' reading.
+	// This also limits the maximum header size.
+	//
+	// Increase this buffer if your clients send multi-KB RequestURIs
+	// and/or multi-KB headers (for example, BIG cookies).
+	//
+	// Default buffer size (81920) is used if not set.
+	RequestReadBufferSize int
+
+	// Per-connection buffer size for responses' writing.
+	//
+	// Default buffer size (81920) is used if not set.
+	RequestWriteBufferSize int
 }
 
 func New() *App {
@@ -88,6 +107,11 @@ func New() *App {
 			RedirectFixedPath:      true,
 			HandleMethodNotAllowed: true,
 			HandleOPTIONS:          true,
+		},
+
+		ServerOptions: ServerOptions{
+			RequestReadBufferSize:  81920,
+			RequestWriteBufferSize: 81920,
 		},
 
 		MetricsOptions: defaultMetricsOptions,
@@ -193,6 +217,8 @@ func (a *App) Start() error {
 		Logger:                       zap.NewStdLog(a.Log().Named("http")),
 		StreamRequestBody:            true,
 		DisablePreParseMultipartForm: true,
+		ReadBufferSize:               a.ServerOptions.RequestReadBufferSize,
+		WriteBufferSize:              a.ServerOptions.RequestWriteBufferSize,
 	}
 
 	// HTTP2 is supported only over HTTPS
