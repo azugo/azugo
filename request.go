@@ -15,9 +15,10 @@ import (
 const defaultPageSize = 20
 
 var (
-	protocolHTTP          = []byte("http")
-	protocolHTTPS         = []byte("https")
-	protocolSeparator     = []byte("://")
+	protocolHTTP      = []byte("http")
+	protocolHTTPS     = []byte("https")
+	protocolSeparator = []byte("://")
+
 	headerXForwardedProto = []byte("X-Forwarded-Proto")
 	headerXForwardedHost  = []byte("X-Forwarded-Host")
 )

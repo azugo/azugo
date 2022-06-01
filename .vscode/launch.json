@@ -7,7 +7,7 @@
       "request": "launch",
       "mode": "debug",
       "buildFlags": "-tags 'netgo osusergo'",
-      "program": "${workspaceRoot}/examples/api/",
+      "program": "${workspaceRoot}/_examples/api/",
       "args": ["web", "-p", "3000"],
       "cwd": "${workspaceFolder}",
       "env": {

@@ -1,6 +1,7 @@
 package azugo
 
 import (
+	"bytes"
 	"crypto/tls"
 	"net/url"
 	"strings"
@@ -127,6 +128,10 @@ func (p *Proxy) Handler(ctx *Context) {
 	req.SetRequestURIBytes(req.RequestURI()[len(p.options.BasePath):])
 	req.URI().SetSchemeBytes(upstream.Scheme)
 	req.SetHostBytes(upstream.Host)
+	// Downgrade HTTP/2 to HTTP/1.1
+	if ctx.IsTLS() && bytes.Equal(req.Header.Protocol(), []byte("HTTP/2")) {
+		req.Header.SetProtocolBytes([]byte("HTTP/1.1"))
+	}
 
 	proxy.StripHeaders(&req.Header)
 
