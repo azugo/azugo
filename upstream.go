@@ -15,6 +15,7 @@ import (
 type proxyUpstream struct {
 	Scheme  []byte
 	Host    []byte
+	Path    []byte
 	BaseURL []byte
 }
 
@@ -77,6 +78,7 @@ func ProxyUpstream(upstream ...*url.URL) ProxyOption {
 		upstr[i] = &proxyUpstream{
 			Scheme:  []byte(v.Scheme),
 			Host:    []byte(v.Host),
+			Path:    []byte(strings.TrimRight(v.Path, "/")),
 			BaseURL: []byte(strings.TrimRight(v.String(), "/")),
 		}
 	}
@@ -125,7 +127,7 @@ func (p *Proxy) Handler(ctx *Context) {
 
 	resp := &ctx.Context().Response
 
-	req.SetRequestURIBytes(req.RequestURI()[len(p.options.BasePath):])
+	req.SetRequestURIBytes(append(upstream.Path, req.RequestURI()[len(p.options.BasePath):]...))
 	req.URI().SetSchemeBytes(upstream.Scheme)
 	req.SetHostBytes(upstream.Host)
 	// Downgrade HTTP/2 to HTTP/1.1
