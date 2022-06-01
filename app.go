@@ -75,12 +75,12 @@ type ServerOptions struct {
 	// Increase this buffer if your clients send multi-KB RequestURIs
 	// and/or multi-KB headers (for example, BIG cookies).
 	//
-	// Default buffer size (81920) is used if not set.
+	// Default buffer size 8K is used if not set.
 	RequestReadBufferSize int
 
 	// Per-connection buffer size for responses' writing.
 	//
-	// Default buffer size (81920) is used if not set.
+	// Default buffer size 8K is used if not set.
 	ResponseWriteBufferSize int
 }
 
@@ -102,7 +102,6 @@ func New() *App {
 
 		RouterOptions: RouterOptions{
 			ProxyOptions:           defaultProxyOptions,
-			SaveMatchedRoutePath:   true,
 			RedirectTrailingSlash:  true,
 			RedirectFixedPath:      true,
 			HandleMethodNotAllowed: true,
@@ -110,8 +109,8 @@ func New() *App {
 		},
 
 		ServerOptions: ServerOptions{
-			RequestReadBufferSize:   81920,
-			ResponseWriteBufferSize: 81920,
+			RequestReadBufferSize:   8192,
+			ResponseWriteBufferSize: 8192,
 		},
 
 		MetricsOptions: defaultMetricsOptions,
@@ -141,11 +140,16 @@ func (a *App) BackgroundContext() context.Context {
 }
 
 func (a *App) String() string {
+	name := a.AppName
+	if len(name) == 0 {
+		name = "Azugo"
+	}
+
 	bw := a.AppBuiltWith
 	if len(bw) > 0 {
 		bw = fmt.Sprintf(" (built with %s)", bw)
 	}
-	return fmt.Sprintf("%s %s%s", a.AppName, a.AppVer, bw)
+	return fmt.Sprintf("%s %s%s", name, a.AppVer, bw)
 }
 
 // basePath returns base path of the application
@@ -204,12 +208,7 @@ func (a *App) Start() error {
 
 	config := a.Config().Server
 
-	name := a.AppName
-	if len(name) == 0 {
-		name = "Azugo"
-	}
-
-	a.Log().Info(a.String())
+	a.Log().Info(fmt.Sprintf("Starting %s...", a.String()))
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
@@ -238,7 +237,7 @@ func (a *App) Start() error {
 		go func() {
 			defer wg.Done()
 			a.Log().Info(fmt.Sprintf("Listening on http://%s:%d%s...", config.HTTP.Address, config.HTTP.Port, config.Path))
-			if err := server.ListenAndServe(fmt.Sprintf("%s:%d", config.HTTP.Address, config.HTTP.Port)); err != nil {
+			if err := server.ListenAndServe(fmt.Sprintf("%s:%d", addr, config.HTTP.Port)); err != nil {
 				a.Log().Error("failed to start HTTP server", zap.Error(err))
 			}
 		}()
@@ -272,7 +271,7 @@ func (a *App) Start() error {
 		go func() {
 			defer wg.Done()
 			a.Log().Info(fmt.Sprintf("Listening on https://%s:%d%s...", config.HTTPS.Address, config.HTTPS.Port, config.Path))
-			if err := server.ListenAndServeTLSEmbed(fmt.Sprintf("%s:%d", config.HTTPS.Address, config.HTTPS.Port), certData, keyData); err != nil {
+			if err := server.ListenAndServeTLSEmbed(fmt.Sprintf("%s:%d", addr, config.HTTPS.Port), certData, keyData); err != nil {
 				a.Log().Error("failed to start HTTPS server", zap.Error(err))
 			}
 		}()

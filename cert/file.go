@@ -21,11 +21,15 @@ func LoadTLSCertificate(path string) ([]byte, []byte, error) {
 		}
 		if block.Type == PEMBlockCertificate {
 			out := &bytes.Buffer{}
-			pem.Encode(out, block)
+			if err = pem.Encode(out, block); err != nil {
+				return nil, nil, err
+			}
 			cert = out.Bytes()
 		} else if block.Type == PEMBlockRSAPrivateKey || block.Type == PEMBlockECPrivateKey {
 			out := &bytes.Buffer{}
-			pem.Encode(out, block)
+			if err = pem.Encode(out, block); err != nil {
+				return nil, nil, err
+			}
 			key = out.Bytes()
 		}
 		raw = rest

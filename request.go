@@ -29,8 +29,9 @@ type Context struct {
 	// Base fastHTTP request context
 	context *fasthttp.RequestCtx
 
-	method string // HTTP method
-	path   string // HTTP path with the modifications by the configuration -> string copy from pathBuffer
+	method     string // HTTP method
+	path       string // HTTP path with the modifications by the configuration -> string copy from pathBuffer
+	routerPath string // HTTP path as registered in the router
 
 	app *App
 
@@ -61,8 +62,9 @@ func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
 	// Set method
 	if c != nil {
 		ctx.method = utils.B2S(c.Request.Header.Method())
+		ctx.path = utils.B2S(c.Request.RequestURI())
 	}
-	ctx.path = path
+	ctx.routerPath = path
 
 	// Attach base fastHTTP request context
 	ctx.context = c
@@ -192,6 +194,11 @@ func (ctx *Context) BaseURL() string {
 	_, _ = url.WriteString(ctx.BasePath())
 
 	return url.String()
+}
+
+// RouterPath returns the registered router path.
+func (ctx *Context) RouterPath() string {
+	return ctx.routerPath
 }
 
 // Path returns the path part of the request URL.

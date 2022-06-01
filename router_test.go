@@ -354,7 +354,6 @@ func TestRouterMutable(t *testing.T) {
 
 	for _, route := range routes {
 		a = NewTestApp()
-		a.RouterOptions.SaveMatchedRoutePath = false
 
 		for _, method := range httpMethods {
 			a.Handle(method, route, handler1)
@@ -706,21 +705,21 @@ func TestRouterMatchedRoutePath(t *testing.T) {
 	route1 := "/user/{name}"
 	routed1 := false
 	handle1 := func(ctx *Context) {
-		assert.Equal(t, route1, ctx.UserValue(MatchedRoutePathParam))
+		assert.Equal(t, route1, ctx.RouterPath())
 		routed1 = true
 	}
 
 	route2 := "/user/{name}/details"
 	routed2 := false
 	handle2 := func(ctx *Context) {
-		assert.Equal(t, route2, ctx.UserValue(MatchedRoutePathParam))
+		assert.Equal(t, route2, ctx.RouterPath())
 		routed2 = true
 	}
 
 	route3 := "/"
 	routed3 := false
 	handle3 := func(ctx *Context) {
-		assert.Equal(t, route3, ctx.UserValue(MatchedRoutePathParam))
+		assert.Equal(t, route3, ctx.RouterPath())
 		routed3 = true
 	}
 
@@ -923,7 +922,6 @@ func BenchmarkAllowed(b *testing.B) {
 	handlerFunc := func(_ *Context) {}
 
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 	a.Post("/path", handlerFunc)
 	a.Get("/path", handlerFunc)
 
@@ -943,7 +941,6 @@ func BenchmarkAllowed(b *testing.B) {
 
 func BenchmarkRouterGet(b *testing.B) {
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 	a.Get("/hello", func(ctx *Context) {})
 
 	ctx := new(fasthttp.RequestCtx)
@@ -959,7 +956,6 @@ func BenchmarkRouterGet(b *testing.B) {
 
 func BenchmarkRouterParams(b *testing.B) {
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 
 	a.Get("/{id}", func(ctx *Context) {})
 
@@ -976,7 +972,6 @@ func BenchmarkRouterParams(b *testing.B) {
 
 func BenchmarkRouterANY(b *testing.B) {
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 
 	a.Get("/data", func(ctx *Context) {})
 	a.Any("/", func(ctx *Context) {})
@@ -999,7 +994,6 @@ func BenchmarkRouterGet_ANY(b *testing.B) {
 	)
 
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 
 	a.Get("/", func(ctx *Context) {
 		ctx.StatusCode(fasthttp.StatusOK).Text(resp)
@@ -1021,7 +1015,6 @@ func BenchmarkRouterGet_ANY(b *testing.B) {
 
 func BenchmarkRouterNotFound(b *testing.B) {
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 
 	a.Get("/bench", func(ctx *Context) {})
 
@@ -1038,7 +1031,6 @@ func BenchmarkRouterNotFound(b *testing.B) {
 
 func BenchmarkRouterFindCaseInsensitive(b *testing.B) {
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 
 	a.Get("/bench", func(ctx *Context) {})
 
@@ -1055,7 +1047,6 @@ func BenchmarkRouterFindCaseInsensitive(b *testing.B) {
 
 func BenchmarkRouterRedirectTrailingSlash(b *testing.B) {
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 
 	a.Get("/bench/", func(ctx *Context) {})
 
@@ -1074,7 +1065,6 @@ func Benchmark_Get(b *testing.B) {
 	handler := func(ctx *Context) {}
 
 	a := NewTestApp()
-	a.RouterOptions.SaveMatchedRoutePath = false
 
 	a.Get("/", handler)
 	a.Get("/plaintext", handler)

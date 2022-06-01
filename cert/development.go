@@ -55,15 +55,18 @@ func DevTLSCertificate(name string, dns ...string) ([]byte, []byte, error) {
 		if err != nil {
 			return nil, nil, err
 		}
-		cert, key := DERBytesToPEMBlocks(der, priv)
+		cert, key, err := DERBytesToPEMBlocks(der, priv)
+		if err != nil {
+			return nil, nil, err
+		}
 		f, err := os.Create(path)
 		if err != nil {
 			return nil, nil, err
 		}
 		defer f.Close()
-		f.Write(cert)
-		f.WriteString("\n")
-		f.Write(key)
+		_, _ = f.Write(cert)
+		_, _ = f.WriteString("\n")
+		_, _ = f.Write(key)
 
 		return cert, key, nil
 	}

@@ -2,11 +2,8 @@ package azugo
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/xml"
 	"errors"
-	"fmt"
-	"io"
 	"strings"
 
 	"azugo.io/azugo/internal/radix"
@@ -27,10 +24,6 @@ var (
 	contentTypeText = []byte("text/plain; charset=utf-8")
 	contentTypeJSON = []byte("application/json")
 	questionMark    = byte('?')
-
-	// MatchedRoutePathParam is the param name under which the path of the matched
-	// route is stored, if Router.SaveMatchedRoutePath is set.
-	MatchedRoutePathParam string
 )
 
 // RequestHandlerFunc is an adapter to allow to use it as wrapper for RequestHandler
@@ -44,12 +37,6 @@ type RouterOptions struct {
 	// Host is the hostname to be used for URL generation. If not set
 	// it will be automatically detected from the request.
 	Host string
-
-	// If enabled, adds the matched route path onto the ctx.UserValue context
-	// before invoking the handler.
-	// The matched route path is only added to handlers of routes that were
-	// registered when this option was enabled.
-	SaveMatchedRoutePath bool
 
 	// Enables automatic redirection if the current route can't be matched but a
 	// handler for the path with (without) the trailing slash exists.
@@ -185,10 +172,6 @@ func (a *App) Handle(method, path string, handler RequestHandler) {
 		a.globalAllowed = a.allowed("*", "")
 	}
 
-	if a.RouterOptions.SaveMatchedRoutePath {
-		handler = a.saveMatchedRoutePath(path, handler)
-	}
-
 	optionalPaths := router.GetOptionalPaths(path)
 
 	wrappedHandler := a.wrapHandler(path, a.chain(handler))
@@ -200,13 +183,6 @@ func (a *App) Handle(method, path string, handler RequestHandler) {
 		for _, p := range optionalPaths {
 			tree.Add(p, wrappedHandler)
 		}
-	}
-}
-
-func (a *App) saveMatchedRoutePath(path string, handler RequestHandler) RequestHandler {
-	return func(ctx *Context) {
-		ctx.SetUserValue(MatchedRoutePathParam, path)
-		handler(ctx)
 	}
 }
 
@@ -590,12 +566,4 @@ func (a *App) Proxy(path string, options ...ProxyOption) {
 // WARNING: Use only for routes where the request method is not important
 func (a *App) Any(path string, handler RequestHandler) {
 	a.Handle(MethodWild, path, handler)
-}
-
-func init() {
-	r := make([]byte, 15)
-	if _, err := io.ReadFull(rand.Reader, r); err != nil {
-		panic(err)
-	}
-	MatchedRoutePathParam = fmt.Sprintf("__matchedRoutePath::%s__", r)
 }

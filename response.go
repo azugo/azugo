@@ -69,8 +69,8 @@ func (ctx *Context) Error(err error) {
 func (ctx *Context) SetPaging(values map[string]string, paginator *paginator.Paginator) {
 	ctx.Header.Set(HeaderTotalCount, strconv.Itoa(paginator.Total()))
 	ctx.Header.AppendAccessControlExposeHeaders(HeaderTotalCount)
-	route, ok := ctx.UserValue(MatchedRoutePathParam).(string)
-	if !ok || len(route) == 0 {
+	route := ctx.RouterPath()
+	if len(route) == 0 {
 		return
 	}
 	for k, v := range values {

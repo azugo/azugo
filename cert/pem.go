@@ -46,17 +46,21 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 // DERBytesToPEMBlocks converts certificate DER bytes and optional private key
 // to PEM blocks.
 // Returns certificate PEM block and private key PEM block.
-func DERBytesToPEMBlocks(der []byte, priv interface{}) ([]byte, []byte) {
+func DERBytesToPEMBlocks(der []byte, priv interface{}) ([]byte, []byte, error) {
 	out := &bytes.Buffer{}
-	pem.Encode(out, &pem.Block{Type: PEMBlockCertificate, Bytes: der})
+	if err := pem.Encode(out, &pem.Block{Type: PEMBlockCertificate, Bytes: der}); err != nil {
+		return nil, nil, err
+	}
 	cert := append([]byte{}, out.Bytes()...)
 
 	var key []byte
 	if priv != nil {
 		out.Reset()
-		pem.Encode(out, pemBlockForKey(priv))
+		if err := pem.Encode(out, pemBlockForKey(priv)); err != nil {
+			return nil, nil, err
+		}
 		key = append([]byte{}, out.Bytes()...)
 	}
 
-	return cert, key
+	return cert, key, nil
 }
