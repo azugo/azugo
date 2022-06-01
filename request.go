@@ -62,7 +62,9 @@ func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
 	// Set method
 	if c != nil {
 		ctx.method = utils.B2S(c.Request.Header.Method())
-		ctx.path = utils.B2S(c.Request.RequestURI())
+		if u := c.Request.URI(); u != nil {
+			ctx.path = utils.B2S(u.Path())
+		}
 	}
 	ctx.routerPath = path
 

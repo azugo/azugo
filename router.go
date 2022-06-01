@@ -557,8 +557,9 @@ func (a *App) Proxy(path string, options ...ProxyOption) {
 		path += "/"
 	}
 	p := a.newUpstreamProxy(path, options...)
-	a.Any(path+"{path:*}", Handle(p))
+	a.Any(path[:len(path)-1], Handle(p))
 	a.Any(path, Handle(p))
+	a.Any(path+"{path:*}", Handle(p))
 }
 
 // Any is a shortcut for all HTTP methods handler

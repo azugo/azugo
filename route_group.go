@@ -96,8 +96,9 @@ func (g *RouteGroup) Proxy(path string, options ...ProxyOption) {
 	p := g.app.newUpstreamProxy(path, options...)
 	handler := g.chain(Handle(p))
 
-	g.Any(path+"{path:*}", handler)
+	g.Any(path[:len(path)-1], handler)
 	g.Any(path, handler)
+	g.Any(path+"{path:*}", handler)
 }
 
 // Any is a shortcut for all HTTP methods handler
