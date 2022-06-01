@@ -553,12 +553,11 @@ func (a *App) Trace(path string, handler RequestHandler) {
 
 // Proxy is helper to proxy requests to another host
 func (a *App) Proxy(path string, options ...ProxyOption) {
+	p := a.newUpstreamProxy(path, options...)
+	a.Any(path, Handle(p))
 	if len(path) > 0 && path[len(path)-1] != '/' {
 		path += "/"
 	}
-	p := a.newUpstreamProxy(path, options...)
-	a.Any(path[:len(path)-1], Handle(p))
-	a.Any(path, Handle(p))
 	a.Any(path+"{path:*}", Handle(p))
 }
 

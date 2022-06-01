@@ -90,14 +90,14 @@ func (g *RouteGroup) Trace(path string, handler RequestHandler) {
 // Proxy is helper to proxy requests to another host
 func (g *RouteGroup) Proxy(path string, options ...ProxyOption) {
 	path = g.prefix + path
-	if len(path) > 0 && path[len(path)-1] != '/' {
-		path += "/"
-	}
+
 	p := g.app.newUpstreamProxy(path, options...)
 	handler := g.chain(Handle(p))
 
-	g.Any(path[:len(path)-1], handler)
 	g.Any(path, handler)
+	if len(path) > 0 && path[len(path)-1] != '/' {
+		path += "/"
+	}
 	g.Any(path+"{path:*}", handler)
 }
 
