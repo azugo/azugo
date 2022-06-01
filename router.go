@@ -580,7 +580,7 @@ func (a *App) Proxy(path string, options ...ProxyOption) {
 	if len(path) > 0 && path[len(path)-1] != '/' {
 		path += "/"
 	}
-	p := newUpstreamProxy(path, options...)
+	p := a.newUpstreamProxy(path, options...)
 	a.Any(path+"{path:*}", Handle(p))
 	a.Any(path, Handle(p))
 }

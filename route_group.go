@@ -93,7 +93,7 @@ func (g *RouteGroup) Proxy(path string, options ...ProxyOption) {
 	if len(path) > 0 && path[len(path)-1] != '/' {
 		path += "/"
 	}
-	p := newUpstreamProxy(path, options...)
+	p := g.app.newUpstreamProxy(path, options...)
 	handler := g.chain(Handle(p))
 
 	g.Any(path+"{path:*}", handler)

@@ -81,7 +81,7 @@ type ServerOptions struct {
 	// Per-connection buffer size for responses' writing.
 	//
 	// Default buffer size (81920) is used if not set.
-	RequestWriteBufferSize int
+	ResponseWriteBufferSize int
 }
 
 func New() *App {
@@ -110,8 +110,8 @@ func New() *App {
 		},
 
 		ServerOptions: ServerOptions{
-			RequestReadBufferSize:  81920,
-			RequestWriteBufferSize: 81920,
+			RequestReadBufferSize:   81920,
+			ResponseWriteBufferSize: 81920,
 		},
 
 		MetricsOptions: defaultMetricsOptions,
@@ -218,7 +218,7 @@ func (a *App) Start() error {
 		StreamRequestBody:            true,
 		DisablePreParseMultipartForm: true,
 		ReadBufferSize:               a.ServerOptions.RequestReadBufferSize,
-		WriteBufferSize:              a.ServerOptions.RequestWriteBufferSize,
+		WriteBufferSize:              a.ServerOptions.ResponseWriteBufferSize,
 	}
 
 	// HTTP2 is supported only over HTTPS
