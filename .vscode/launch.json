@@ -11,7 +11,7 @@
       "args": ["web", "-p", "3000"],
       "cwd": "${workspaceFolder}",
       "env": {
-        "SERVER_URL": "http://localhost:3000",
+        "SERVER_URLS": "http://localhost:3000;https://localhost:5000",
         "ENVIRONMENT": "Development",
       }
     }

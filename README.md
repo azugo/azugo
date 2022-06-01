@@ -16,7 +16,7 @@ Opinionated GoLang web framework for microservices based on FastHTTP.
 
 * `ENVIRONMENT` - An App environment setting (allowed values are `Development`, `Staging` and `Production`).
 * `BASE_PATH` - Base path for an App if it's deployed in subdirectory.
-* `SERVER_URL` - An server URL to listen on.
+* `SERVER_URLS` - An server URL or multiple URLS separated by semicolon to listen on.
 
 ### Special thanks to
 

@@ -8,6 +8,7 @@ import (
 	"sync"
 	"syscall"
 
+	"azugo.io/azugo/cert"
 	"azugo.io/azugo/config"
 	"azugo.io/azugo/internal/radix"
 	"azugo.io/azugo/validation"
@@ -179,19 +180,12 @@ func (a *App) Start() error {
 
 	config := a.Config().Server
 
-	addr := config.Address
-	if addr == "0.0.0.0" {
-		addr = ""
-	}
-
 	name := a.AppName
 	if len(name) == 0 {
 		name = "Azugo"
 	}
 
 	a.Log().Info(a.String())
-
-	a.Log().Info(fmt.Sprintf("Listening on %s:%d...", config.Address, config.Port))
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
@@ -201,12 +195,65 @@ func (a *App) Start() error {
 		DisablePreParseMultipartForm: true,
 	}
 
-	http2.ConfigureServer(server, http2.ServerConfig{})
-
-	err := server.ListenAndServe(fmt.Sprintf("%s:%d", addr, config.Port))
-	if err != nil {
-		return fmt.Errorf("failed to start server: %w", err)
+	// HTTP2 is supported only over HTTPS
+	if config.HTTPS != nil && config.HTTPS.Enabled {
+		http2.ConfigureServer(server, http2.ServerConfig{})
 	}
+
+	var wg sync.WaitGroup
+	if config.HTTP != nil && config.HTTP.Enabled {
+		addr := config.HTTP.Address
+		if addr == "0.0.0.0" {
+			addr = ""
+		}
+
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			a.Log().Info(fmt.Sprintf("Listening on http://%s:%d%s...", config.HTTP.Address, config.HTTP.Port, config.Path))
+			if err := server.ListenAndServe(fmt.Sprintf("%s:%d", config.HTTP.Address, config.HTTP.Port)); err != nil {
+				a.Log().Error("failed to start HTTP server", zap.Error(err))
+			}
+		}()
+	}
+
+	if config.HTTPS != nil && config.HTTPS.Enabled {
+		addr := config.HTTPS.Address
+		if addr == "0.0.0.0" {
+			addr = ""
+		}
+
+		var certData []byte
+		var keyData []byte
+		var err error
+		if len(config.HTTPS.PEMPath) > 0 {
+			certData, keyData, err = cert.LoadTLSCertificate(config.HTTPS.PEMPath)
+			if err != nil {
+				a.Log().Error("failed to load TLS certificate", zap.Error(err))
+				return err
+			}
+		} else {
+			certData, keyData, err = cert.DevTLSCertificate("azugo", "localhost")
+			if err != nil {
+				a.Log().Error("failed to load or generate self-signed TLS certificate", zap.Error(err))
+				return err
+			}
+		}
+
+		wg.Add(1)
+
+		go func() {
+			defer wg.Done()
+			a.Log().Info(fmt.Sprintf("Listening on https://%s:%d%s...", config.HTTPS.Address, config.HTTPS.Port, config.Path))
+			if err := server.ListenAndServeTLSEmbed(fmt.Sprintf("%s:%d", config.HTTPS.Address, config.HTTPS.Port), certData, keyData); err != nil {
+				a.Log().Error("failed to start HTTPS server", zap.Error(err))
+			}
+		}()
+	}
+
+	wg.Wait()
+
 	return nil
 }
 
