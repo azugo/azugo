@@ -252,8 +252,8 @@ func (a *App) Start() error {
 		var certData []byte
 		var keyData []byte
 		var err error
-		if len(config.HTTPS.PEMPath) > 0 {
-			certData, keyData, err = cert.LoadTLSCertificate(config.HTTPS.PEMPath)
+		if len(config.HTTPS.CertificatePEMFile) > 0 {
+			certData, keyData, err = cert.LoadTLSCertificate(config.HTTPS.CertificatePEMFile)
 			if err != nil {
 				a.Log().Error("failed to load TLS certificate", zap.Error(err))
 				return err

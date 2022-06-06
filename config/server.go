@@ -54,10 +54,10 @@ func (s *ServerHTTP) Validate(valid *validation.Validate) error {
 
 // ServerHTTPS is a HTTPS server configuration.
 type ServerHTTPS struct {
-	Enabled bool   `mapstructure:"enabled"`
-	Address string `mapstructure:"address" validate:"ip4_addr|ip6_addr|hostname|fqdn"`
-	Port    int    `mapstructure:"port" validate:"required,min=1,max=65535"`
-	PEMPath string `mapstructure:"pem" validate:"omitempty,file"`
+	Enabled            bool   `mapstructure:"enabled"`
+	Address            string `mapstructure:"address" validate:"ip4_addr|ip6_addr|hostname|fqdn"`
+	Port               int    `mapstructure:"port" validate:"required,min=1,max=65535"`
+	CertificatePEMFile string `mapstructure:"certificate_pem_file" validate:"omitempty,file"`
 }
 
 // Bind server configuration section.
@@ -87,6 +87,8 @@ func (s *ServerHTTPS) Bind(prefix string, v *viper.Viper) {
 	v.SetDefault(prefix+".enabled", enabled)
 	v.SetDefault(prefix+".address", addr)
 	v.SetDefault(prefix+".port", port)
+
+	_ = v.BindEnv(prefix+".certificate_pem_file", "SERVER_HTTPS_CERTIFICATE_PEM_FILE")
 }
 
 // Validate server configuration section.
