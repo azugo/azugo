@@ -30,7 +30,6 @@ func New() *Configuration {
 		v:        v,
 		validate: validation.New(),
 	}
-	c.Bind("", v)
 
 	return c
 }
@@ -108,6 +107,20 @@ func (c *Configuration) Load(config interface{}, environment string) error {
 		return nil
 	}
 
+	// Bind defaults
+	extconf, ok := config.(Configurable)
+	if !ok {
+		return errors.New("configuration must implement Configurable interface")
+	}
+
+	conf := extconf.Core()
+	conf.Bind("", c.v)
+
+	if extbind, ok := config.(Binder); ok {
+		extbind.Bind("", c.v)
+	}
+
+	// Load configuration
 	configPath := c.v.ConfigFileUsed()
 
 	if len(configPath) == 0 && len(c.configName) == 0 {
@@ -133,15 +146,14 @@ func (c *Configuration) Load(config interface{}, environment string) error {
 		return fmt.Errorf("failed to unmarshal configuration: %w", err)
 	}
 
-	extconf, ok := config.(Configurable)
-	if !ok {
-		return errors.New("configuration must implement Configurable interface")
+	if err := c.Validate(c.validate); err != nil {
+		return err
 	}
 
-	conf := extconf.Core()
-
-	if err := c.updateAll(conf); err != nil {
-		return err
+	if extvalid, ok := config.(Validatable); ok {
+		if err := extvalid.Validate(c.validate); err != nil {
+			return err
+		}
 	}
 
 	extconf.Loaded(c)
@@ -150,25 +162,8 @@ func (c *Configuration) Load(config interface{}, environment string) error {
 	return nil
 }
 
-func update[T any](prefix string, src, dst *T, validate *validation.Validate) (*T, error) {
-	if src == nil {
-		return dst, nil
-	}
-
-	dst = src
-
-	if valid, ok := any(dst).(Validatable); ok {
-		if err := valid.Validate(validate); err != nil {
-			return dst, fmt.Errorf("invalid %s configuration: %w", prefix, err)
-		}
-	}
-
-	return dst, nil
-}
-
-func (c *Configuration) updateAll(conf *Configuration) error {
-	var err error
-	if c.Server, err = update("server", conf.Server, c.Server, c.validate); err != nil {
+func (c *Configuration) Validate(validate *validation.Validate) error {
+	if err := c.Server.Validate(validate); err != nil {
 		return err
 	}
 	return nil
