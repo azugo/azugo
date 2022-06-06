@@ -5,6 +5,7 @@ import (
 	"time"
 )
 
+// Token parser and validation errors.
 var (
 	ErrTokenMalformed        = errors.New("token is malformed")
 	ErrTokenUnverifiable     = errors.New("token is unverifiable")
@@ -18,6 +19,20 @@ var (
 	ErrTokenNotValidYet      = errors.New("token is not valid yet")
 )
 
+// Common claim types.
+const (
+	ClaimTypeName                      string = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name"
+	ClaimTypeGivenName                 string = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/givenname"
+	ClaimTypeSurname                   string = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/surname"
+	ClaimTypeEmail                     string = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress"
+	ClaimTypeNameIdentifier            string = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier"
+	ClaimTypePrivatePersonalIdentifier string = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/privatepersonalidentifier"
+	ClaimTypeSID                       string = "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/sid"
+	ClaimTypePrimarySID                string = "http://schemas.microsoft.com/ws/2008/06/identity/claims/primarysid"
+	ClaimTypeRole                      string = "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"
+	ClaimTypeAction                    string = "http://docs.oasis-open.org/wsfed/authorization/200706/claims/action"
+)
+
 // Token represents a WS-Federation token.
 type Token struct {
 	Raw       string
@@ -25,6 +40,20 @@ type Token struct {
 	Claims    *RegisteredClaims
 	Signature string
 	Valid     bool
+}
+
+// ClaimValue returns the value of the given claim.
+func (t *Token) ClaimValue(name string) string {
+	c, ok := t.Claims.Attributes[name]
+	if ok && len(c) > 0 {
+		return c[0]
+	}
+	return ""
+}
+
+// ClaimValues returns the values of the given claim.
+func (t *Token) ClaimValues(name string) []string {
+	return t.Claims.Attributes[name]
 }
 
 type tokenParseOptions struct {

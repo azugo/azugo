@@ -82,3 +82,39 @@ func TestResponsePaging(t *testing.T) {
 	assert.Equal(t, `<http://test/user/test?page=2&per_page=20>; rel="next",<http://test/user/test?page=5&per_page=20>; rel="last"`, string(resp.Header.Peek(HeaderLink)))
 	assert.Equal(t, "X-Total-Count, Link", string(resp.Header.Peek(HeaderAccessControlExposeHeaders)))
 }
+
+func TestResponseRedirect(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		ctx.Redirect("http://test/")
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user")
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+
+	assert.Equal(t, fasthttp.StatusFound, resp.StatusCode())
+	assert.Equal(t, "http://test/", string(resp.Header.Peek("Location")))
+}
+
+func TestResponseRedirectStatusCode(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		ctx.StatusCode(fasthttp.StatusPermanentRedirect).Redirect("http://test/")
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user")
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+
+	assert.Equal(t, fasthttp.StatusPermanentRedirect, resp.StatusCode())
+	assert.Equal(t, "http://test/", string(resp.Header.Peek("Location")))
+}

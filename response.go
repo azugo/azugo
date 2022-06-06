@@ -40,7 +40,7 @@ func (ctx *Context) ContentType(contentType string, charset ...string) *Context 
 // Redirect redirects the request to a given URL with status code 302 (Found) if other redirect status code
 // not set already.
 func (ctx *Context) Redirect(url string) {
-	if fasthttp.StatusCodeIsRedirect(ctx.Response().StatusCode()) {
+	if !fasthttp.StatusCodeIsRedirect(ctx.Response().StatusCode()) {
 		ctx.StatusCode(fasthttp.StatusFound)
 	}
 	// TODO: Check if it's safe to redirect to provided URL
