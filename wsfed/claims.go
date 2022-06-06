@@ -65,7 +65,7 @@ func verifyExp(exp *time.Time, now time.Time, skew time.Duration, required bool)
 	if exp == nil {
 		return !required
 	}
-	now = now.Add(skew)
+	now = now.Add(-skew)
 	return now.Before(*exp)
 }
 
@@ -73,7 +73,7 @@ func verifyIat(iat *time.Time, now time.Time, skew time.Duration, required bool)
 	if iat == nil {
 		return !required
 	}
-	now = now.Add(-skew)
+	now = now.Add(skew)
 	return now.After(*iat) || now.Equal(*iat)
 }
 
@@ -81,7 +81,7 @@ func verifyNbf(nbf *time.Time, now time.Time, skew time.Duration, required bool)
 	if nbf == nil {
 		return !required
 	}
-	now = now.Add(-skew)
+	now = now.Add(skew)
 	return now.After(*nbf) || now.Equal(*nbf)
 }
 

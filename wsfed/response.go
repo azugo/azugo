@@ -12,6 +12,12 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
+const iso8601Layout = "2006-01-02T15:04:05Z"
+
+func parseISO8601Time(s string) (time.Time, error) {
+	return time.Parse(iso8601Layout, s)
+}
+
 func elementToString(el *etree.Element) (string, error) {
 	if el == nil {
 		return "", nil
@@ -21,7 +27,7 @@ func elementToString(el *etree.Element) (string, error) {
 	return doc.WriteToString()
 }
 
-func (p *WsFederation) decodeResponse(resp []byte) (*Token, error) {
+func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*Token, error) {
 	if err := xrv.Validate(bytes.NewReader(resp)); err != nil {
 		return nil, err
 	}
@@ -32,6 +38,11 @@ func (p *WsFederation) decodeResponse(resp []byte) (*Token, error) {
 	}
 
 	el := doc.Root()
+	if el == nil {
+		return nil, ErrTokenMalformed
+	}
+
+	el = el.FindElement("//Assertion")
 	if el == nil {
 		return nil, ErrTokenMalformed
 	}
@@ -47,57 +58,65 @@ func (p *WsFederation) decodeResponse(resp []byte) (*Token, error) {
 		return nil, ErrTokenSignatureInvalid
 	}
 
-	el = validated.FindElement("//Assertion")
-	if el == nil {
-		return nil, ErrTokenMalformed
-	}
-	raw, err := elementToString(el)
-	if err != nil {
-		return nil, err
-	}
+	var raw, signature, validatedRaw string
+	if opts.SaveToken {
+		var err error
+		// Token RAW XML
+		raw, err = elementToString(el)
+		if err != nil {
+			return nil, err
+		}
 
-	signel := el.FindElement("//Signature")
-	if signel == nil {
-		return nil, ErrTokenMalformed
-	}
-	signature, err := elementToString(signel)
-	if err != nil {
-		return nil, err
+		// Signature XML to token
+		signel := el.FindElement("./Signature")
+		if signel == nil {
+			return nil, ErrTokenMalformed
+		}
+		signature, err = elementToString(signel)
+		if err != nil {
+			return nil, err
+		}
+
+		// Validated XML token without signature
+		validatedRaw, err = elementToString(validated)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	claims := &RegisteredClaims{
-		ID:         el.SelectAttrValue("ID", ""),
+		ID:         validated.SelectAttrValue("ID", ""),
 		Audience:   make([]string, 0, 1),
 		Attributes: make(map[string][]string, 10),
 	}
 
-	if iat := el.SelectAttrValue("IssueInstant", ""); len(iat) > 0 {
-		t, err := time.Parse(time.RFC3339, iat)
+	if iat := validated.SelectAttrValue("IssueInstant", ""); len(iat) > 0 {
+		t, err := parseISO8601Time(iat)
 		if err != nil {
 			return nil, err
 		}
 		claims.IssuedAt = &t
 	}
 
-	if issuer := el.FindElement("./Issuer"); issuer != nil {
+	if issuer := validated.FindElement("./Issuer"); issuer != nil {
 		claims.Issuer = issuer.Text()
 	}
 
-	if sub := el.FindElement("./Subject/NameID"); sub != nil {
+	if sub := validated.FindElement("./Subject/NameID"); sub != nil {
 		claims.Subject.ID = sub.Text()
 		claims.Subject.Format = sub.SelectAttrValue("Format", "")
 	}
 
-	if cond := el.FindElement("./Conditions"); cond != nil {
+	if cond := validated.FindElement("./Conditions"); cond != nil {
 		if nbf := cond.SelectAttrValue("NotBefore", ""); len(nbf) > 0 {
-			t, err := time.Parse(time.RFC3339, nbf)
+			t, err := parseISO8601Time(nbf)
 			if err != nil {
 				return nil, err
 			}
 			claims.NotBefore = &t
 		}
 		if exp := cond.SelectAttrValue("NotOnOrAfter", ""); len(exp) > 0 {
-			t, err := time.Parse(time.RFC3339, exp)
+			t, err := parseISO8601Time(exp)
 			if err != nil {
 				return nil, err
 			}
@@ -109,7 +128,7 @@ func (p *WsFederation) decodeResponse(resp []byte) (*Token, error) {
 		}
 	}
 
-	for _, attr := range el.FindElements("./AttributeStatement/Attribute") {
+	for _, attr := range validated.FindElements("./AttributeStatement/Attribute") {
 		name := attr.SelectAttrValue("Name", "")
 		if len(name) == 0 {
 			return nil, ErrTokenMalformed
@@ -123,6 +142,7 @@ func (p *WsFederation) decodeResponse(resp []byte) (*Token, error) {
 
 	return &Token{
 		Raw:       raw,
+		Validated: validatedRaw,
 		Signature: signature,
 		Claims:    claims,
 	}, nil
@@ -139,7 +159,7 @@ func (p *WsFederation) IsSignoutResponse(ctx *azugo.Context) bool {
 }
 
 // ReadResponse reads the IDP response from the request.
-func (p *WsFederation) ReadResponse(ctx *azugo.Context, aud string) (*Token, error) {
+func (p *WsFederation) ReadResponse(ctx *azugo.Context, opt ...TokenParseOption) (*Token, error) {
 	if p.IsSignoutResponse(ctx) {
 		return nil, nil
 	}
@@ -170,5 +190,5 @@ func (p *WsFederation) ReadResponse(ctx *azugo.Context, aud string) (*Token, err
 		return nil, err
 	}
 
-	return p.Parse([]byte(wresult), aud)
+	return p.Parse([]byte(wresult), opt...)
 }
