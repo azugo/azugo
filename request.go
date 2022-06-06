@@ -48,6 +48,8 @@ type Context struct {
 	Body Body
 	// Form access methods
 	Form Form
+	// Route parameters access methods
+	Params Params
 }
 
 func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
@@ -65,6 +67,8 @@ func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
 		ctx.Form.app = a
 		ctx.Form.ctx = ctx
 		ctx.Form.form = nilArgsValuer
+		ctx.Params.app = a
+		ctx.Params.ctx = ctx
 	} else {
 		ctx = v.(*Context)
 	}
