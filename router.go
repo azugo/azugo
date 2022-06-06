@@ -275,55 +275,66 @@ func (a *App) recv(path string, ctx *fasthttp.RequestCtx) {
 	}
 }
 
+func (a *App) handleNotFound(ctx *Context) {
+	if a.RouterOptions.NotFound != nil {
+		a.RouterOptions.NotFound(ctx)
+		return
+	}
+
+	ctx.Response().Reset()
+	ctx.StatusCode(fasthttp.StatusNotFound).Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
+}
+
 func (a *App) handleError(ctx *Context, err error) {
 	if a.RouterOptions.ErrorHandler != nil {
 		a.RouterOptions.ErrorHandler(ctx, err)
+		return
+	}
+
+	// If there is no error, we don't need to do anything
+	if err == nil {
+		return
+	}
+
+	// Check that the error implements method to customize the status code
+	rerr, ok := err.(ResponseStatusCode)
+	if ok {
+		ctx.StatusCode(rerr.StatusCode())
+	} else if errors.As(err, &validator.ValidationErrors{}) {
+		// Validation errors return a 422 (unprocessable entity) status code
+		ctx.StatusCode(fasthttp.StatusUnprocessableEntity)
 	} else {
-		// If there is no error, we don't need to do anything
-		if err == nil {
+		ctx.StatusCode(fasthttp.StatusInternalServerError)
+	}
+
+	// Log the error only if it's server error
+	if ctx.Response().StatusCode()/100 == 5 {
+		a.Log().Error(err.Error(), zap.Error(err))
+	}
+
+	// Check that the error implements method to for safe error message
+	resp := NewErrorResponse(err)
+	if resp == nil {
+		return
+	}
+
+	ct := ctx.Response().Header.ContentType()
+	if bytes.HasPrefix(ct, []byte("application/json")) {
+		data, ierr := json.Marshal(resp)
+		if ierr != nil {
+			a.Log().Error("error marshalling error response", zap.Error(ierr))
 			return
 		}
-
-		// Check that the error implements method to customize the status code
-		rerr, ok := err.(ResponseStatusCode)
-		if ok {
-			ctx.StatusCode(rerr.StatusCode())
-		} else if errors.As(err, &validator.ValidationErrors{}) {
-			// Validation errors return a 422 (unprocessable entity) status code
-			ctx.StatusCode(fasthttp.StatusUnprocessableEntity)
-		} else {
-			ctx.StatusCode(fasthttp.StatusInternalServerError)
-		}
-
-		// Log the error only if it's server error
-		if ctx.Response().StatusCode()/100 == 5 {
-			a.Log().Error(err.Error(), zap.Error(err))
-		}
-
-		// Check that the error implements method to for safe error message
-		resp := NewErrorResponse(err)
-		if resp == nil {
+		ctx.Response().SetBodyRaw(data)
+	} else if bytes.HasPrefix(ct, []byte("application/xml")) {
+		data, ierr := xml.Marshal(resp)
+		if ierr != nil {
+			a.Log().Error("error marshalling error response", zap.Error(ierr))
 			return
 		}
-
-		ct := ctx.Response().Header.ContentType()
-		if bytes.HasPrefix(ct, []byte("application/json")) {
-			data, ierr := json.Marshal(resp)
-			if ierr != nil {
-				a.Log().Error("error marshalling error response", zap.Error(ierr))
-				return
-			}
-			ctx.Response().SetBodyRaw(data)
-		} else if bytes.HasPrefix(ct, []byte("application/xml")) {
-			data, ierr := xml.Marshal(resp)
-			if ierr != nil {
-				a.Log().Error("error marshalling error response", zap.Error(ierr))
-				return
-			}
-			ctx.Response().SetBodyRaw(data)
-		} else {
-			ctx.Response().SetBodyString(resp.Errors[0].Message)
-		}
+		ctx.Response().SetBodyRaw(data)
+	} else {
+		ctx.Response().SetBodyString(resp.Errors[0].Message)
 	}
 }
 
@@ -483,14 +494,7 @@ func (a *App) Handler(ctx *fasthttp.RequestCtx) {
 	}
 
 	// Handle 404
-	if a.RouterOptions.NotFound != nil {
-		a.wrapHandler(path, a.chain(a.RouterOptions.NotFound))(ctx)
-	} else {
-		// TODO: move as default value?
-		a.wrapHandler(path, a.chain(func(c *Context) {
-			c.StatusCode(fasthttp.StatusNotFound).Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
-		}))(ctx)
-	}
+	a.wrapHandler(path, a.chain(a.handleNotFound))(ctx)
 }
 
 // Routes returns all registered routes grouped by method

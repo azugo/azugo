@@ -76,6 +76,11 @@ func (ctx *Context) Error(err error) {
 	ctx.app.handleError(ctx, err)
 }
 
+// NotFound returns an not found response. Calls either custom NotFound or default if not specified.
+func (ctx *Context) NotFound() {
+	ctx.app.handleNotFound(ctx)
+}
+
 func (ctx *Context) SetPaging(values map[string]string, paginator *paginator.Paginator) {
 	ctx.Header.Set(HeaderTotalCount, strconv.Itoa(paginator.Total()))
 	ctx.Header.AppendAccessControlExposeHeaders(HeaderTotalCount)
