@@ -82,8 +82,7 @@ func (c *Configuration) Core() *Configuration {
 }
 
 // Loaded receives loaded core configuration.
-func (c *Configuration) Loaded(_ *Configuration) {
-}
+func (c *Configuration) Loaded(*Configuration) {}
 
 // SetConfigFile explicitly defines the path, name and extension of the config file.
 func (c *Configuration) SetConfigFile(path string) {

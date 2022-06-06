@@ -275,7 +275,7 @@ func TestRouterInvalidInput(t *testing.T) {
 	a.Start(t)
 	defer a.Stop()
 
-	handle := func(_ *Context) {}
+	handle := func(*Context) {}
 
 	assert.Panics(t, func() {
 		a.Handle("", "/", handle)
@@ -326,10 +326,10 @@ func TestRouterRegexUserValues(t *testing.T) {
 func TestRouterMutable(t *testing.T) {
 	var called1, called2 bool
 
-	handler1 := func(_ *Context) {
+	handler1 := func(*Context) {
 		called1 = true
 	}
-	handler2 := func(_ *Context) {
+	handler2 := func(*Context) {
 		called2 = true
 	}
 
@@ -386,7 +386,7 @@ func TestRouterMutable(t *testing.T) {
 }
 
 func TestRouterOPTIONS(t *testing.T) {
-	handlerFunc := func(_ *Context) {}
+	handlerFunc := func(*Context) {}
 
 	a := NewTestApp()
 	a.Post("/path", handlerFunc)
@@ -434,7 +434,7 @@ func TestRouterOPTIONS(t *testing.T) {
 }
 
 func TestRouterNotAllowed(t *testing.T) {
-	handlerFunc := func(_ *Context) {}
+	handlerFunc := func(*Context) {}
 
 	a := NewTestApp()
 	a.Post("/path", handlerFunc)
@@ -495,7 +495,7 @@ func TestRouterPanicHandler(t *testing.T) {
 }
 
 func testRouterNotFoundByMethod(t *testing.T, method string) {
-	handlerFunc := func(_ *Context) {}
+	handlerFunc := func(*Context) {}
 	host := "test"
 
 	a := NewTestApp()
@@ -588,7 +588,7 @@ func TestRouterNotFound(t *testing.T) {
 	defer a.Stop()
 
 	// Test other method than GET (want 308 instead of 301)
-	a.Patch("/path", func(_ *Context) {})
+	a.Patch("/path", func(*Context) {})
 
 	resp, err := a.TestClient().Call(fasthttp.MethodPatch, "/path/?key=val", nil)
 	require.NoError(t, err)
@@ -596,7 +596,7 @@ func TestRouterNotFound(t *testing.T) {
 	assert.Equal(t, "http://test/path?key=val", string(resp.Header.Peek("Location")), "unexpected response header")
 
 	// Test special case where no node for the prefix "/" exists
-	a.Get("/a", func(_ *Context) {})
+	a.Get("/a", func(*Context) {})
 
 	resp, err = a.TestClient().Call(fasthttp.MethodPatch, "/", nil)
 	defer fasthttp.ReleaseResponse(resp)
@@ -648,7 +648,7 @@ func testRouterLookupByMethod(t *testing.T, method string) {
 	}
 
 	routed := false
-	wantHandle := func(_ *Context) {
+	wantHandle := func(*Context) {
 		routed = true
 	}
 	wantParams := map[string]string{"name": "gopher"}
@@ -919,7 +919,7 @@ func TestRouterMiddlewareAfterRoute(t *testing.T) {
 }
 
 func BenchmarkAllowed(b *testing.B) {
-	handlerFunc := func(_ *Context) {}
+	handlerFunc := func(*Context) {}
 
 	a := NewTestApp()
 	a.Post("/path", handlerFunc)

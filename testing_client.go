@@ -2,10 +2,16 @@ package azugo
 
 import (
 	"bytes"
+	"crypto/rand"
 	"fmt"
+	"mime/multipart"
 	"strings"
+	"time"
+
+	"azugo.io/azugo/internal/utils"
 
 	"github.com/goccy/go-json"
+	"github.com/oklog/ulid/v2"
 	"github.com/valyala/fasthttp"
 )
 
@@ -28,6 +34,13 @@ func (c *TestClient) applyOptions(request *fasthttp.Request, options []TestClien
 func (c *TestClient) WithHeader(key, value string) TestClientOption {
 	return func(tc *TestClient, r *fasthttp.Request) {
 		r.Header.Add(key, value)
+	}
+}
+
+// WithMultiPartFormBoundary sets multipart form data boundary.
+func (c *TestClient) WithMultiPartFormBoundary(boundary string) TestClientOption {
+	return func(tc *TestClient, r *fasthttp.Request) {
+		r.Header.SetMultipartFormBoundary(boundary)
 	}
 }
 
@@ -100,7 +113,30 @@ func (c *TestClient) PatchJSON(endpoint string, body interface{}, options ...Tes
 	if err != nil {
 		return nil, err
 	}
+	options = append(options, c.WithHeader("Content-Type", "application/json"))
 	return c.Patch(endpoint, b, options...)
+}
+
+// PatchForm calls PATCH method with given map marshaled as URL encoded form and options.
+func (c *TestClient) PatchForm(endpoint string, params map[string]interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+	return c.Patch(endpoint, []byte(utils.MapToURLValues(params)), options...)
+}
+
+// PatchMultiPartForm calls PATCH method with given multipart form and options.
+func (c *TestClient) PatchMultiPartForm(endpoint string, form *multipart.Form, options ...TestClientOption) (*fasthttp.Response, error) {
+	boundary, err := ulid.New(ulid.Timestamp(time.Now().UTC()), ulid.Monotonic(rand.Reader, 1))
+	if err != nil {
+		return nil, err
+	}
+	options = append(options, c.WithMultiPartFormBoundary(boundary.String()))
+
+	var body bytes.Buffer
+	if err = fasthttp.WriteMultipartForm(&body, form, boundary.String()); err != nil {
+		return nil, err
+	}
+
+	return c.Put(endpoint, body.Bytes(), options...)
 }
 
 // Put calls PUT method with given body and options.
@@ -114,7 +150,30 @@ func (c *TestClient) PutJSON(endpoint string, body interface{}, options ...TestC
 	if err != nil {
 		return nil, err
 	}
+	options = append(options, c.WithHeader("Content-Type", "application/json"))
 	return c.Put(endpoint, b, options...)
+}
+
+// PutForm calls PUT method with given map marshaled as URL encoded form and options.
+func (c *TestClient) PutForm(endpoint string, params map[string]interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+	return c.Put(endpoint, []byte(utils.MapToURLValues(params)), options...)
+}
+
+// PutMultiPartForm calls PUT method with given multipart form and options.
+func (c *TestClient) PutMultiPartForm(endpoint string, form *multipart.Form, options ...TestClientOption) (*fasthttp.Response, error) {
+	boundary, err := ulid.New(ulid.Timestamp(time.Now().UTC()), ulid.Monotonic(rand.Reader, 1))
+	if err != nil {
+		return nil, err
+	}
+	options = append(options, c.WithMultiPartFormBoundary(boundary.String()))
+
+	var body bytes.Buffer
+	if err = fasthttp.WriteMultipartForm(&body, form, boundary.String()); err != nil {
+		return nil, err
+	}
+
+	return c.Put(endpoint, body.Bytes(), options...)
 }
 
 // Post calls POST method with given body and options.
@@ -128,7 +187,30 @@ func (c *TestClient) PostJSON(endpoint string, body interface{}, options ...Test
 	if err != nil {
 		return nil, err
 	}
+	options = append(options, c.WithHeader("Content-Type", "application/json"))
 	return c.Post(endpoint, b, options...)
+}
+
+// PostForm calls POST method with given map marshaled as URL encoded form and options.
+func (c *TestClient) PostForm(endpoint string, params map[string]interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+	return c.Post(endpoint, []byte(utils.MapToURLValues(params)), options...)
+}
+
+// PostMultiPartForm calls POST method with given multipart form and options.
+func (c *TestClient) PostMultiPartForm(endpoint string, form *multipart.Form, options ...TestClientOption) (*fasthttp.Response, error) {
+	boundary, err := ulid.New(ulid.Timestamp(time.Now().UTC()), ulid.Monotonic(rand.Reader, 1))
+	if err != nil {
+		return nil, err
+	}
+	options = append(options, c.WithMultiPartFormBoundary(boundary.String()))
+
+	var body bytes.Buffer
+	if err = fasthttp.WriteMultipartForm(&body, form, boundary.String()); err != nil {
+		return nil, err
+	}
+
+	return c.Post(endpoint, body.Bytes(), options...)
 }
 
 // Connect calls CONNECT method with given options.

@@ -21,6 +21,11 @@ var (
 
 	headerXForwardedProto = []byte("X-Forwarded-Proto")
 	headerXForwardedHost  = []byte("X-Forwarded-Host")
+
+	contentTypeFormURLEncoded    = []byte("application/x-www-form-urlencoded")
+	contentTypeMultipartFormData = []byte("multipart/form-data")
+
+	nilArgsValuer formKeyValuer = &nilArgs{}
 )
 
 type Context struct {
@@ -41,6 +46,8 @@ type Context struct {
 	Query Query
 	// Body access methods
 	Body Body
+	// Form access methods
+	Form Form
 }
 
 func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
@@ -55,6 +62,9 @@ func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
 		ctx.Query.ctx = ctx
 		ctx.Body.app = a
 		ctx.Body.ctx = ctx
+		ctx.Form.app = a
+		ctx.Form.ctx = ctx
+		ctx.Form.form = nilArgsValuer
 	} else {
 		ctx = v.(*Context)
 	}
@@ -67,6 +77,20 @@ func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
 		}
 	}
 	ctx.routerPath = path
+
+	if ctx.method == fasthttp.MethodPost || ctx.method == fasthttp.MethodPut || ctx.method == fasthttp.MethodPatch {
+		if bytes.Equal(c.Request.Header.ContentType(), contentTypeFormURLEncoded) {
+			ctx.Form.form = &postArgs{
+				args: c.Request.PostArgs(),
+			}
+		} else if bytes.HasPrefix(c.Request.Header.ContentType(), contentTypeMultipartFormData) {
+			if form, err := c.Request.MultipartForm(); err == nil {
+				ctx.Form.form = &multiPartArgs{
+					args: form,
+				}
+			}
+		}
+	}
 
 	// Attach base fastHTTP request context
 	ctx.context = c
@@ -99,6 +123,8 @@ func Handle(h Handler) RequestHandler {
 }
 
 func (ctx *Context) reset() {
+	ctx.Form.form.Reset(ctx)
+	ctx.Form.form = nilArgsValuer
 	ctx.context = nil
 }
 
