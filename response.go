@@ -37,6 +37,16 @@ func (ctx *Context) ContentType(contentType string, charset ...string) *Context 
 	return ctx
 }
 
+// Redirect redirects the request to a given URL with status code 302 (Found) if other redirect status code
+// not set already.
+func (ctx *Context) Redirect(url string) {
+	if fasthttp.StatusCodeIsRedirect(ctx.Response().StatusCode()) {
+		ctx.StatusCode(fasthttp.StatusFound)
+	}
+	// TODO: Check if it's safe to redirect to provided URL
+	ctx.Header.Set("Location", url)
+}
+
 // JSON serializes the given struct as JSON and sets it as the response body.
 func (ctx *Context) JSON(obj interface{}) {
 	ctx.Response().Header.SetContentTypeBytes(contentTypeJSON)
