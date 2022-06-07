@@ -41,7 +41,7 @@ func forwardedFor(ctx *azugo.Context) net.IP {
 	xff := buf.Bytes()
 	if len(xff) > 0 {
 		p := 0
-		for i := ctx.App().RouterOptions.ProxyOptions.ForwardLimit; i > 0; i-- {
+		for i := ctx.App().RouterOptions.Proxy.ForwardLimit; i > 0; i-- {
 			if p > 0 {
 				xff = xff[:p-2]
 			}

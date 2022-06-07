@@ -31,8 +31,11 @@ type RequestHandlerFunc func(h RequestHandler) RequestHandler
 
 // RouterOptions allow to configure the router behavior
 type RouterOptions struct {
-	// ProxyOptions is the options to describe the trusted proxies.
-	ProxyOptions ProxyOptions
+	// Proxy is the options to describe the trusted proxies.
+	Proxy ProxyOptions
+
+	// CorsOptions is the options to describe Cross-Origin Resource Sharing (CORS)
+	CORS CORSOptions
 
 	// Host is the hostname to be used for URL generation. If not set
 	// it will be automatically detected from the request.

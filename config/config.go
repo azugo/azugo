@@ -19,6 +19,8 @@ type Configuration struct {
 
 	// Server configuration section.
 	Server *Server `mapstructure:"server"`
+	// CORS configuration section.
+	CORS *CORS `mapstructure:"cors"`
 }
 
 // New returns a new configuration.
@@ -67,6 +69,7 @@ func Bind[T any](c *T, prefix string, v *viper.Viper) *T {
 // Bind binds configuration section to viper.
 func (c *Configuration) Bind(_ string, v *viper.Viper) {
 	c.Server = Bind(c.Server, "server", v)
+	c.CORS = Bind(c.CORS, "cors", v)
 }
 
 // BindCmd adds configuration bindings from command arguments.
@@ -162,8 +165,12 @@ func (c *Configuration) Load(config interface{}, environment string) error {
 	return nil
 }
 
+// Validate the configuration.
 func (c *Configuration) Validate(validate *validation.Validate) error {
 	if err := c.Server.Validate(validate); err != nil {
+		return err
+	}
+	if err := c.CORS.Validate(validate); err != nil {
 		return err
 	}
 	return nil

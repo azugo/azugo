@@ -101,7 +101,8 @@ func New() *App {
 		validate: validation.New(),
 
 		RouterOptions: RouterOptions{
-			ProxyOptions:           defaultProxyOptions,
+			Proxy:                  defaultProxyOptions,
+			CORS:                   defaultCORSOptions,
 			RedirectTrailingSlash:  true,
 			RedirectFixedPath:      true,
 			HandleMethodNotAllowed: true,
