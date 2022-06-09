@@ -48,7 +48,7 @@ func (ctx *Context) Redirect(url string) {
 }
 
 // JSON serializes the given struct as JSON and sets it as the response body.
-func (ctx *Context) JSON(obj interface{}) {
+func (ctx *Context) JSON(obj any) {
 	ctx.Response().Header.SetContentTypeBytes(contentTypeJSON)
 	buf, err := json.Marshal(obj)
 	if err != nil {

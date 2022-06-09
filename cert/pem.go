@@ -16,7 +16,7 @@ const (
 	PEMBlockCertificate   = "CERTIFICATE"
 )
 
-func publicKey(priv interface{}) interface{} {
+func publicKey(priv any) any {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
 		return &k.PublicKey
@@ -27,7 +27,7 @@ func publicKey(priv interface{}) interface{} {
 	}
 }
 
-func pemBlockForKey(priv interface{}) *pem.Block {
+func pemBlockForKey(priv any) *pem.Block {
 	switch k := priv.(type) {
 	case *rsa.PrivateKey:
 		return &pem.Block{Type: PEMBlockRSAPrivateKey, Bytes: x509.MarshalPKCS1PrivateKey(k)}
@@ -46,7 +46,7 @@ func pemBlockForKey(priv interface{}) *pem.Block {
 // DERBytesToPEMBlocks converts certificate DER bytes and optional private key
 // to PEM blocks.
 // Returns certificate PEM block and private key PEM block.
-func DERBytesToPEMBlocks(der []byte, priv interface{}) ([]byte, []byte, error) {
+func DERBytesToPEMBlocks(der []byte, priv any) ([]byte, []byte, error) {
 	out := &bytes.Buffer{}
 	if err := pem.Encode(out, &pem.Block{Type: PEMBlockCertificate, Bytes: der}); err != nil {
 		return nil, nil, err

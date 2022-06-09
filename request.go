@@ -254,12 +254,12 @@ func (ctx *Context) UserAgent() string {
 // All the values are removed from context after returning from the top
 // RequestHandler. Additionally, Close method is called on each value
 // implementing io.Closer before removing the value from context.
-func (ctx *Context) SetUserValue(name string, value interface{}) {
+func (ctx *Context) SetUserValue(name string, value any) {
 	ctx.context.SetUserValue(name, value)
 }
 
 // UserValue returns the value stored via SetUserValue under the given key.
-func (ctx *Context) UserValue(name string) interface{} {
+func (ctx *Context) UserValue(name string) any {
 	return ctx.context.UserValue(name)
 }
 

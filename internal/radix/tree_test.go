@@ -23,7 +23,7 @@ func generateHandler() fasthttp.RequestHandler {
 }
 
 func testHandlerAndParams(
-	t *testing.T, tree *Tree, reqPath string, handler fasthttp.RequestHandler, wantTSR bool, params map[string]interface{},
+	t *testing.T, tree *Tree, reqPath string, handler fasthttp.RequestHandler, wantTSR bool, params map[string]any,
 ) {
 	for _, ctx := range []*fasthttp.RequestCtx{new(fasthttp.RequestCtx), nil} {
 
@@ -37,12 +37,12 @@ func testHandlerAndParams(
 		}
 
 		if ctx != nil {
-			resultParams := make(map[string]interface{})
+			resultParams := make(map[string]any)
 			if params == nil {
-				params = make(map[string]interface{})
+				params = make(map[string]any)
 			}
 
-			ctx.VisitUserValues(func(key []byte, value interface{}) {
+			ctx.VisitUserValues(func(key []byte, value any) {
 				resultParams[string(key)] = value
 			})
 
@@ -62,7 +62,7 @@ func Test_Tree(t *testing.T) {
 
 	type want struct {
 		tsr    bool
-		params map[string]interface{}
+		params map[string]any
 	}
 
 	tests := []struct {
@@ -76,7 +76,7 @@ func Test_Tree(t *testing.T) {
 				handler: generateHandler(),
 			},
 			want: want{
-				params: map[string]interface{}{
+				params: map[string]any{
 					"name": "atreugo",
 				},
 			},
@@ -119,7 +119,7 @@ func Test_Tree(t *testing.T) {
 				handler: generateHandler(),
 			},
 			want: want{
-				params: map[string]interface{}{
+				params: map[string]any{
 					"name": "atreugo",
 				},
 			},
@@ -141,7 +141,7 @@ func Test_Tree(t *testing.T) {
 				handler: generateHandler(),
 			},
 			want: want{
-				params: map[string]interface{}{
+				params: map[string]any{
 					"status": "active",
 				},
 			},
@@ -153,7 +153,7 @@ func Test_Tree(t *testing.T) {
 				handler: generateHandler(),
 			},
 			want: want{
-				params: map[string]interface{}{
+				params: map[string]any{
 					"filepath": "assets/js/main.js",
 				},
 			},
@@ -179,7 +179,7 @@ func Test_Tree(t *testing.T) {
 
 	tree.Add("/{filepath:*}", filepathHandler)
 
-	testHandlerAndParams(t, tree, "/js/main.js", filepathHandler, false, map[string]interface{}{
+	testHandlerAndParams(t, tree, "/js/main.js", filepathHandler, false, map[string]any{
 		"filepath": "js/main.js",
 	})
 }
@@ -214,19 +214,19 @@ func Test_AddWithParam(t *testing.T) {
 	tree.Add("/prefix{name:[a-z]+}/data", handler)
 	tree.Add("/api/{file}.json", handler)
 
-	testHandlerAndParams(t, tree, "/api/prefixV1_atreugo_sufix/files", handler, false, map[string]interface{}{
+	testHandlerAndParams(t, tree, "/api/prefixV1_atreugo_sufix/files", handler, false, map[string]any{
 		"version": "V1", "name": "atreugo",
 	})
-	testHandlerAndParams(t, tree, "/api/prefixV1_atreugo_sufix/data", handler, false, map[string]interface{}{
+	testHandlerAndParams(t, tree, "/api/prefixV1_atreugo_sufix/data", handler, false, map[string]any{
 		"version": "V1", "name": "atreugo",
 	})
-	testHandlerAndParams(t, tree, "/prefixatreugosuffix/data", handler, false, map[string]interface{}{
+	testHandlerAndParams(t, tree, "/prefixatreugosuffix/data", handler, false, map[string]any{
 		"name": "atreugo",
 	})
-	testHandlerAndParams(t, tree, "/prefixatreugo/data", handler, false, map[string]interface{}{
+	testHandlerAndParams(t, tree, "/prefixatreugo/data", handler, false, map[string]any{
 		"name": "atreugo",
 	})
-	testHandlerAndParams(t, tree, "/api/name.json", handler, false, map[string]interface{}{
+	testHandlerAndParams(t, tree, "/api/name.json", handler, false, map[string]any{
 		"file": "name",
 	})
 
@@ -240,12 +240,12 @@ func Test_TreeRootWildcard(t *testing.T) {
 	tree := New()
 	tree.Add("/{filepath:*}", handler)
 
-	testHandlerAndParams(t, tree, "/", handler, false, map[string]interface{}{
+	testHandlerAndParams(t, tree, "/", handler, false, map[string]any{
 		"filepath": "",
 	})
 
 	tree.Add("/hello/{a}/{b}/{c}", handler)
-	testHandlerAndParams(t, tree, "/hello/a", handler, false, map[string]interface{}{
+	testHandlerAndParams(t, tree, "/hello/a", handler, false, map[string]any{
 		"filepath": "hello/a",
 	})
 }

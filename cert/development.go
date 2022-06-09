@@ -14,7 +14,7 @@ import (
 
 // CreateDevTLSCertificate creates a self-signed certificate for development.
 // Returns certificate DER bytes and private key.
-func CreateDevTLSCertificate(dns ...string) ([]byte, interface{}, error) {
+func CreateDevTLSCertificate(dns ...string) ([]byte, any, error) {
 	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		return nil, nil, err

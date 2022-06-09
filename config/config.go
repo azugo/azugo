@@ -105,7 +105,7 @@ func (c *Configuration) SetConfigName(name string) {
 }
 
 // Load loads the configuration from the provided path.
-func (c *Configuration) Load(config interface{}, environment string) error {
+func (c *Configuration) Load(config any, environment string) error {
 	if c.loaded {
 		return nil
 	}

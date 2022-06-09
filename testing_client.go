@@ -45,7 +45,7 @@ func (c *TestClient) WithMultiPartFormBoundary(boundary string) TestClientOption
 }
 
 // WithQuery adds query parameters from map to query arguments.
-func (c *TestClient) WithQuery(params map[string]interface{}) TestClientOption {
+func (c *TestClient) WithQuery(params map[string]any) TestClientOption {
 	return func(tc *TestClient, r *fasthttp.Request) {
 		for key, value := range params {
 			var val string
@@ -108,7 +108,7 @@ func (c *TestClient) Patch(endpoint string, body []byte, options ...TestClientOp
 }
 
 // PatchJSON calls PATCH method with given object marshaled as JSON and options.
-func (c *TestClient) PatchJSON(endpoint string, body interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+func (c *TestClient) PatchJSON(endpoint string, body any, options ...TestClientOption) (*fasthttp.Response, error) {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
@@ -118,7 +118,7 @@ func (c *TestClient) PatchJSON(endpoint string, body interface{}, options ...Tes
 }
 
 // PatchForm calls PATCH method with given map marshaled as URL encoded form and options.
-func (c *TestClient) PatchForm(endpoint string, params map[string]interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+func (c *TestClient) PatchForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
 	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
 	return c.Patch(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
@@ -145,7 +145,7 @@ func (c *TestClient) Put(endpoint string, body []byte, options ...TestClientOpti
 }
 
 // PutJSON calls PUT method with given object marshaled as JSON and options.
-func (c *TestClient) PutJSON(endpoint string, body interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+func (c *TestClient) PutJSON(endpoint string, body any, options ...TestClientOption) (*fasthttp.Response, error) {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
@@ -155,7 +155,7 @@ func (c *TestClient) PutJSON(endpoint string, body interface{}, options ...TestC
 }
 
 // PutForm calls PUT method with given map marshaled as URL encoded form and options.
-func (c *TestClient) PutForm(endpoint string, params map[string]interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+func (c *TestClient) PutForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
 	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
 	return c.Put(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
@@ -182,7 +182,7 @@ func (c *TestClient) Post(endpoint string, body []byte, options ...TestClientOpt
 }
 
 // PostJSON calls POST method with given object marshaled as JSON and options.
-func (c *TestClient) PostJSON(endpoint string, body interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+func (c *TestClient) PostJSON(endpoint string, body any, options ...TestClientOption) (*fasthttp.Response, error) {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return nil, err
@@ -192,7 +192,7 @@ func (c *TestClient) PostJSON(endpoint string, body interface{}, options ...Test
 }
 
 // PostForm calls POST method with given map marshaled as URL encoded form and options.
-func (c *TestClient) PostForm(endpoint string, params map[string]interface{}, options ...TestClientOption) (*fasthttp.Response, error) {
+func (c *TestClient) PostForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
 	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
 	return c.Post(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }

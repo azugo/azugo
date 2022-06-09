@@ -28,7 +28,7 @@ func (b *Body) WriteTo(w io.Writer) error {
 // JSON unmarshals the request body into provided structure.
 // Optionally calls Validate method of the structure if it
 // implements validation.Validator interface.
-func (b *Body) JSON(v interface{}) error {
+func (b *Body) JSON(v any) error {
 	buf := b.Bytes()
 	if len(buf) == 0 {
 		return ErrParamRequired{"body"}
@@ -43,7 +43,7 @@ func (b *Body) JSON(v interface{}) error {
 }
 
 // XML unmarshals the request body into provided structure.
-func (b *Body) XML(v interface{}) error {
+func (b *Body) XML(v any) error {
 	buf := b.Bytes()
 	if len(buf) == 0 {
 		return ErrParamRequired{"body"}

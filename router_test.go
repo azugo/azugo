@@ -306,7 +306,7 @@ func TestRouterRegexUserValues(t *testing.T) {
 	v4 := a.Group("/v4")
 	id := v4.Group("/{id:^[1-9]\\d*}")
 
-	var v1 interface{}
+	var v1 any
 	id.Get("/click", func(ctx *Context) {
 		v1 = ctx.UserValue("id")
 		ctx.StatusCode(fasthttp.StatusOK)
@@ -477,7 +477,7 @@ func TestRouterPanicHandler(t *testing.T) {
 	a := NewTestApp()
 
 	panicHandled := false
-	a.RouterOptions.PanicHandler = func(ctx *Context, p interface{}) {
+	a.RouterOptions.PanicHandler = func(ctx *Context, p any) {
 		panicHandled = true
 	}
 

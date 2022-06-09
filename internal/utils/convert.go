@@ -14,7 +14,7 @@ func B2S(b []byte) string {
 }
 
 // MapToURLValues converts a map to url.Values.
-func MapToURLValues(m map[string]interface{}) string {
+func MapToURLValues(m map[string]any) string {
 	p := &url.Values{}
 
 	for key, value := range m {

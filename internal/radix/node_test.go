@@ -14,7 +14,7 @@ type testRequests []struct {
 	path       string
 	nilHandler bool
 	route      string
-	ps         map[string]interface{}
+	ps         map[string]any
 }
 
 type testRoute struct {
@@ -31,7 +31,7 @@ func fakeHandler(val string) fasthttp.RequestHandler {
 	}
 }
 
-func catchPanic(testFunc func()) (recv interface{}) {
+func catchPanic(testFunc func()) (recv any) {
 	defer func() {
 		recv = recover()
 	}()
@@ -68,12 +68,12 @@ func checkRequests(t *testing.T, tree *Tree, requests testRequests) {
 			}
 		}
 
-		params := make(map[string]interface{})
+		params := make(map[string]any)
 		if request.ps == nil {
-			request.ps = make(map[string]interface{})
+			request.ps = make(map[string]any)
 		}
 
-		ctx.VisitUserValues(func(key []byte, value interface{}) {
+		ctx.VisitUserValues(func(key []byte, value any) {
 			params[string(key)] = value
 		})
 
@@ -139,8 +139,8 @@ func TestTreeAddAndGet(t *testing.T) {
 		{"/β", false, "/β", nil},
 		{"/hello/test", false, "/hello/test", nil},
 		{"/hello/tooth", false, "/hello/tooth", nil},
-		{"/hello/testastretta", false, "/hello/{name}", map[string]interface{}{"name": "testastretta"}},
-		{"/hello/tes", false, "/hello/{name}", map[string]interface{}{"name": "tes"}},
+		{"/hello/testastretta", false, "/hello/{name}", map[string]any{"name": "testastretta"}},
+		{"/hello/tes", false, "/hello/{name}", map[string]any{"name": "tes"}},
 		{"/hello/test/bye", true, "", nil},
 	})
 }
@@ -172,19 +172,19 @@ func TestTreeWildcard(t *testing.T) {
 
 	checkRequests(t, tree, testRequests{
 		{"/", false, "/", nil},
-		{"/cmd/test/", false, "/cmd/{tool}/", map[string]interface{}{"tool": "test"}},
+		{"/cmd/test/", false, "/cmd/{tool}/", map[string]any{"tool": "test"}},
 		{"/cmd/test", true, "", nil},
-		{"/cmd/test/3", false, "/cmd/{tool}/{sub}", map[string]interface{}{"tool": "test", "sub": "3"}},
-		{"/src/", false, "/src/{filepath:*}", map[string]interface{}{"filepath": ""}},
-		{"/src/some/file.png", false, "/src/{filepath:*}", map[string]interface{}{"filepath": "some/file.png"}},
+		{"/cmd/test/3", false, "/cmd/{tool}/{sub}", map[string]any{"tool": "test", "sub": "3"}},
+		{"/src/", false, "/src/{filepath:*}", map[string]any{"filepath": ""}},
+		{"/src/some/file.png", false, "/src/{filepath:*}", map[string]any{"filepath": "some/file.png"}},
 		{"/search/", false, "/search/", nil},
-		{"/search/someth!ng+in+ünìcodé", false, "/search/{query}", map[string]interface{}{"query": "someth!ng+in+ünìcodé"}},
+		{"/search/someth!ng+in+ünìcodé", false, "/search/{query}", map[string]any{"query": "someth!ng+in+ünìcodé"}},
 		{"/search/someth!ng+in+ünìcodé/", true, "", nil},
-		{"/user_gopher", false, "/user_{name}", map[string]interface{}{"name": "gopher"}},
-		{"/user_gopher/about", false, "/user_{name}/about", map[string]interface{}{"name": "gopher"}},
-		{"/files/js/inc/framework.js", false, "/files/{dir}/{filepath:*}", map[string]interface{}{"dir": "js", "filepath": "inc/framework.js"}},
-		{"/info/gordon/public", false, "/info/{user}/public", map[string]interface{}{"user": "gordon"}},
-		{"/info/gordon/project/go", false, "/info/{user}/project/{project}", map[string]interface{}{"user": "gordon", "project": "go"}},
+		{"/user_gopher", false, "/user_{name}", map[string]any{"name": "gopher"}},
+		{"/user_gopher/about", false, "/user_{name}/about", map[string]any{"name": "gopher"}},
+		{"/files/js/inc/framework.js", false, "/files/{dir}/{filepath:*}", map[string]any{"dir": "js", "filepath": "inc/framework.js"}},
+		{"/info/gordon/public", false, "/info/{user}/public", map[string]any{"user": "gordon"}},
+		{"/info/gordon/project/go", false, "/info/{user}/project/{project}", map[string]any{"user": "gordon", "project": "go"}},
 		{"/info/gordon", true, "", nil},
 	})
 }
@@ -266,9 +266,9 @@ func TestTreeDuplicatePath(t *testing.T) {
 	checkRequests(t, tree, testRequests{
 		{"/", false, "/", nil},
 		{"/doc/", false, "/doc/", nil},
-		{"/src/some/file.png", false, "/src/{filepath:*}", map[string]interface{}{"filepath": "some/file.png"}},
-		{"/search/someth!ng+in+ünìcodé", false, "/search/{query}", map[string]interface{}{"query": "someth!ng+in+ünìcodé"}},
-		{"/user_gopher", false, "/user_{name}", map[string]interface{}{"name": "gopher"}},
+		{"/src/some/file.png", false, "/src/{filepath:*}", map[string]any{"filepath": "some/file.png"}},
+		{"/search/someth!ng+in+ünìcodé", false, "/search/{query}", map[string]any{"query": "someth!ng+in+ünìcodé"}},
+		{"/user_gopher", false, "/user_{name}", map[string]any{"name": "gopher"}},
 	})
 }
 

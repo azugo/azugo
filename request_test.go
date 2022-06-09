@@ -143,7 +143,7 @@ func TestRequestPaging(t *testing.T) {
 	})
 
 	c := a.TestClient()
-	resp, err := c.Get("/user", c.WithQuery(map[string]interface{}{
+	resp, err := c.Get("/user", c.WithQuery(map[string]any{
 		paginator.QueryParameterPage:    2,
 		paginator.QueryParameterPerPage: 10,
 	}))

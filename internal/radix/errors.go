@@ -15,13 +15,13 @@ const (
 
 type radixError struct {
 	msg    string
-	params []interface{}
+	params []any
 }
 
 func (err radixError) Error() string {
 	return fmt.Sprintf(err.msg, err.params...)
 }
 
-func newRadixError(msg string, params ...interface{}) radixError {
+func newRadixError(msg string, params ...any) radixError {
 	return radixError{msg, params}
 }

@@ -41,7 +41,7 @@ func TestFormValidParams(t *testing.T) {
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
-	resp, err := a.TestClient().PostForm("/user", map[string]interface{}{
+	resp, err := a.TestClient().PostForm("/user", map[string]any{
 		"multi": "a,c,b",
 		"i":     1,
 		"s":     "test",

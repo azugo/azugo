@@ -17,7 +17,7 @@ type ServerOptions struct {
 	AppVer string
 
 	// Configuration object that implements config.Configurable interface.
-	Configuration interface{}
+	Configuration any
 }
 
 // New returns new Azugo pre-configured server with default set of middlewares and default router options.

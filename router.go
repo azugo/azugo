@@ -101,7 +101,7 @@ type RouterOptions struct {
 	// 500 (Internal Server Error).
 	// The handler can be used to keep your server from crashing because of
 	// unrecovered panics.
-	PanicHandler func(*Context, interface{})
+	PanicHandler func(*Context, any)
 }
 
 // Mutable allows updating the route handler

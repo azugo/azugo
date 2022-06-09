@@ -100,7 +100,7 @@ func TestQueryInvalidValueError(t *testing.T) {
 	})
 
 	c := a.TestClient()
-	resp, err := c.Get("/user", c.WithQuery(map[string]interface{}{
+	resp, err := c.Get("/user", c.WithQuery(map[string]any{
 		"i": "test",
 		"l": "test",
 	}))
@@ -144,7 +144,7 @@ func TestQueryOptionalValidParams(t *testing.T) {
 	})
 
 	c := a.TestClient()
-	resp, err := c.Get("/user", c.WithQuery(map[string]interface{}{
+	resp, err := c.Get("/user", c.WithQuery(map[string]any{
 		"s": "test",
 		"i": 1,
 		"l": 500,
@@ -208,7 +208,7 @@ func TestQueryOptionalInvalidValueError(t *testing.T) {
 	})
 
 	c := a.TestClient()
-	resp, err := c.Get("/user", c.WithQuery(map[string]interface{}{
+	resp, err := c.Get("/user", c.WithQuery(map[string]any{
 		"i": "test",
 		"l": "test",
 	}))
