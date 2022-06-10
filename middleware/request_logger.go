@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"strconv"
 	"time"
 
@@ -8,7 +9,13 @@ import (
 	"azugo.io/azugo/internal/utils"
 
 	"github.com/valyala/bytebufferpool"
+	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
+)
+
+var (
+	protocolHTTP  = []byte("http")
+	protocolHTTPS = []byte("https")
 )
 
 func RequestLogger(logger *zap.Logger) func(azugo.RequestHandler) azugo.RequestHandler {
@@ -23,6 +30,12 @@ func RequestLogger(logger *zap.Logger) func(azugo.RequestHandler) azugo.RequestH
 
 			method := ctx.Method()
 			path := ctx.Path()
+			cleanedPath := path
+			basePath := ctx.BasePath()
+			if len(basePath) > 0 && basePath == path[:len(basePath)] {
+				cleanedPath = path[len(basePath):]
+			}
+
 			query := ctx.Request().URI().QueryString()
 
 			referer := ctx.Header.Get("Referer")
@@ -45,7 +58,7 @@ func RequestLogger(logger *zap.Logger) func(azugo.RequestHandler) azugo.RequestH
 			_, _ = msg.WriteString(method)
 			// Path
 			_ = msg.WriteByte(' ')
-			_, _ = msg.WriteString(path)
+			_, _ = msg.WriteString(cleanedPath)
 			// Query string
 			if len(query) > 0 {
 				_ = msg.WriteByte('?')
@@ -101,13 +114,28 @@ func RequestLogger(logger *zap.Logger) func(azugo.RequestHandler) azugo.RequestH
 
 			// URL
 			u := ctx.Request().URI()
+			scheme := u.Scheme()
+			if bytes.Equal(scheme, protocolHTTP) && ctx.IsTLS() {
+				scheme = protocolHTTPS
+			} else if bytes.Equal(scheme, protocolHTTPS) && !ctx.IsTLS() {
+				scheme = protocolHTTP
+			}
 			fields = append(fields,
-				zap.String("url.full", utils.B2S(u.FullURI())),
-				zap.String("url.scheme", utils.B2S(u.Scheme())),
+				zap.String("url.full", buildFullURI(ctx, cleanedPath, u)),
+				zap.String("url.original", utils.B2S(u.Path())),
+				zap.String("url.scheme", utils.B2S(scheme)),
 				zap.String("url.domain", utils.B2S(u.Host())),
-				zap.String("url.path", utils.B2S(u.Path())),
-				zap.String("url.fragment", utils.B2S(u.Hash())),
+				zap.String("url.path", cleanedPath),
 			)
+			if usr := u.Username(); len(usr) > 0 {
+				fields = append(fields, zap.String("url.username", utils.B2S(usr)))
+			}
+			if q := u.QueryString(); len(q) > 0 {
+				fields = append(fields, zap.String("url.query", utils.B2S(q)))
+			}
+			if h := u.Hash(); len(h) > 0 {
+				fields = append(fields, zap.String("url.fragment", utils.B2S(h)))
+			}
 
 			// Response
 			fields = append(fields,
@@ -132,4 +160,22 @@ func RequestLogger(logger *zap.Logger) func(azugo.RequestHandler) azugo.RequestH
 			logger.Info(msg.String(), fields...)
 		}
 	}
+}
+
+func buildFullURI(ctx *azugo.Context, path string, u *fasthttp.URI) string {
+	fullURI := bytebufferpool.Get()
+	defer bytebufferpool.Put(fullURI)
+
+	_, _ = fullURI.WriteString(ctx.BaseURL())
+	_, _ = fullURI.WriteString(path)
+	if q := u.QueryString(); len(q) > 0 {
+		_ = fullURI.WriteByte('?')
+		_, _ = fullURI.Write(q)
+	}
+	if h := u.Hash(); len(h) > 0 {
+		_ = fullURI.WriteByte('#')
+		_, _ = fullURI.Write(h)
+	}
+
+	return fullURI.String()
 }
