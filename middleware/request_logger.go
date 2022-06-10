@@ -32,7 +32,7 @@ func RequestLogger(logger *zap.Logger) func(azugo.RequestHandler) azugo.RequestH
 			path := ctx.Path()
 			cleanedPath := path
 			basePath := ctx.BasePath()
-			if len(basePath) > 0 && basePath == path[:len(basePath)] {
+			if len(basePath) > 0 && len(basePath) < len(path) && basePath == path[:len(basePath)] {
 				cleanedPath = path[len(basePath):]
 			}
 
