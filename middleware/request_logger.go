@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"azugo.io/azugo"
+	"azugo.io/azugo/internal/utils"
 
 	"github.com/valyala/bytebufferpool"
 	"go.uber.org/zap"
@@ -81,16 +82,54 @@ func RequestLogger(logger *zap.Logger) func(azugo.RequestHandler) azugo.RequestH
 			}
 			_ = msg.WriteByte('"')
 
-			logger.
-				Info(
-					msg.String(),
-					// Request
-					zap.String("http.request.method", method),
-					// Response
-					zap.Int("http.response.status_code", ctx.Response().StatusCode()),
-					// Event
-					zap.Int64("event.duration", ns),
-				)
+			fields := make([]zap.Field, 0, 10)
+
+			// Request
+			fields = append(fields,
+				zap.String("http.version", utils.B2S(ctx.Context().Request.Header.Protocol())),
+				zap.String("http.request.method", method),
+			)
+			if len(referer) > 0 {
+				fields = append(fields, zap.String("http.request.referer", referer))
+			}
+			if ct := ctx.Request().Header.ContentType(); len(ct) > 0 {
+				fields = append(fields, zap.String("http.request.mime_type", utils.B2S(ct)))
+			}
+			if len(userAgent) > 0 {
+				fields = append(fields, zap.String("user_agent.original", userAgent))
+			}
+
+			// URL
+			u := ctx.Request().URI()
+			fields = append(fields,
+				zap.String("url.full", utils.B2S(u.FullURI())),
+				zap.String("url.scheme", utils.B2S(u.Scheme())),
+				zap.String("url.domain", utils.B2S(u.Host())),
+				zap.String("url.path", utils.B2S(u.Path())),
+				zap.String("url.fragment", utils.B2S(u.Hash())),
+			)
+
+			// Response
+			fields = append(fields,
+				zap.Int("http.response.status_code", ctx.Response().StatusCode()),
+			)
+			if ct := ctx.Response().Header.ContentType(); len(ct) > 0 {
+				fields = append(fields, zap.String("http.response.mime_type", utils.B2S(ct)))
+			}
+
+			// Event
+			fields = append(fields,
+				zap.String("event.action", "http-request"),
+				zap.String("event.category", "web"),
+				zap.Int64("event.duration", ns),
+			)
+
+			// Source
+			fields = append(fields,
+				zap.String("source.ip", ctx.IP().String()),
+			)
+
+			logger.Info(msg.String(), fields...)
 		}
 	}
 }
