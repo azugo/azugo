@@ -13,7 +13,7 @@ import (
 // ServerHTTP is a HTTP server configuration.
 type ServerHTTP struct {
 	Enabled bool   `mapstructure:"enabled"`
-	Address string `mapstructure:"address" validate:"ip4_addr|ip6_addr|hostname|fqdn"`
+	Address string `mapstructure:"address" validate:"ip_addr|hostname|fqdn"`
 	Port    int    `mapstructure:"port" validate:"required,min=1,max=65535"`
 }
 
@@ -25,6 +25,7 @@ func (s *ServerHTTP) Bind(prefix string, v *viper.Viper) {
 	enabled := true
 
 	for _, servu := range strings.Split(os.Getenv("SERVER_URLS"), ";") {
+		servu = strings.TrimSpace(servu)
 		if len(servu) == 0 {
 			continue
 		}
@@ -55,7 +56,7 @@ func (s *ServerHTTP) Validate(valid *validation.Validate) error {
 // ServerHTTPS is a HTTPS server configuration.
 type ServerHTTPS struct {
 	Enabled            bool   `mapstructure:"enabled"`
-	Address            string `mapstructure:"address" validate:"ip4_addr|ip6_addr|hostname|fqdn"`
+	Address            string `mapstructure:"address" validate:"ip_addr|hostname|fqdn"`
 	Port               int    `mapstructure:"port" validate:"required,min=1,max=65535"`
 	CertificatePEMFile string `mapstructure:"certificate_pem_file" validate:"omitempty,file"`
 }
@@ -68,6 +69,7 @@ func (s *ServerHTTPS) Bind(prefix string, v *viper.Viper) {
 	enabled := false
 
 	for _, servu := range strings.Split(os.Getenv("SERVER_URLS"), ";") {
+		servu = strings.TrimSpace(servu)
 		if len(servu) == 0 {
 			continue
 		}
@@ -108,7 +110,7 @@ func (s *Server) Bind(prefix string, v *viper.Viper) {
 	// Special functionality for SERVER_URLS defaults
 	path := "/"
 
-	if servu := strings.Split(os.Getenv("SERVER_URLS"), ";"); len(servu) > 0 {
+	if servu := strings.Split(os.Getenv("SERVER_URLS"), ";"); len(servu) > 0 && len(servu[0]) > 0 {
 		if u, err := url.Parse(servu[0]); err == nil && len(u.Path) > 0 {
 			path = u.Path
 		}

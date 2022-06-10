@@ -44,6 +44,9 @@ func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
 		return nil, err
 	}
 
+	// Apply configuration.
+	applyConfig(a)
+
 	// Proxy support for client IP
 	a.Use(middleware.RealIP)
 	// Log requests
@@ -51,11 +54,21 @@ func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
 	// Provide metrics
 	a.Use(middleware.Metrics(azugo.DefaultMetricPath))
 	// Support CORS headers
-	cors := &a.RouterOptions.CORS
-	if len(conf.CORS.Origins) > 0 {
-		cors.SetOrigins(conf.CORS.Origins...)
-	}
-	a.Use(middleware.CORS(cors))
+	a.Use(middleware.CORS(&a.RouterOptions.CORS))
 
 	return a, nil
+}
+
+func applyConfig(a *azugo.App) {
+	conf := a.Config()
+
+	// Apply CORS configuration.
+	if len(conf.CORS.Origins) > 0 {
+		a.RouterOptions.CORS.SetOrigins(conf.CORS.Origins...)
+	}
+	// Apply Proxy configuration.
+	a.RouterOptions.Proxy.Clear().ForwardLimit = conf.Proxy.Limit
+	for _, p := range conf.Proxy.Address {
+		a.RouterOptions.Proxy.Add(p)
+	}
 }
