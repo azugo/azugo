@@ -19,8 +19,8 @@ type formKeyValuer interface {
 	Reset(*Context)
 }
 
-// Form represents the post form key-value pairs.
-type Form struct {
+// FormCtx represents the post form key-value pairs.
+type FormCtx struct {
 	noCopy noCopy //nolint:unused,structcheck
 
 	form formKeyValuer
@@ -124,13 +124,13 @@ func (a *multiPartArgs) Reset(ctx *Context) {
 }
 
 // Values returns all values associated with the given key in query.
-func (f *Form) Values(key string) []string {
+func (f *FormCtx) Values(key string) []string {
 	return f.form.Values(key)
 }
 
 // String gets the first value associated with the given key in form.
 // If there are no values associated with the key or value is empty returns ErrParamRequired error.
-func (f *Form) String(key string) (string, error) {
+func (f *FormCtx) String(key string) (string, error) {
 	v := f.form.Value(key)
 	if len(v) == 0 {
 		return "", ErrParamRequired{key}
@@ -139,7 +139,7 @@ func (f *Form) String(key string) (string, error) {
 }
 
 // StringOptional gets the first value associated with the given key in query or null if value is empty.
-func (f *Form) StringOptional(key string) *string {
+func (f *FormCtx) StringOptional(key string) *string {
 	v := f.form.Value(key)
 	if len(v) == 0 {
 		return nil
@@ -148,7 +148,7 @@ func (f *Form) StringOptional(key string) *string {
 }
 
 // Int64 returns the value of the parameter as int64.
-func (f *Form) Int64(key string) (int64, error) {
+func (f *FormCtx) Int64(key string) (int64, error) {
 	s, err := f.String(key)
 	if err != nil {
 		return 0, err
@@ -161,7 +161,7 @@ func (f *Form) Int64(key string) (int64, error) {
 }
 
 // Int64Optional returns the value of the parameter as optional int64 or null if value is empty.
-func (f *Form) Int64Optional(key string) (*int64, error) {
+func (f *FormCtx) Int64Optional(key string) (*int64, error) {
 	s := f.StringOptional(key)
 	if s == nil {
 		return nil, nil
@@ -174,7 +174,7 @@ func (f *Form) Int64Optional(key string) (*int64, error) {
 }
 
 // Int returns the value of the parameter as int.
-func (f *Form) Int(key string) (int, error) {
+func (f *FormCtx) Int(key string) (int, error) {
 	v, err := f.Int64(key)
 	if err != nil {
 		return 0, err
@@ -183,7 +183,7 @@ func (f *Form) Int(key string) (int, error) {
 }
 
 // IntOptional returns the value of the parameter as optional int or null if value is empty.
-func (f *Form) IntOptional(key string) (*int, error) {
+func (f *FormCtx) IntOptional(key string) (*int, error) {
 	v, err := f.Int64Optional(key)
 	if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func (f *Form) IntOptional(key string) (*int, error) {
 // Bool returns the value of the parameter as bool.
 //
 // Valid values ar "true", "false", "1" and "0".
-func (f *Form) Bool(key string) (bool, error) {
+func (f *FormCtx) Bool(key string) (bool, error) {
 	v, err := f.String(key)
 	if err != nil {
 		return false, err
@@ -209,7 +209,7 @@ func (f *Form) Bool(key string) (bool, error) {
 // BoolOptional returns the value of the parameter as optional bool or null if value is empty.
 //
 // Valid values ar "true", "false", "1" and "0".
-func (f *Form) BoolOptional(key string) (*bool, error) {
+func (f *FormCtx) BoolOptional(key string) (*bool, error) {
 	v := f.StringOptional(key)
 	if v == nil {
 		return nil, nil

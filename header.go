@@ -19,8 +19,8 @@ const (
 	ContentTypeXML  string = "application/xml"
 )
 
-// Header represents the key-value pairs in an HTTP header.
-type Header struct {
+// HeaderCtx represents the key-value pairs in an HTTP header.
+type HeaderCtx struct {
 	noCopy noCopy //nolint:unused,structcheck
 
 	app *App
@@ -29,12 +29,12 @@ type Header struct {
 
 // Get gets the first value associated with the given key in request.
 // If there are no values associated with the key, Get returns "".
-func (h *Header) Get(key string) string {
+func (h *HeaderCtx) Get(key string) string {
 	return utils.B2S(h.ctx.Request().Header.Peek(key))
 }
 
 // Values returns all values associated with the given key in request.
-func (h *Header) Values(key string) []string {
+func (h *HeaderCtx) Values(key string) []string {
 	data := make([]string, 0, 1)
 	h.ctx.Request().Header.VisitAll(func(k, val []byte) {
 		if !strings.EqualFold(key, utils.B2S(k)) {
@@ -55,23 +55,23 @@ func (h *Header) Values(key string) []string {
 
 // Set sets the response header entries associated with key to the single element value.
 // It replaces any existing values associated with key.
-func (h *Header) Set(key, value string) {
+func (h *HeaderCtx) Set(key, value string) {
 	h.ctx.Response().Header.Set(key, value)
 }
 
 // Add adds the key, value pair to the response header. It appends to any existing values associated with key.
-func (h *Header) Add(key, value string) {
+func (h *HeaderCtx) Add(key, value string) {
 	h.ctx.Response().Header.Add(key, value)
 }
 
 // Del deletes the values associated with key in both request and response.
-func (h *Header) Del(key string) {
+func (h *HeaderCtx) Del(key string) {
 	h.ctx.Request().Header.Del(key)
 	h.ctx.Response().Header.Del(key)
 }
 
 // AppendAccessControlExposeHeaders appends the given headers to the Access-Control-Expose-Headers header.
-func (h *Header) AppendAccessControlExposeHeaders(names ...string) {
+func (h *HeaderCtx) AppendAccessControlExposeHeaders(names ...string) {
 	val := h.ctx.Response().Header.Peek(HeaderAccessControlExposeHeaders)
 	if len(val) != 0 {
 		h.ctx.Response().Header.Set(HeaderAccessControlExposeHeaders, fmt.Sprintf("%s, %s", val, strings.Join(names, ", ")))

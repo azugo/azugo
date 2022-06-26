@@ -7,8 +7,8 @@ import (
 	"github.com/goccy/go-json"
 )
 
-// Body represents the request body.
-type Body struct {
+// BodyCtx represents the request body.
+type BodyCtx struct {
 	noCopy noCopy //nolint:unused,structcheck
 
 	app *App
@@ -16,19 +16,19 @@ type Body struct {
 }
 
 // Bytes returns the request body as raw bytes.
-func (b *Body) Bytes() []byte {
+func (b *BodyCtx) Bytes() []byte {
 	return b.ctx.Request().Body()
 }
 
 // Copy copies the request raw body to the provided writer.
-func (b *Body) WriteTo(w io.Writer) error {
+func (b *BodyCtx) WriteTo(w io.Writer) error {
 	return b.ctx.context.Request.BodyWriteTo(w)
 }
 
 // JSON unmarshals the request body into provided structure.
 // Optionally calls Validate method of the structure if it
 // implements validation.Validator interface.
-func (b *Body) JSON(v any) error {
+func (b *BodyCtx) JSON(v any) error {
 	buf := b.Bytes()
 	if len(buf) == 0 {
 		return ErrParamRequired{"body"}
@@ -43,7 +43,7 @@ func (b *Body) JSON(v any) error {
 }
 
 // XML unmarshals the request body into provided structure.
-func (b *Body) XML(v any) error {
+func (b *BodyCtx) XML(v any) error {
 	buf := b.Bytes()
 	if len(buf) == 0 {
 		return ErrParamRequired{"body"}

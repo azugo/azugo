@@ -14,12 +14,12 @@ require (
 	github.com/russellhaering/goxmldsig v1.2.0
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.7.2
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.37.0
 	go.elastic.co/ecszap v1.0.1
 	go.uber.org/zap v1.21.0
-	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
+	golang.org/x/sys v0.0.0-20220610221304-9f5ed59c137d
 )
 
 require (

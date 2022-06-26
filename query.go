@@ -8,8 +8,8 @@ import (
 	"azugo.io/azugo/internal/utils"
 )
 
-// Query represents the key-value pairs in an query string.
-type Query struct {
+// QueryCtx represents the key-value pairs in an query string.
+type QueryCtx struct {
 	noCopy noCopy //nolint:unused,structcheck
 
 	app *App
@@ -17,7 +17,7 @@ type Query struct {
 }
 
 // Values returns all values associated with the given key in query.
-func (q *Query) Values(key string) []string {
+func (q *QueryCtx) Values(key string) []string {
 	data := make([]string, 0, 1)
 	q.ctx.Request().URI().QueryArgs().VisitAll(func(k, val []byte) {
 		if !strings.EqualFold(key, utils.B2S(k)) {
@@ -38,7 +38,7 @@ func (q *Query) Values(key string) []string {
 
 // String gets the first value associated with the given key in query.
 // If there are no values associated with the key or value is empty returns ErrParamRequired error.
-func (q *Query) String(key string) (string, error) {
+func (q *QueryCtx) String(key string) (string, error) {
 	v := q.ctx.Request().URI().QueryArgs().Peek(key)
 	if len(v) == 0 {
 		return "", ErrParamRequired{key}
@@ -47,7 +47,7 @@ func (q *Query) String(key string) (string, error) {
 }
 
 // StringOptional gets the first value associated with the given key in query or null if value is empty.
-func (q *Query) StringOptional(key string) *string {
+func (q *QueryCtx) StringOptional(key string) *string {
 	v := q.ctx.Request().URI().QueryArgs().Peek(key)
 	if len(v) == 0 {
 		return nil
@@ -57,7 +57,7 @@ func (q *Query) StringOptional(key string) *string {
 }
 
 // Int64 returns the value of the parameter as int64.
-func (q *Query) Int64(key string) (int64, error) {
+func (q *QueryCtx) Int64(key string) (int64, error) {
 	s, err := q.String(key)
 	if err != nil {
 		return 0, err
@@ -70,7 +70,7 @@ func (q *Query) Int64(key string) (int64, error) {
 }
 
 // Int64Optional returns the value of the parameter as optional int64 or null if value is empty.
-func (q *Query) Int64Optional(key string) (*int64, error) {
+func (q *QueryCtx) Int64Optional(key string) (*int64, error) {
 	s := q.StringOptional(key)
 	if s == nil {
 		return nil, nil
@@ -83,7 +83,7 @@ func (q *Query) Int64Optional(key string) (*int64, error) {
 }
 
 // Int returns the value of the parameter as int.
-func (q *Query) Int(key string) (int, error) {
+func (q *QueryCtx) Int(key string) (int, error) {
 	v, err := q.Int64(key)
 	if err != nil {
 		return 0, err
@@ -92,7 +92,7 @@ func (q *Query) Int(key string) (int, error) {
 }
 
 // IntOptional returns the value of the parameter as optional int or null if value is empty.
-func (q *Query) IntOptional(key string) (*int, error) {
+func (q *QueryCtx) IntOptional(key string) (*int, error) {
 	v, err := q.Int64Optional(key)
 	if err != nil {
 		return nil, err
@@ -107,7 +107,7 @@ func (q *Query) IntOptional(key string) (*int, error) {
 // Bool returns the value of the parameter as bool.
 //
 // Valid values ar "true", "false", "1" and "0".
-func (q *Query) Bool(key string) (bool, error) {
+func (q *QueryCtx) Bool(key string) (bool, error) {
 	v, err := q.String(key)
 	if err != nil {
 		return false, err
@@ -118,7 +118,7 @@ func (q *Query) Bool(key string) (bool, error) {
 // BoolOptional returns the value of the parameter as optional bool or null if value is empty.
 //
 // Valid values ar "true", "false", "1" and "0".
-func (q *Query) BoolOptional(key string) (*bool, error) {
+func (q *QueryCtx) BoolOptional(key string) (*bool, error) {
 	v := q.StringOptional(key)
 	if v == nil {
 		return nil, nil

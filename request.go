@@ -41,15 +41,15 @@ type Context struct {
 	app *App
 
 	// Header access methods
-	Header Header
+	Header HeaderCtx
 	// Query access methods
-	Query Query
+	Query QueryCtx
 	// Body access methods
-	Body Body
+	Body BodyCtx
 	// Form access methods
-	Form Form
+	Form FormCtx
 	// Route parameters access methods
-	Params Params
+	Params ParamsCtx
 }
 
 func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
