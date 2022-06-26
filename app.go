@@ -8,6 +8,7 @@ import (
 	"sync"
 	"syscall"
 
+	"azugo.io/azugo/cache"
 	"azugo.io/azugo/cert"
 	"azugo.io/azugo/config"
 	"azugo.io/azugo/internal/radix"
@@ -51,6 +52,9 @@ type App struct {
 
 	// Configuration
 	config *config.Configuration
+
+	// Cache
+	cache *cache.Cache
 
 	// Background context
 	bgctx  context.Context
@@ -204,6 +208,9 @@ func (a *App) Config() *config.Configuration {
 // Start web application.
 func (a *App) Start() error {
 	if err := a.initLogger(); err != nil {
+		return err
+	}
+	if err := a.initCache(); err != nil {
 		return err
 	}
 

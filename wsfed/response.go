@@ -178,7 +178,7 @@ func (p *WsFederation) ReadResponse(ctx *azugo.Context, opt ...TokenParseOption)
 		return nil, err
 	}
 
-	if ok, err := p.NonceStore.Verify(wctx); !ok || err != nil {
+	if ok, err := p.NonceStore.Verify(ctx, wctx); !ok || err != nil {
 		if !ok {
 			return nil, ErrTokenNonceInvalid
 		}

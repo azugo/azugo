@@ -23,6 +23,8 @@ type Configuration struct {
 	CORS *CORS `mapstructure:"cors"`
 	// Proxy configuration section.
 	Proxy *Proxy `mapstructure:"proxy"`
+	// Cache configuration section.
+	Cache *Cache `mapstructure:"cache"`
 }
 
 // New returns a new configuration.
@@ -73,6 +75,7 @@ func (c *Configuration) Bind(_ string, v *viper.Viper) {
 	c.Server = Bind(c.Server, "server", v)
 	c.CORS = Bind(c.CORS, "cors", v)
 	c.Proxy = Bind(c.Proxy, "proxy", v)
+	c.Cache = Bind(c.Cache, "cache", v)
 }
 
 // BindCmd adds configuration bindings from command arguments.
@@ -177,6 +180,9 @@ func (c *Configuration) Validate(validate *validation.Validate) error {
 		return err
 	}
 	if err := c.Proxy.Validate(validate); err != nil {
+		return err
+	}
+	if err := c.Cache.Validate(validate); err != nil {
 		return err
 	}
 	return nil

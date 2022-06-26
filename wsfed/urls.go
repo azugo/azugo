@@ -1,6 +1,7 @@
 package wsfed
 
 import (
+	"context"
 	"net/url"
 	"time"
 )
@@ -22,7 +23,7 @@ func (o WithRequestWreply) apply(p *requestParams) {
 }
 
 // SigninURL returns the signin URL.
-func (p *WsFederation) SigninURL(realm string, options ...RequestOption) (string, error) {
+func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...RequestOption) (string, error) {
 	if err := p.check(p.defaultHttpClient(), false); err != nil {
 		return "", err
 	}
@@ -33,7 +34,7 @@ func (p *WsFederation) SigninURL(realm string, options ...RequestOption) (string
 	for _, o := range options {
 		o.apply(rp)
 	}
-	wctx, err := p.NonceStore.Create()
+	wctx, err := p.NonceStore.Create(ctx)
 	if err != nil {
 		return "", err
 	}

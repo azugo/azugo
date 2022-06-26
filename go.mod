@@ -6,6 +6,7 @@ require (
 	github.com/beevik/etree v1.1.0
 	github.com/dgrr/http2 v0.3.5
 	github.com/go-playground/validator/v10 v10.11.0
+	github.com/go-redis/redis/v9 v9.0.0-beta.1
 	github.com/goccy/go-json v0.9.7
 	github.com/lafriks/ttlcache/v3 v3.1.0
 	github.com/mattn/go-colorable v0.1.12
@@ -27,6 +28,7 @@ require (
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/go-playground/locales v0.14.0 // indirect
 	github.com/go-playground/universal-translator v0.18.0 // indirect

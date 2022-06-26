@@ -6,6 +6,8 @@ import (
 	"sync"
 	"time"
 
+	"azugo.io/azugo"
+	"azugo.io/azugo/cache"
 	"azugo.io/azugo/token/nonce"
 
 	"github.com/jonboulle/clockwork"
@@ -34,7 +36,7 @@ type WsFederation struct {
 }
 
 // New creates a new WS-Federation service instance.
-func New(metadataURL string) (*WsFederation, error) {
+func New(app *azugo.App, metadataURL string) (*WsFederation, error) {
 	var u *url.URL
 	if metadataURL != "" {
 		var err error
@@ -44,10 +46,15 @@ func New(metadataURL string) (*WsFederation, error) {
 		}
 	}
 
+	st, err := cache.Create[bool](app.Cache(), "wsfed-nonce", cache.DefaultTTL(10*time.Minute))
+	if err != nil {
+		return nil, err
+	}
+
 	return &WsFederation{
 		MetadataURL: u,
 		ClockSkew:   5 * time.Minute,
-		NonceStore:  nonce.NewMemoryNonceStore(10 * time.Minute),
+		NonceStore:  nonce.NewCacheNonceStore(st),
 
 		clock: clockwork.NewRealClock(),
 		signCertStore: &dsig.MemoryX509CertificateStore{
