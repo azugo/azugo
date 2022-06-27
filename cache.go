@@ -19,11 +19,21 @@ func (a *App) initCache() error {
 	if len(conf.ConnectionString) != 0 {
 		opts = append(opts, cache.ConnectionString(conf.ConnectionString))
 	}
+	if len(conf.Password) != 0 {
+		opts = append(opts, cache.ConnectionPassword(conf.Password))
+	}
 	if len(conf.KeyPrefix) != 0 {
 		opts = append(opts, cache.KeyPrefix(conf.KeyPrefix))
 	}
 	a.cache = cache.New(opts...)
 	return nil
+}
+
+func (a *App) closeCache() {
+	if a.cache == nil {
+		return
+	}
+	a.cache.Close()
 }
 
 func (a *App) Cache() *cache.Cache {

@@ -293,6 +293,8 @@ func (a *App) Start() error {
 // Stop application and its services
 func (a *App) Stop() {
 	a.bgstop()
+
+	a.closeCache()
 }
 
 // Runnable provides methods to run application that will gracefully stop

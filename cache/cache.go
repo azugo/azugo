@@ -32,6 +32,22 @@ type CacheInstance[T any] interface {
 	Delete(ctx context.Context, key string) error
 }
 
+// CacheInstanceCloser represents a cache instance close method.
+type CacheInstanceCloser interface {
+	// Close cache instance.
+	Close()
+}
+
+// Close all cache instances.
+func (c *Cache) Close() {
+	for _, i := range c.cache {
+		if c, ok := i.(CacheInstanceCloser); ok {
+			c.Close()
+		}
+	}
+	c.cache = nil
+}
+
 // Get returns pre-configured cache instance by name.
 func Get[T any](cache *Cache, name string) (CacheInstance[T], error) {
 	i, ok := cache.cache[name]
@@ -51,11 +67,24 @@ func Create[T any](cache *Cache, name string, opts ...CacheOption) (CacheInstanc
 
 	o := newCacheOptions(opt...)
 
+	var c CacheInstance[T]
+	var err error
+
 	switch o.Type {
 	case MemoryCache:
-		return newMemoryCache[T](opt...)
+		c, err = newMemoryCache[T](opt...)
+		if err != nil {
+			return nil, err
+		}
 	case RedisCache:
-		return newRedisCache[T](name, opt...)
+		c, err = newRedisCache[T](name, opt...)
+		if err != nil {
+			return nil, err
+		}
+	}
+	if c != nil {
+		cache.cache[name] = c
+		return c, nil
 	}
 	return nil, errors.New("unsupported cache type")
 }

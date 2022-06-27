@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"azugo.io/azugo"
+
 	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,6 +15,8 @@ import (
 
 func TestSigninURL(t *testing.T) {
 	a := azugo.NewTestApp()
+	a.Start(t)
+	defer a.Stop()
 
 	ws, err := New(a.App, "")
 	ws.IDPEndpoint = &url.URL{Scheme: "https", Host: "idp.example.local", Path: "/wsfed"}

@@ -14,6 +14,11 @@ import (
 	dsig "github.com/russellhaering/goxmldsig"
 )
 
+const (
+	// Cache key to store nonce in cache.
+	WsFederationNonceCacheKey string = "wsfed-nonce"
+)
+
 // WsFederation is a WS-Federation service to communicate with IDP.
 type WsFederation struct {
 	// MetadataURL is the URL to the WS-Federation metadata.
@@ -46,7 +51,7 @@ func New(app *azugo.App, metadataURL string) (*WsFederation, error) {
 		}
 	}
 
-	st, err := cache.Create[bool](app.Cache(), "wsfed-nonce", cache.DefaultTTL(10*time.Minute))
+	st, err := cache.Create[bool](app.Cache(), WsFederationNonceCacheKey, cache.DefaultTTL(10*time.Minute))
 	if err != nil {
 		return nil, err
 	}

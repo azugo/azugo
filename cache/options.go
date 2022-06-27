@@ -5,10 +5,11 @@ import (
 )
 
 type cacheOptions struct {
-	Type             CacheType
-	TTL              time.Duration
-	ConnectionString string
-	KeyPrefix        string
+	Type               CacheType
+	TTL                time.Duration
+	ConnectionString   string
+	ConnectionPassword string
+	KeyPrefix          string
 }
 
 // CacheOption is an option for the cache instance.
@@ -75,6 +76,13 @@ type ConnectionString string
 
 func (cs ConnectionString) applyCache(c *cacheOptions) {
 	c.ConnectionString = string(cs)
+}
+
+// ConnectionString is a connection password for the cache instance.
+type ConnectionPassword string
+
+func (cs ConnectionPassword) applyCache(c *cacheOptions) {
+	c.ConnectionPassword = string(cs)
 }
 
 // KeyPrefix is a prefix for the cache keys.

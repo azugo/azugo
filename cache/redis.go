@@ -21,6 +21,10 @@ func newRedisCache[T any](prefix string, opts ...CacheOption) (CacheInstance[T],
 	if err != nil {
 		return nil, err
 	}
+	// If password is provided override provided in connection string.
+	if len(opt.ConnectionPassword) != 0 {
+		redisOptions.Password = opt.ConnectionPassword
+	}
 	return &redisCache[T]{
 		con:    redis.NewClient(redisOptions),
 		prefix: opt.KeyPrefix + prefix + ":",
@@ -66,4 +70,9 @@ func (c *redisCache[T]) Delete(ctx context.Context, key string) error {
 		return s.Err()
 	}
 	return nil
+}
+
+func (c *redisCache[T]) Close() {
+	// Ignore close error.
+	_ = c.con.Close()
 }

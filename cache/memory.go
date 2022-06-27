@@ -42,3 +42,8 @@ func (c *memoryCache[T]) Delete(ctx context.Context, key string) error {
 	c.cache.Delete(key)
 	return nil
 }
+
+func (c *memoryCache[T]) Close() {
+	c.cache.DeleteAll()
+	c.cache = nil
+}
