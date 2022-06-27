@@ -217,3 +217,22 @@ func (f *FormCtx) BoolOptional(key string) (*bool, error) {
 	iv := strings.ToLower(*v) == "true" || *v == "1"
 	return &iv, nil
 }
+
+// File returns uploaded file data.
+func (f *FormCtx) File(key string) (*multipart.FileHeader, error) {
+	v := f.form.File(key)
+	if v == nil {
+		return nil, ErrParamRequired{key}
+	}
+	return v, nil
+}
+
+// FileOptional returns uploaded file data if it's provided.
+func (f *FormCtx) FileOptional(key string) *multipart.FileHeader {
+	return f.form.File(key)
+}
+
+// Files returns uploaded files.
+func (f *FormCtx) Files(key string) []*multipart.FileHeader {
+	return f.form.Files(key)
+}
