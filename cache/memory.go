@@ -17,8 +17,11 @@ func newMemoryCache[T any](opts ...CacheOption) (CacheInstance[T], error) {
 }
 
 func (c *memoryCache[T]) Get(ctx context.Context, key string, opts ...ItemOption[T]) (T, error) {
-	i, err := c.cache.Get(key)
 	var val T
+	if c.cache == nil {
+		return val, ErrCacheClosed
+	}
+	i, err := c.cache.Get(key)
 	if err != nil {
 		return val, err
 	}
@@ -29,6 +32,9 @@ func (c *memoryCache[T]) Get(ctx context.Context, key string, opts ...ItemOption
 }
 
 func (c *memoryCache[T]) Set(ctx context.Context, key string, value T, opts ...ItemOption[T]) error {
+	if c.cache == nil {
+		return ErrCacheClosed
+	}
 	opt := newItemOptions(opts...)
 	ttl := opt.TTL
 	if ttl == 0 {
@@ -39,11 +45,17 @@ func (c *memoryCache[T]) Set(ctx context.Context, key string, value T, opts ...I
 }
 
 func (c *memoryCache[T]) Delete(ctx context.Context, key string) error {
+	if c.cache == nil {
+		return ErrCacheClosed
+	}
 	c.cache.Delete(key)
 	return nil
 }
 
 func (c *memoryCache[T]) Close() {
+	if c.cache == nil {
+		return
+	}
 	c.cache.DeleteAll()
 	c.cache = nil
 }

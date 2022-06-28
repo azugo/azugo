@@ -7,10 +7,14 @@ import (
 	"github.com/go-redis/redis/v9"
 )
 
+var ErrCacheClosed = errors.New("cache closed")
+
 // Cache represents a cache.
 type Cache struct {
-	options []CacheOption
-	cache   map[string]any
+	options     []CacheOption
+	cache       map[string]any
+	redisCon    *redis.Client
+	redisConStr string
 }
 
 // New creates a new cache with specified type.
@@ -38,8 +42,27 @@ type CacheInstanceCloser interface {
 	Close()
 }
 
-// Close all cache instances.
+// Start cache.
+func (c *Cache) Start() error {
+	opt := newCacheOptions(c.options...)
+	if opt.Type == RedisCache {
+		con, err := newRedisClient(opt.ConnectionString, opt.ConnectionPassword)
+		if err != nil {
+			return err
+		}
+		c.redisCon = con
+		c.redisConStr = opt.ConnectionString
+	}
+	return nil
+}
+
+// Close cache and all its instances.
 func (c *Cache) Close() {
+	opt := newCacheOptions(c.options...)
+	if opt.Type == RedisCache {
+		_ = c.redisCon.Close()
+		c.redisCon = nil
+	}
 	for _, i := range c.cache {
 		if c, ok := i.(CacheInstanceCloser); ok {
 			c.Close()
@@ -77,7 +100,14 @@ func Create[T any](cache *Cache, name string, opts ...CacheOption) (CacheInstanc
 			return nil, err
 		}
 	case RedisCache:
-		c, err = newRedisCache[T](name, opt...)
+		con := cache.redisCon
+		if o.ConnectionString != cache.redisConStr {
+			con, err = newRedisClient(o.ConnectionString, o.ConnectionPassword)
+			if err != nil {
+				return nil, err
+			}
+		}
+		c, err = newRedisCache[T](name, con, opt...)
 		if err != nil {
 			return nil, err
 		}

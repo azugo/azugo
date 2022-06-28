@@ -26,7 +26,8 @@ func (a *App) initCache() error {
 		opts = append(opts, cache.KeyPrefix(conf.KeyPrefix))
 	}
 	a.cache = cache.New(opts...)
-	return nil
+
+	return a.cache.Start()
 }
 
 func (a *App) closeCache() {
