@@ -70,10 +70,10 @@ type TokenParseOption interface {
 	apply(*tokenParseOptions)
 }
 
-// TokenSave is an option to save the token raw and validated XML.
-type TokenSave bool
+// SaveToken is an option to save the token raw and validated XML.
+type SaveToken bool
 
-func (o TokenSave) apply(p *tokenParseOptions) {
+func (o SaveToken) apply(p *tokenParseOptions) {
 	p.SaveToken = bool(o)
 }
 

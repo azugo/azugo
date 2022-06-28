@@ -93,7 +93,7 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 	}
 
 	claims := &RegisteredClaims{
-		ID:         validated.SelectAttrValue("ID", ""),
+		ID:         validated.SelectAttrValue(idAttr, ""),
 		Audience:   make([]string, 0, 1),
 		Attributes: make(map[string][]string, 10),
 	}
@@ -106,11 +106,16 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 		claims.IssuedAt = &t
 	}
 
-	if issuer := validated.FindElement("./Issuer"); issuer != nil {
+	if issuer := validated.SelectAttrValue("Issuer", ""); len(issuer) > 0 {
+		claims.Issuer = issuer
+	} else if issuer := validated.FindElement("./Issuer"); issuer != nil {
 		claims.Issuer = issuer.Text()
 	}
 
-	if sub := validated.FindElement("./Subject/NameID"); sub != nil {
+	if sub := validated.FindElement("./AttributeStatement/Subject/NameIdentifier"); sub != nil {
+		claims.Subject.ID = sub.Text()
+		claims.Subject.Format = sub.SelectAttrValue("Format", "")
+	} else if sub := validated.FindElement("./Subject/NameID"); sub != nil {
 		claims.Subject.ID = sub.Text()
 		claims.Subject.Format = sub.SelectAttrValue("Format", "")
 	}
@@ -131,6 +136,9 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 			claims.ExpiresAt = &t
 		}
 
+		for _, aud := range cond.FindElements("./AudienceRestrictionCondition/Audience") {
+			claims.Audience = append(claims.Audience, aud.Text())
+		}
 		for _, aud := range cond.FindElements("./AudienceRestriction/Audience") {
 			claims.Audience = append(claims.Audience, aud.Text())
 		}
@@ -138,6 +146,13 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 
 	for _, attr := range validated.FindElements("./AttributeStatement/Attribute") {
 		name := attr.SelectAttrValue("Name", "")
+		if len(name) == 0 {
+			ns := attr.SelectAttrValue("AttributeNamespace", "")
+			name = attr.SelectAttrValue("AttributeName", "")
+			if len(ns) > 0 && len(name) > 0 {
+				name = fmt.Sprintf("%s/%s", ns, name)
+			}
+		}
 		if len(name) == 0 {
 			return nil, ErrTokenMalformed
 		}
