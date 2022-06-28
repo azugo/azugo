@@ -47,7 +47,15 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 		return nil, ErrTokenMalformed
 	}
 
+	idAttr := dsig.DefaultIdAttr
+	// Check if it has ID attribute, if not fallback to AssertionID
+	if el.SelectAttr(idAttr) == nil {
+		idAttr = "AssertionID"
+	}
+
 	ctx := dsig.NewDefaultValidationContext(p.signCertStore)
+	ctx.IdAttribute = idAttr
+
 	validated, err := ctx.Validate(el)
 	if err != nil {
 		if err == dsig.ErrMissingSignature {
