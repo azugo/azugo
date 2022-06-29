@@ -54,6 +54,7 @@ func (p *WsFederation) check(client *fasthttp.Client, force bool) error {
 		if p.IDPEndpoint == nil {
 			return errors.New("no MetadataURL or IDPEndpoint set")
 		}
+		p.ready = true
 		return nil
 	}
 
@@ -114,5 +115,6 @@ func (p *WsFederation) check(client *fasthttp.Client, force bool) error {
 		p.IDPEndpoint = addr
 	}
 
+	p.ready = true
 	return nil
 }
