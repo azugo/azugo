@@ -89,3 +89,14 @@ func (p *WsFederation) RefreshMetadata() error {
 
 	return p.check(p.defaultHttpClient(), true)
 }
+
+// Ready returns true if the service is ready.
+func (p *WsFederation) Ready() bool {
+	if p.check(p.defaultHttpClient(), false) != nil {
+		return false
+	}
+
+	p.lock.RLock()
+	defer p.lock.RUnlock()
+	return p.ready
+}
