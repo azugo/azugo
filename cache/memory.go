@@ -22,7 +22,7 @@ func (c *memoryCache[T]) Get(ctx context.Context, key string, opts ...ItemOption
 		return val, ErrCacheClosed
 	}
 	i, err := c.cache.Get(key)
-	if err != nil {
+	if err != nil || i == nil {
 		return val, err
 	}
 	if i.IsExpired() {
