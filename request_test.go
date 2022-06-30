@@ -169,3 +169,41 @@ func TestRequestDefaultPaging(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	require.NoError(t, err)
 }
+
+func TestRequestAccepts(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/test", func(ctx *Context) {
+		assert.True(t, ctx.Accepts("application/json"), "Should accept json")
+		assert.True(t, ctx.Accepts("text/html"), "Should accept html")
+		assert.True(t, ctx.Accepts("application/xml"), "Should accept xml")
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/test", c.WithHeader("Accept", "application/json, text/*; q=0.5, */*; q=0.1"))
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+}
+
+func TestRequestAcceptsExplicit(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/test", func(ctx *Context) {
+		assert.True(t, ctx.AcceptsExplicit("application/json"), "Should accept json")
+		assert.True(t, ctx.AcceptsExplicit("text/html"), "Should accept html")
+		assert.False(t, ctx.AcceptsExplicit("application/xml"), "Should not accept xml")
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/test", c.WithHeader("Accept", "application/json, text/*; q=0.5, */*; q=0.1"))
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+}

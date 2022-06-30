@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	HeaderAccept                     string = "Accept"
 	HeaderTotalCount                 string = "X-Total-Count"
 	HeaderLink                       string = "Link"
 	HeaderAccessControlExposeHeaders string = "Access-Control-Expose-Headers"

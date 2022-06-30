@@ -322,18 +322,24 @@ func (a *App) handleError(ctx *Context, err error) {
 	}
 
 	ct := ctx.Response().Header.ContentType()
-	if bytes.HasPrefix(ct, []byte("application/json")) {
+	if hasCT := bytes.HasPrefix(ct, []byte(ContentTypeJSON)); hasCT || ctx.AcceptsExplicit(ContentTypeJSON) {
 		data, ierr := json.Marshal(resp)
 		if ierr != nil {
 			a.Log().Error("error marshalling error response", zap.Error(ierr))
 			return
 		}
+		if !hasCT {
+			ctx.ContentType(ContentTypeJSON)
+		}
 		ctx.Response().SetBodyRaw(data)
-	} else if bytes.HasPrefix(ct, []byte("application/xml")) {
+	} else if hasCT := bytes.HasPrefix(ct, []byte(ContentTypeXML)); hasCT || ctx.AcceptsExplicit(ContentTypeXML) {
 		data, ierr := xml.Marshal(resp)
 		if ierr != nil {
 			a.Log().Error("error marshalling error response", zap.Error(ierr))
 			return
+		}
+		if !hasCT {
+			ctx.ContentType(ContentTypeXML)
 		}
 		ctx.Response().SetBodyRaw(data)
 	} else {

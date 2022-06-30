@@ -3,6 +3,7 @@ package azugo
 import (
 	"bytes"
 	"net"
+	"strings"
 
 	"azugo.io/azugo/internal/utils"
 	"azugo.io/azugo/paginator"
@@ -274,4 +275,79 @@ func (ctx *Context) Paging() *paginator.Paginator {
 		pageSize = defaultPageSize
 	}
 	return paginator.New(page*pageSize, pageSize, page)
+}
+
+// Accepts checks if provided content type is acceptable for client.
+func (ctx *Context) Accepts(contentType string) bool {
+	h := ctx.Header.Get(HeaderAccept)
+	if len(h) == 0 {
+		return true
+	}
+
+	ctGroup, _, _ := strings.Cut(contentType, "/")
+	ctGroup = ctGroup + "/*"
+
+	var part string
+	var pos int
+	for len(h) > 0 && pos != -1 {
+		pos = strings.IndexByte(h, ',')
+		if pos != -1 {
+			part = strings.Trim(h[:pos], " ")
+		} else {
+			part = strings.Trim(h, " ")
+		}
+		// Ignore priority
+		if f := strings.IndexByte(part, ';'); f != -1 {
+			part = strings.TrimRight(part[:f], " ")
+		}
+		if part == "*/*" {
+			return true
+		}
+		if part == contentType {
+			return true
+		}
+		if part == ctGroup {
+			return true
+		}
+		if pos != -1 {
+			h = h[pos+1:]
+		}
+	}
+	return false
+}
+
+// AcceptsExplicit checks if provided content type is explicitly acceptable for client.
+func (ctx *Context) AcceptsExplicit(contentType string) bool {
+	h := ctx.Header.Get(HeaderAccept)
+	if len(h) == 0 {
+		return false
+	}
+
+	ctGroup, _, _ := strings.Cut(contentType, "/")
+	ctGroup = ctGroup + "/*"
+
+	var part string
+	var pos int
+	for len(h) > 0 && pos != -1 {
+		pos = strings.IndexByte(h, ',')
+		if pos != -1 {
+			part = strings.Trim(h[:pos], " ")
+		} else {
+			part = strings.Trim(h, " ")
+		}
+		// Ignore priority
+		if f := strings.IndexByte(part, ';'); f != -1 {
+			part = strings.TrimRight(part[:f], " ")
+		}
+		if part == contentType {
+			return true
+		}
+		if part == ctGroup {
+			return true
+		}
+		if pos != -1 {
+			h = h[pos+1:]
+		}
+	}
+	return false
 }
