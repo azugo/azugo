@@ -112,7 +112,7 @@ func New() *App {
 			HandleMethodNotAllowed: true,
 			HandleOPTIONS:          true,
 			PanicHandler: func(ctx *Context, err any) {
-				ctx.Log().Error("Panic handler", zap.Any("error", err))
+				ctx.Log().Error("Unhandled error", zap.Any("error", err))
 			},
 		},
 
