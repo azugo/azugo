@@ -111,6 +111,9 @@ func New() *App {
 			RedirectFixedPath:      true,
 			HandleMethodNotAllowed: true,
 			HandleOPTIONS:          true,
+			PanicHandler: func(ctx *Context, err any) {
+				ctx.Log().Error("Panic handler", zap.Any("error", err))
+			},
 		},
 
 		ServerOptions: ServerOptions{
