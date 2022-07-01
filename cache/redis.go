@@ -20,7 +20,7 @@ func newRedisCache[T any](prefix string, con *redis.Client, opts ...CacheOption)
 
 	return &redisCache[T]{
 		con:    con,
-		prefix: opt.KeyPrefix + prefix + ":",
+		prefix: opt.KeyPrefix + ":" + prefix + ":",
 		ttl:    opt.TTL,
 	}, nil
 }
@@ -39,21 +39,21 @@ func newRedisClient(constr, password string) (*redis.Client, error) {
 }
 
 func (c *redisCache[T]) Get(ctx context.Context, key string, opts ...ItemOption[T]) (T, error) {
-	var val T
+	val := new(T)
 	if c.con == nil {
-		return val, ErrCacheClosed
+		return *val, ErrCacheClosed
 	}
 	s := c.con.Get(ctx, c.prefix+key)
 	if s.Err() == redis.Nil {
-		return val, nil
+		return *val, nil
 	}
 	if s.Err() != nil {
-		return val, s.Err()
+		return *val, s.Err()
 	}
-	if err := json.Unmarshal([]byte(s.Val()), &val); err != nil {
-		return val, fmt.Errorf("invalid cache value: %w", err)
+	if err := json.Unmarshal([]byte(s.Val()), val); err != nil {
+		return *val, fmt.Errorf("invalid cache value: %w", err)
 	}
-	return val, nil
+	return *val, nil
 }
 
 func (c *redisCache[T]) Set(ctx context.Context, key string, value T, opts ...ItemOption[T]) error {
