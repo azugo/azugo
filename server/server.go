@@ -52,7 +52,9 @@ func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
 	// Log requests
 	a.Use(middleware.RequestLogger(a.Log().Named("http")))
 	// Provide metrics
-	a.Use(middleware.Metrics(azugo.DefaultMetricPath))
+	if a.Config().Metrics.Enabled {
+		a.Use(middleware.Metrics(a.Config().Metrics.Path))
+	}
 	// Support CORS headers
 	a.Use(middleware.CORS(&a.RouterOptions.CORS))
 
@@ -70,5 +72,12 @@ func applyConfig(a *azugo.App) {
 	a.RouterOptions.Proxy.Clear().ForwardLimit = conf.Proxy.Limit
 	for _, p := range conf.Proxy.Address {
 		a.RouterOptions.Proxy.Add(p)
+	}
+	// Apply Metrics configuration.
+	if conf.Metrics.Enabled {
+		a.MetricsOptions.Clear()
+		for _, p := range conf.Metrics.Address {
+			a.MetricsOptions.Add(p)
+		}
 	}
 }
