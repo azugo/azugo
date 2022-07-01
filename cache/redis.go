@@ -87,6 +87,17 @@ func (c *redisCache[T]) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
+func (c *redisCache[T]) Ping(ctx context.Context) error {
+	if c.con == nil {
+		return nil
+	}
+	s := c.con.Ping(ctx)
+	if s.Err() != nil {
+		return s.Err()
+	}
+	return nil
+}
+
 func (c *redisCache[T]) Close() {
 	if c.con == nil {
 		return

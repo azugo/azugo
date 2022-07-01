@@ -42,6 +42,11 @@ type CacheInstanceCloser interface {
 	Close()
 }
 
+// CacheInstancePinger represents a cache instance ping method.
+type CacheInstancePinger interface {
+	Ping(ctx context.Context) error
+}
+
 // Start cache.
 func (c *Cache) Start() error {
 	opt := newCacheOptions(c.options...)
@@ -69,6 +74,24 @@ func (c *Cache) Close() {
 		}
 	}
 	c.cache = nil
+}
+
+// Ping cache and all its instances.
+func (c *Cache) Ping(ctx context.Context) error {
+	opt := newCacheOptions(c.options...)
+	if opt.Type == RedisCache && c.redisCon != nil {
+		if s := c.redisCon.Ping(ctx); s != nil && s.Err() != nil {
+			return s.Err()
+		}
+	}
+	for _, i := range c.cache {
+		if c, ok := i.(CacheInstancePinger); ok {
+			if err := c.Ping(ctx); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 // Get returns pre-configured cache instance by name.
