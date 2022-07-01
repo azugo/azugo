@@ -3,6 +3,7 @@ package middleware
 import (
 	"bytes"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -76,12 +77,12 @@ func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
 func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 	metricsHandler := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
 	return func(ctx *azugo.Context) {
-		if bytes.EqualFold(ctx.Context().Path(), []byte(p.MetricsPath)) && p.isTrusted(ctx) {
+		if strings.EqualFold(ctx.Path(), p.MetricsPath) && p.isTrusted(ctx) {
 			metricsHandler(ctx.Context())
 			return
 		}
 		for _, path := range ctx.App().MetricsOptions.SkipPaths {
-			if bytes.HasPrefix(bytes.ToLower(ctx.Context().Path()), []byte(path)) {
+			if strings.HasPrefix(strings.ToLower(ctx.Path()), path) {
 				h(ctx)
 				return
 			}
@@ -100,8 +101,12 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 		}
 		elapsed := float64(time.Since(ctx.Context().ConnTime())) / float64(time.Second)
 		respSize := float64(len(ctx.Response().Body()))
-		p.reqDur.WithLabelValues(strconv.Itoa(status), ctx.Method(), ctx.Path()).Observe(elapsed)
-		p.reqCnt.WithLabelValues(strconv.Itoa(status), ctx.Method(), ctx.Path()).Inc()
+		path := ctx.RouterPath()
+		if path == "" {
+			path = ctx.Path()
+		}
+		p.reqDur.WithLabelValues(strconv.Itoa(status), ctx.Method(), path).Observe(elapsed)
+		p.reqCnt.WithLabelValues(strconv.Itoa(status), ctx.Method(), path).Inc()
 		p.reqSize.Observe(float64(<-reqSize))
 		p.respSize.Observe(respSize)
 	}
