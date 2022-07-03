@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"time"
 )
 
@@ -10,6 +11,7 @@ type cacheOptions struct {
 	ConnectionString   string
 	ConnectionPassword string
 	KeyPrefix          string
+	Loader             func(ctx context.Context, key string) (interface{}, error)
 }
 
 // CacheOption is an option for the cache instance.
@@ -90,4 +92,13 @@ type KeyPrefix string
 
 func (kp KeyPrefix) applyCache(c *cacheOptions) {
 	c.KeyPrefix = string(kp)
+}
+
+// Loader is a function that loads data when cache key is missing.
+//
+// WARNING: it's not guaranteed that the function will be called only once.
+type Loader func(ctx context.Context, key string) (any, error)
+
+func (l Loader) applyCache(c *cacheOptions) {
+	c.Loader = l
 }

@@ -13,6 +13,7 @@ type redisCache[T any] struct {
 	con    *redis.Client
 	prefix string
 	ttl    time.Duration
+	loader func(ctx context.Context, key string) (interface{}, error)
 }
 
 func newRedisCache[T any](prefix string, con *redis.Client, opts ...CacheOption) (CacheInstance[T], error) {
@@ -22,6 +23,7 @@ func newRedisCache[T any](prefix string, con *redis.Client, opts ...CacheOption)
 		con:    con,
 		prefix: opt.KeyPrefix + ":" + prefix + ":",
 		ttl:    opt.TTL,
+		loader: opt.Loader,
 	}, nil
 }
 
@@ -45,6 +47,20 @@ func (c *redisCache[T]) Get(ctx context.Context, key string, opts ...ItemOption[
 	}
 	s := c.con.Get(ctx, c.prefix+key)
 	if s.Err() == redis.Nil {
+		if c.loader != nil {
+			v, err := c.loader(ctx, key)
+			if err != nil {
+				return *val, err
+			}
+			vv, ok := v.(T)
+			if !ok {
+				return *val, fmt.Errorf("invalid value from loader: %v", v)
+			}
+			if err := c.Set(ctx, key, vv, opts...); err != nil {
+				return *val, err
+			}
+			return vv, nil
+		}
 		return *val, nil
 	}
 	if s.Err() != nil {

@@ -2,18 +2,43 @@ package cache
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/lafriks/ttlcache/v3"
 )
 
 type memoryCache[T any] struct {
-	cache *ttlcache.Cache[string, T]
+	cache  *ttlcache.Cache[string, T]
+	loader func(ctx context.Context, key string) (interface{}, error)
 }
 
 func newMemoryCache[T any](opts ...CacheOption) (CacheInstance[T], error) {
 	opt := newCacheOptions(opts...)
 	c := ttlcache.New(ttlcache.WithTTL[string, T](opt.TTL))
-	return &memoryCache[T]{c}, nil
+	return &memoryCache[T]{
+		cache:  c,
+		loader: opt.Loader,
+	}, nil
+}
+
+func (c *memoryCache[T]) getLoader(ctx context.Context, opts ...ItemOption[T]) ttlcache.LoaderFunc[string, T] {
+	return func(cache *ttlcache.Cache[string, T], key string) (*ttlcache.Item[string, T], error) {
+		opt := newItemOptions(opts...)
+		ttl := opt.TTL
+		if ttl == 0 {
+			ttl = ttlcache.DefaultTTL
+		}
+
+		v, err := c.loader(ctx, key)
+		if err != nil {
+			return nil, err
+		}
+		vv, ok := v.(T)
+		if !ok {
+			return nil, fmt.Errorf("invalid value from loader: %v", v)
+		}
+		return cache.Set(key, vv, ttl), nil
+	}
 }
 
 func (c *memoryCache[T]) Get(ctx context.Context, key string, opts ...ItemOption[T]) (T, error) {
@@ -21,7 +46,14 @@ func (c *memoryCache[T]) Get(ctx context.Context, key string, opts ...ItemOption
 	if c.cache == nil {
 		return val, ErrCacheClosed
 	}
-	i, err := c.cache.Get(key)
+
+	cacheOpts := make([]ttlcache.Option[string, T], 0)
+
+	if c.loader != nil {
+		cacheOpts = append(cacheOpts, ttlcache.WithLoader[string, T](c.getLoader(ctx, opts...)))
+	}
+
+	i, err := c.cache.Get(key, cacheOpts...)
 	if err != nil || i == nil {
 		return val, err
 	}
