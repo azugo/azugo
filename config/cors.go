@@ -24,7 +24,7 @@ func (c *CORS) Bind(prefix string, v *viper.Viper) {
 	origins := ""
 	if origin := strings.Split(os.Getenv("CORS_ORIGINS"), ";"); len(origin) > 0 && len(origin[0]) > 0 {
 		if o, err := url.Parse(strings.TrimSpace(origin[0])); err == nil && len(o.Host) > 0 {
-			origins = o.Host
+			origins = o.Scheme + "://" + o.Host
 		}
 	}
 
