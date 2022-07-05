@@ -114,6 +114,9 @@ func New() *App {
 			PanicHandler: func(ctx *Context, err any) {
 				ctx.Log().Error("Unhandled error", zap.Any("error", err))
 			},
+			GlobalOPTIONS: func(ctx *Context) {
+				ctx.StatusCode(fasthttp.StatusNoContent)
+			},
 		},
 
 		ServerOptions: ServerOptions{
