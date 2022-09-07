@@ -403,7 +403,7 @@ func TestRouterOPTIONS(t *testing.T) {
 	}
 
 	// path
-	checkHandling("/path", "OPTIONS, POST", fasthttp.StatusOK)
+	checkHandling("/path", "OPTIONS, POST", fasthttp.StatusNoContent)
 
 	resp, err := a.TestClient().Options("/doesnotexist")
 	require.NoError(t, err)
@@ -415,12 +415,12 @@ func TestRouterOPTIONS(t *testing.T) {
 
 	// set a global OPTIONS handler
 	a.RouterOptions.GlobalOPTIONS = func(ctx *Context) {
-		// Adjust status code to 204
-		ctx.StatusCode(fasthttp.StatusNoContent)
+		// Adjust status code to 200
+		ctx.StatusCode(fasthttp.StatusOK)
 	}
 
 	// path
-	checkHandling("/path", "GET, OPTIONS, POST", fasthttp.StatusNoContent)
+	checkHandling("/path", "GET, OPTIONS, POST", fasthttp.StatusOK)
 
 	// custom handler
 	var custom bool

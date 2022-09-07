@@ -4,18 +4,33 @@ import (
 	"net/url"
 
 	"azugo.io/azugo"
+	"azugo.io/azugo/config"
 	"azugo.io/azugo/server"
-
+	cs "azugo.io/core/server"
 	"github.com/valyala/fasthttp"
 )
+
+// Configuration represents application configuration
+type Configuration struct {
+	*config.Configuration `mapstructure:",squash"`
+
+	// Custom configuration section.
+	Custom string `mapstructure:"custom"`
+}
 
 type TestRequest struct {
 	Name string `json:"name" validate:"required,max=50"`
 }
 
 func main() {
-	a, err := server.New(nil, server.ServerOptions{
+	conf := &Configuration{
+		Configuration: config.New(),
+	}
+
+	a, err := server.New(nil, cs.ServerOptions{
 		AppName: "REST API Example",
+
+		Configuration: conf,
 	})
 	if err != nil {
 		panic(err)
@@ -42,5 +57,5 @@ func main() {
 	}
 	a.Proxy("/example", azugo.ProxyUpstream(u))
 
-	azugo.Run(a)
+	cs.Run(a)
 }

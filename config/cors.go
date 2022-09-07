@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	"azugo.io/azugo/validation"
+	"azugo.io/core/validation"
 	"github.com/spf13/viper"
 )
 

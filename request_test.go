@@ -7,6 +7,7 @@ import (
 
 	"azugo.io/azugo/paginator"
 
+	"azugo.io/core"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -19,7 +20,7 @@ func TestRequestBasic(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		assert.NotNil(t, ctx.App(), "App should not be nil")
-		assert.Equal(t, EnvironmentProduction, ctx.Env(), "Environment should be production")
+		assert.Equal(t, core.EnvironmentProduction, ctx.Env(), "Environment should be production")
 		assert.Equal(t, fasthttp.MethodGet, ctx.Method(), "Request method should be GET")
 		assert.Equal(t, "/user", ctx.Path(), "Request path should be /user")
 		assert.Equal(t, "test/1.0", ctx.UserAgent(), "User agent should be test/1.0")

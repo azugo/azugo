@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"azugo.io/azugo/config"
+	"azugo.io/core"
 
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -16,6 +17,7 @@ import (
 // TestApp represents testing app instance
 type TestApp struct {
 	*App
+
 	ln   *fasthttputil.InmemoryListener
 	logs *observer.ObservedLogs
 }
@@ -33,21 +35,28 @@ func NewTestApp(app ...*App) *TestApp {
 	// Trust all proxy headers for test app
 	a.RouterOptions.Proxy.TrustAll = true
 
-	observedZapCore, observedLogs := observer.New(zap.InfoLevel)
-	a.logger = zap.New(observedZapCore)
-
 	conf := config.New()
 	a.SetConfig(nil, conf)
-	_ = conf.Load(conf, string(EnvironmentDevelopment))
+	a.App.SetConfig(nil, conf.Core())
+	_ = conf.Load(nil, conf, string(core.EnvironmentDevelopment))
 
 	return &TestApp{
-		App:  a,
-		logs: observedLogs,
+		App: a,
 	}
+}
+
+func (a *TestApp) initLogs() {
+	observedZapCore, observedLogs := observer.New(zap.InfoLevel)
+	a.ReplaceLogger(zap.New(observedZapCore))
+
+	a.logs = observedLogs
 }
 
 // Start starts testing web server instance
 func (a *TestApp) Start(t *testing.T) {
+	a.initLogs()
+	a.App.App.Start()
+
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
 		Handler:                      a.App.Handler,
@@ -64,9 +73,8 @@ func (a *TestApp) Start(t *testing.T) {
 
 // StartBenchmark starts benchmarking web server instance
 func (a *TestApp) StartBenchmark() {
-	if err := a.App.initLogger(); err != nil {
-		panic(err)
-	}
+	a.initLogs()
+	a.App.App.Start()
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,

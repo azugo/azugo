@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"azugo.io/azugo/cache"
+	"azugo.io/core/cache"
 	"github.com/oklog/ulid/v2"
 )
 

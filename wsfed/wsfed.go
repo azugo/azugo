@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"azugo.io/azugo"
-	"azugo.io/azugo/cache"
 	"azugo.io/azugo/token/nonce"
 
+	"azugo.io/core/cache"
 	"github.com/jonboulle/clockwork"
 	dsig "github.com/russellhaering/goxmldsig"
 )

@@ -8,6 +8,7 @@ import (
 	"azugo.io/azugo/internal/utils"
 	"azugo.io/azugo/paginator"
 
+	"azugo.io/core"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -39,7 +40,8 @@ type Context struct {
 	path       string // HTTP path with the modifications by the configuration -> string copy from pathBuffer
 	routerPath string // HTTP path as registered in the router
 
-	app *App
+	app  *App
+	user User
 
 	// Header access methods
 	Header HeaderCtx
@@ -130,6 +132,7 @@ func Handle(h Handler) RequestHandler {
 func (ctx *Context) reset() {
 	ctx.Form.form.Reset(ctx)
 	ctx.Form.form = nilArgsValuer
+	ctx.user = nil
 	ctx.context = nil
 }
 
@@ -144,7 +147,7 @@ func (ctx *Context) Log() *zap.Logger {
 }
 
 // Env returns the application environment.
-func (ctx *Context) Env() Environment {
+func (ctx *Context) Env() core.Environment {
 	return ctx.app.Env()
 }
 

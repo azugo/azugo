@@ -6,7 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"azugo.io/azugo/validation"
+	"azugo.io/core/config"
+	"azugo.io/core/validation"
 	"github.com/spf13/viper"
 )
 
@@ -120,8 +121,8 @@ func (s *Server) Bind(prefix string, v *viper.Viper) {
 
 	_ = v.BindEnv(prefix+".path", "BASE_PATH")
 
-	s.HTTP = Bind(s.HTTP, prefix+".http", v)
-	s.HTTPS = Bind(s.HTTPS, prefix+".https", v)
+	s.HTTP = config.Bind(s.HTTP, prefix+".http", v)
+	s.HTTPS = config.Bind(s.HTTPS, prefix+".https", v)
 }
 
 // Validate server configuration section.
