@@ -6,16 +6,30 @@ import (
 	"azugo.io/azugo"
 	"azugo.io/azugo/config"
 	"azugo.io/azugo/server"
-	cs "azugo.io/core/server"
+	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 )
+
+type CustomConfiguration struct {
+	Value string `mapstructure:"value"`
+}
 
 // Configuration represents application configuration
 type Configuration struct {
 	*config.Configuration `mapstructure:",squash"`
 
 	// Custom configuration section.
-	Custom string `mapstructure:"custom"`
+	Custom *CustomConfiguration `mapstructure:"custom"`
+}
+
+func (c *Configuration) ServerCore() *config.Configuration {
+	return c.Configuration
+}
+
+func (c *Configuration) Bind(prefix string, v *viper.Viper) {
+	c.Configuration.Bind(prefix, v)
+
+	c.Custom = config.Bind(c.Custom, "custom", v)
 }
 
 type TestRequest struct {
@@ -27,7 +41,7 @@ func main() {
 		Configuration: config.New(),
 	}
 
-	a, err := server.New(nil, cs.ServerOptions{
+	a, err := server.New(nil, server.ServerOptions{
 		AppName: "REST API Example",
 
 		Configuration: conf,
@@ -57,5 +71,5 @@ func main() {
 	}
 	a.Proxy("/example", azugo.ProxyUpstream(u))
 
-	cs.Run(a)
+	server.Run(a)
 }

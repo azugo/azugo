@@ -11,8 +11,11 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ServerOptions is a set of options for the server.
+type ServerOptions server.ServerOptions
+
 // New returns new Azugo pre-configured server with default set of middlewares and default router options.
-func New(cmd *cobra.Command, opt server.ServerOptions) (*azugo.App, error) {
+func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
 	a := azugo.New()
 
 	// Support extended configuration.
@@ -29,7 +32,7 @@ func New(cmd *cobra.Command, opt server.ServerOptions) (*azugo.App, error) {
 	}
 	a.SetConfig(cmd, conf)
 
-	ca, err := server.New(cmd, opt)
+	ca, err := server.New(cmd, server.ServerOptions(opt))
 	if err != nil {
 		return nil, err
 	}
@@ -71,4 +74,9 @@ func applyConfig(a *azugo.App) {
 			a.MetricsOptions.Add(p)
 		}
 	}
+}
+
+// Run starts an application and waits for it to finish
+func Run(a server.Runnable) {
+	server.Run(a)
 }

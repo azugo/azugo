@@ -34,6 +34,11 @@ type Configurable interface {
 	ServerCore() *Configuration
 }
 
+// Bind configuration section if it implements Binder interface.
+func Bind[T any](c *T, prefix string, v *viper.Viper) *T {
+	return config.Bind(c, prefix, v)
+}
+
 // Bind binds configuration section to viper.
 func (c *Configuration) Bind(_ string, v *viper.Viper) {
 	c.Server = config.Bind(c.Server, "server", v)
