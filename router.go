@@ -20,6 +20,8 @@ import (
 // MethodWild wild HTTP method
 const MethodWild = "*"
 
+const InstrumentationRequest = "http-request"
+
 var (
 	contentTypeText = []byte("text/plain; charset=utf-8")
 	contentTypeJSON = []byte("application/json")
@@ -106,8 +108,7 @@ type RouterOptions struct {
 
 // Mutable allows updating the route handler
 //
-// It's disabled by default
-//
+// Disabled by default.
 // WARNING: Use with care. It could generate unexpected behaviors
 func (a *App) Mutable(v bool) {
 	a.treeMutable = v
@@ -132,6 +133,8 @@ func (a *App) wrapHandler(path string, handler RequestHandler) fasthttp.RequestH
 	return func(ctx *fasthttp.RequestCtx) {
 		c := a.acquireCtx(path, ctx)
 		defer a.releaseCtx(c)
+		finish := a.Instrumenter().Observe(c, InstrumentationRequest)
+		defer finish(nil)
 		handler(c)
 	}
 }
