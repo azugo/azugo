@@ -3,18 +3,18 @@ module azugo.io/azugo
 go 1.18
 
 require (
-	azugo.io/core v0.5.0
+	azugo.io/core v0.6.1
 	github.com/beevik/etree v1.1.0
 	github.com/dgrr/http2 v0.3.5
 	github.com/go-playground/validator/v10 v10.11.0
 	github.com/goccy/go-json v0.9.11
-	github.com/oklog/ulid/v2 v2.0.2
+	github.com/oklog/ulid/v2 v2.1.0
 	github.com/russellhaering/goxmldsig v1.2.0
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.13.0
 	github.com/stretchr/testify v1.8.0
 	github.com/valyala/bytebufferpool v1.0.0
-	github.com/valyala/fasthttp v1.37.0
+	github.com/valyala/fasthttp v1.40.0
 	go.uber.org/zap v1.23.0
 )
 
@@ -60,8 +60,8 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
-	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde // indirect
-	golang.org/x/sys v0.0.0-20220907062415-87db552b00fd // indirect
+	golang.org/x/sync v0.0.0-20220907140024-f12130a52804 // indirect
+	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
