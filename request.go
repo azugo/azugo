@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"azugo.io/azugo/internal/utils"
-	"azugo.io/azugo/paginator"
 
 	"azugo.io/core"
+	"azugo.io/core/paginator"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"

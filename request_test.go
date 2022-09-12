@@ -5,9 +5,8 @@ import (
 	"net/netip"
 	"testing"
 
-	"azugo.io/azugo/paginator"
-
 	"azugo.io/core"
+	"azugo.io/core/paginator"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"

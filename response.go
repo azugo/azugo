@@ -5,8 +5,7 @@ import (
 	"strconv"
 	"strings"
 
-	"azugo.io/azugo/paginator"
-
+	"azugo.io/core/paginator"
 	"github.com/goccy/go-json"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
