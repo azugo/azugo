@@ -195,13 +195,13 @@ func (a *App) Start() error {
 		var keyData []byte
 		var err error
 		if len(conf.HTTPS.CertificatePEMFile) > 0 {
-			certData, keyData, err = cert.LoadTLSCertificate(conf.HTTPS.CertificatePEMFile)
+			certData, keyData, err = cert.LoadPEMFromFile(conf.HTTPS.CertificatePEMFile)
 			if err != nil {
 				a.Log().Error("failed to load TLS certificate", zap.Error(err))
 				return err
 			}
 		} else {
-			certData, keyData, err = cert.DevTLSCertificate("azugo", "localhost")
+			certData, keyData, err = cert.DevPEMFile("azugo", "localhost")
 			if err != nil {
 				a.Log().Error("failed to load or generate self-signed TLS certificate", zap.Error(err))
 				return err

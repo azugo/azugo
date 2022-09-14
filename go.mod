@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.18
 
 require (
-	azugo.io/core v0.7.1
+	azugo.io/core v0.8.0
 	github.com/beevik/etree v1.1.0
 	github.com/dgrr/http2 v0.3.5
 	github.com/go-playground/validator/v10 v10.11.0
@@ -61,7 +61,7 @@ require (
 	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.0.0-20220829220503-c86fa9a7ed90 // indirect
 	golang.org/x/sync v0.0.0-20220907140024-f12130a52804 // indirect
-	golang.org/x/sys v0.0.0-20220909162455-aba9fc2a8ff2 // indirect
+	golang.org/x/sys v0.0.0-20220913175220-63ea55921009 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
