@@ -87,7 +87,7 @@ func ProxyUpstream(upstream ...*url.URL) ProxyOption {
 }
 
 // newUpstreamProxy creates a new proxy handler.
-func (a *App) newUpstreamProxy(basePath string, options ...ProxyOption) *Proxy {
+func (m *mux) newUpstreamProxy(basePath string, options ...ProxyOption) *Proxy {
 	opt := &proxyOptions{
 		BasePath:           strings.TrimRight(basePath, "/"),
 		InsecureSkipVerify: true,
@@ -104,8 +104,8 @@ func (a *App) newUpstreamProxy(basePath string, options ...ProxyOption) *Proxy {
 			TLSConfig: &tls.Config{
 				InsecureSkipVerify: opt.InsecureSkipVerify,
 			},
-			ReadBufferSize:  a.ServerOptions.ResponseWriteBufferSize,
-			WriteBufferSize: a.ServerOptions.RequestReadBufferSize,
+			ReadBufferSize:  m.app.ServerOptions.ResponseWriteBufferSize,
+			WriteBufferSize: m.app.ServerOptions.RequestReadBufferSize,
 		},
 		options: opt,
 	}

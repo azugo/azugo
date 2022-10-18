@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"azugo.io/azugo/config"
-	"azugo.io/azugo/internal/radix"
 
 	"azugo.io/core"
 	"azugo.io/core/cert"
@@ -18,26 +17,11 @@ import (
 type App struct {
 	*core.App
 
-	// Routing tree
-	trees              []*radix.Tree
-	treeMutable        bool
-	customMethodsIndex map[string]int
-	registeredPaths    map[string][]string
-	// Router middlewares
-	middlewares []RequestHandlerFunc
-	// Cached value of global (*) allowed methods
-	globalAllowed string
+	router     RouteSwitcher
+	defaultMux *mux
+
 	// Request context pool
 	ctxPool sync.Pool
-
-	// Pointer to the originally set base path in RouterOptions
-	originalBasePath *string
-	// Cached value of base path
-	fixedBasePath string
-	pathLock      sync.RWMutex
-
-	// Router options
-	RouterOptions RouterOptions
 
 	// Configuration
 	config *config.Configuration
@@ -69,26 +53,6 @@ func New() *App {
 	a := &App{
 		App: core.New(),
 
-		trees:              make([]*radix.Tree, 10),
-		customMethodsIndex: make(map[string]int),
-		registeredPaths:    make(map[string][]string),
-		middlewares:        make([]RequestHandlerFunc, 0, 10),
-
-		RouterOptions: RouterOptions{
-			Proxy:                  defaultProxyOptions,
-			CORS:                   defaultCORSOptions,
-			RedirectTrailingSlash:  true,
-			RedirectFixedPath:      true,
-			HandleMethodNotAllowed: true,
-			HandleOPTIONS:          true,
-			PanicHandler: func(ctx *Context, err any) {
-				ctx.Log().Error("Unhandled error", zap.Any("error", err))
-			},
-			GlobalOPTIONS: func(ctx *Context) {
-				ctx.StatusCode(fasthttp.StatusNoContent)
-			},
-		},
-
 		ServerOptions: ServerOptions{
 			RequestReadBufferSize:   8192,
 			ResponseWriteBufferSize: 8192,
@@ -96,42 +60,47 @@ func New() *App {
 
 		MetricsOptions: defaultMetricsOptions,
 	}
+	a.defaultMux = newMux(a)
+	a.router = defaultRouter{App: a}
 	return a
 }
 
-// basePath returns base path of the application
-func (a *App) basePath() string {
-	a.pathLock.RLock()
-	defer a.pathLock.RUnlock()
-
-	if a.originalBasePath == nil || *a.originalBasePath != a.Config().Server.Path {
-		a.pathLock.RUnlock()
-		a.pathLock.Lock()
-
-		a.originalBasePath = &a.Config().Server.Path
-		a.fixedBasePath = a.Config().Server.Path
-		// Add leading slash
-		if len(a.fixedBasePath) > 0 && a.fixedBasePath[0] != '/' {
-			a.fixedBasePath = "/" + a.fixedBasePath
-		}
-		// Strip trailing slash
-		if len(a.fixedBasePath) > 0 && a.fixedBasePath[len(a.fixedBasePath)-1] == '/' {
-			a.fixedBasePath = a.fixedBasePath[:len(a.fixedBasePath)-1]
-		}
-
-		a.pathLock.Unlock()
-		a.pathLock.RLock()
-	}
-	return a.fixedBasePath
+// RouterOptions for default router.
+func (a *App) RouterOptions() *RouterOptions {
+	return a.defaultMux.RouterOptions
 }
 
-// SetConfig binds application configuration to the application
+// SetConfig binds application configuration to the application.
 func (a *App) SetConfig(cmd *cobra.Command, conf *config.Configuration) {
 	if a.config != nil && a.config.Ready() {
 		return
 	}
 
 	a.config = conf
+}
+
+func (a *App) ApplyConfig() {
+	conf := a.Config()
+
+	// Apply configuration to default server router options.
+	a.RouterOptions().ApplyConfig(conf)
+
+	// Apply Metrics configuration.
+	if conf.Metrics.Enabled {
+		a.MetricsOptions.Clear()
+		for _, p := range conf.Metrics.Address {
+			a.MetricsOptions.Add(p)
+		}
+	}
+}
+
+// SetRouterSwitch sets router switcher that selects router based on request context.
+func (a *App) SetRouterSwitch(r RouteSwitcher) {
+	if r == nil {
+		a.router = defaultRouter{App: a}
+		return
+	}
+	a.router = customRouter{App: a, custom: r}
 }
 
 // Config returns application configuration.

@@ -72,12 +72,12 @@ func (ctx *Context) Raw(data []byte) {
 
 // Error return the error response. Calls either custom ErrorHandler or default if not specified.
 func (ctx *Context) Error(err error) {
-	ctx.app.handleError(ctx, err)
+	ctx.mux.HandleError(ctx, err)
 }
 
 // NotFound returns an not found response. Calls either custom NotFound or default if not specified.
 func (ctx *Context) NotFound() {
-	ctx.app.handleNotFound(ctx)
+	ctx.mux.HandleNotFound(ctx)
 }
 
 func (ctx *Context) SetPaging(values map[string]string, paginator *paginator.Paginator) {

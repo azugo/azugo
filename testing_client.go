@@ -30,6 +30,13 @@ func (c *TestClient) applyOptions(request *fasthttp.Request, options []TestClien
 	}
 }
 
+// WithHost sets host for the request.
+func (c *TestClient) WithHost(host string) TestClientOption {
+	return func(tc *TestClient, r *fasthttp.Request) {
+		r.SetHost(host)
+	}
+}
+
 // WithHeader adds header to request.
 func (c *TestClient) WithHeader(key, value string) TestClientOption {
 	return func(tc *TestClient, r *fasthttp.Request) {

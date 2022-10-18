@@ -12,7 +12,7 @@ import (
 func TestCORSHandlerOptions(t *testing.T) {
 	a := azugo.NewTestApp()
 
-	a.Use(CORS(a.RouterOptions.CORS.
+	a.Use(CORS(a.RouterOptions().CORS.
 		SetMethods("GET", "POST").
 		SetOrigins("http://1.0.1.0").
 		SetHeaders("X-Test-Header")),
@@ -44,7 +44,7 @@ func TestCORSHandlerOptions(t *testing.T) {
 func TestCORSHandlerNotAllowed(t *testing.T) {
 	a := azugo.NewTestApp()
 
-	a.Use(CORS(&a.RouterOptions.CORS))
+	a.Use(CORS(&a.RouterOptions().CORS))
 
 	a.Get("/test", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
@@ -72,7 +72,7 @@ func TestCORSHandlerNotAllowed(t *testing.T) {
 func TestCORSHandlerAllowedOriginsAll(t *testing.T) {
 	a := azugo.NewTestApp()
 
-	a.Use(CORS(a.RouterOptions.CORS.SetOrigins("*")))
+	a.Use(CORS(a.RouterOptions().CORS.SetOrigins("*")))
 
 	a.Get("/test", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
@@ -94,7 +94,7 @@ func TestCORSHandlerAllowedOriginsAll(t *testing.T) {
 func TestCORSHandlerOriginDisallowed(t *testing.T) {
 	a := azugo.NewTestApp()
 
-	a.Use(CORS(a.RouterOptions.CORS.SetOrigins("http://1.1.1.1")))
+	a.Use(CORS(a.RouterOptions().CORS.SetOrigins("http://1.1.1.1")))
 
 	a.Get("/test", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")

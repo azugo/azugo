@@ -88,7 +88,7 @@ func TestRequestTLSBaseURL(t *testing.T) {
 
 func TestRequestCustomHost(t *testing.T) {
 	a := NewTestApp()
-	a.RouterOptions.Host = "test.local"
+	a.RouterOptions().Host = "test.local"
 	a.Start(t)
 	defer a.Stop()
 

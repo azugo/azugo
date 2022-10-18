@@ -5,6 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
+	"azugo.io/azugo/internal/utils"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -38,8 +40,8 @@ func randomHTTPMethod() string {
 // If the path was found, it returns the handler function.
 // Otherwise the second return value indicates whether a redirection to
 // the same path with an extra / without the trailing slash should be performed.
-func routerLookupRequest(r *App, method, path string, ctx *fasthttp.RequestCtx) (fasthttp.RequestHandler, bool) {
-	methodIndex := r.methodIndexOf(method)
+func routerLookupRequest(r *mux, method, path string, ctx *fasthttp.RequestCtx) (fasthttp.RequestHandler, bool) {
+	methodIndex := r.MethodIndexOf(method)
 	if methodIndex == -1 {
 		return nil, false
 	}
@@ -51,7 +53,7 @@ func routerLookupRequest(r *App, method, path string, ctx *fasthttp.RequestCtx) 
 		}
 	}
 
-	if tree := r.trees[r.methodIndexOf(MethodWild)]; tree != nil {
+	if tree := r.trees[r.MethodIndexOf(MethodWild)]; tree != nil {
 		return tree.Get(path, ctx)
 	}
 
@@ -90,7 +92,7 @@ func TestGetOptionalPath(t *testing.T) {
 	for _, e := range expected {
 		ctx := new(fasthttp.RequestCtx)
 
-		h, tsr := routerLookupRequest(a.App, fasthttp.MethodGet, e.path, ctx)
+		h, tsr := routerLookupRequest(a.defaultMux, fasthttp.MethodGet, e.path, ctx)
 
 		assert.Equal(t, e.tsr, tsr, "TSR (path: %s)", e.path)
 
@@ -335,14 +337,14 @@ func TestRouterMutable(t *testing.T) {
 
 	a := NewTestApp()
 	a.Mutable(true)
-	require.True(t, a.treeMutable, "router tree should be mutable")
+	require.True(t, a.defaultMux.treeMutable, "router tree should be mutable")
 
 	for _, method := range httpMethods {
 		a.Handle(method, "/", handler1)
 	}
 
-	for method := range a.trees {
-		assert.True(t, a.trees[method].Mutable, "router tree should be mutable")
+	for method := range a.defaultMux.trees {
+		assert.True(t, a.defaultMux.trees[method].Mutable, "router tree should be mutable")
 	}
 
 	routes := []string{
@@ -364,7 +366,7 @@ func TestRouterMutable(t *testing.T) {
 				a.Handle(method, route, handler2)
 			}, "registering route for none mutable router did not panic")
 
-			h, _ := routerLookupRequest(a.App, method, route, nil)
+			h, _ := routerLookupRequest(a.defaultMux, method, route, nil)
 			assert.NotNil(t, h, "handler should not be nil")
 			h(nil)
 			assert.True(t, called1, "handler should not be changed")
@@ -376,7 +378,7 @@ func TestRouterMutable(t *testing.T) {
 		for _, method := range httpMethods {
 			a.Handle(method, route, handler2)
 
-			h, _ := routerLookupRequest(a.App, method, route, nil)
+			h, _ := routerLookupRequest(a.defaultMux, method, route, nil)
 			assert.NotNil(t, h, "handler should not be nil")
 			h(nil)
 			assert.True(t, called2, "handler should be changed")
@@ -414,7 +416,7 @@ func TestRouterOPTIONS(t *testing.T) {
 	a.Get("/path", handlerFunc)
 
 	// set a global OPTIONS handler
-	a.RouterOptions.GlobalOPTIONS = func(ctx *Context) {
+	a.RouterOptions().GlobalOPTIONS = func(ctx *Context) {
 		// Adjust status code to 200
 		ctx.StatusCode(fasthttp.StatusOK)
 	}
@@ -461,7 +463,7 @@ func TestRouterNotAllowed(t *testing.T) {
 
 	// test custom handler
 	responseText := "custom method"
-	a.RouterOptions.MethodNotAllowed = func(ctx *Context) {
+	a.RouterOptions().MethodNotAllowed = func(ctx *Context) {
 		ctx.StatusCode(fasthttp.StatusTeapot).Text(responseText)
 	}
 
@@ -477,7 +479,7 @@ func TestRouterPanicHandler(t *testing.T) {
 	a := NewTestApp()
 
 	panicHandled := false
-	a.RouterOptions.PanicHandler = func(ctx *Context, p any) {
+	a.RouterOptions().PanicHandler = func(ctx *Context, p any) {
 		panicHandled = true
 	}
 
@@ -566,7 +568,7 @@ func testRouterNotFoundByMethod(t *testing.T, method string) {
 
 	// Test custom not found handler
 	var notFound bool
-	a.RouterOptions.NotFound = func(ctx *Context) {
+	a.RouterOptions().NotFound = func(ctx *Context) {
 		ctx.StatusCode(fasthttp.StatusNotFound)
 		notFound = true
 	}
@@ -660,13 +662,13 @@ func testRouterLookupByMethod(t *testing.T, method string) {
 	defer a.Stop()
 
 	// try empty router first
-	handle, tsr := routerLookupRequest(a.App, reqMethod, "/nope", ctx)
+	handle, tsr := routerLookupRequest(a.defaultMux, reqMethod, "/nope", ctx)
 	assert.Nilf(t, handle, "got handle for unregistered pattern: %v", handle)
 	assert.False(t, tsr, "got wrong TSR recommendation")
 
 	// insert route and try again
 	a.Handle(method, "/user/{name}", wantHandle)
-	handle, _ = routerLookupRequest(a.App, reqMethod, "/user/gopher", ctx)
+	handle, _ = routerLookupRequest(a.defaultMux, reqMethod, "/user/gopher", ctx)
 	require.NotNil(t, handle, "got no handle for registered pattern")
 
 	handle(ctx)
@@ -680,17 +682,17 @@ func testRouterLookupByMethod(t *testing.T, method string) {
 
 	// route without param
 	a.Handle(method, "/user", wantHandle)
-	handle, _ = routerLookupRequest(a.App, reqMethod, "/user", ctx)
+	handle, _ = routerLookupRequest(a.defaultMux, reqMethod, "/user", ctx)
 	require.NotNil(t, handle, "got no handle for registered pattern")
 
 	handle(ctx)
 	assert.True(t, routed, "handle should be called")
 
-	handle, tsr = routerLookupRequest(a.App, reqMethod, "/user/gopher/", ctx)
+	handle, tsr = routerLookupRequest(a.defaultMux, reqMethod, "/user/gopher/", ctx)
 	assert.Nilf(t, handle, "got handle for unregistered pattern: %v", handle)
 	assert.True(t, tsr, "got no TSR recommendation")
 
-	handle, tsr = routerLookupRequest(a.App, reqMethod, "/nope", ctx)
+	handle, tsr = routerLookupRequest(a.defaultMux, reqMethod, "/nope", ctx)
 	assert.Nilf(t, handle, "got handle for unregistered pattern: %v", handle)
 	assert.False(t, tsr, "got wrong TSR recommendation")
 }
@@ -918,170 +920,61 @@ func TestRouterMiddlewareAfterRoute(t *testing.T) {
 	assert.True(t, handled, "Handler not called")
 }
 
-func BenchmarkAllowed(b *testing.B) {
-	handlerFunc := func(*Context) {}
+type hostRouteSwitcher struct {
+	hosts map[string]RouterHandler
+}
 
+func (s hostRouteSwitcher) SelectRouter(ctx *fasthttp.RequestCtx) RouterHandler {
+	if handler, ok := s.hosts[utils.B2S(ctx.Host())]; ok {
+		return handler
+	}
+	return nil
+}
+
+func TestPerHostRouteSwitcher(t *testing.T) {
 	a := NewTestApp()
-	a.Post("/path", handlerFunc)
-	a.Get("/path", handlerFunc)
 
-	b.Run("Global", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			_ = a.allowed("*", fasthttp.MethodOptions)
-		}
+	r1 := NewRouter(a.App)
+	r2 := NewRouter(a.App)
+
+	a.SetRouterSwitch(hostRouteSwitcher{
+		hosts: map[string]RouterHandler{
+			"host1": r1,
+			"host2": r2,
+		},
 	})
-	b.Run("Path", func(b *testing.B) {
-		b.ReportAllocs()
-		for i := 0; i < b.N; i++ {
-			_ = a.allowed("/path", fasthttp.MethodOptions)
-		}
+
+	var host1, host2, hostother bool
+
+	r1.Get("/", func(ctx *Context) {
+		host1 = true
 	})
-}
 
-func BenchmarkRouterGet(b *testing.B) {
-	a := NewTestApp()
-	a.Get("/hello", func(ctx *Context) {})
-
-	ctx := new(fasthttp.RequestCtx)
-	ctx.Request.Header.SetMethod("GET")
-	ctx.Request.SetRequestURI("/hello")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		a.Handler(ctx)
-	}
-}
-
-func BenchmarkRouterParams(b *testing.B) {
-	a := NewTestApp()
-
-	a.Get("/{id}", func(ctx *Context) {})
-
-	ctx := new(fasthttp.RequestCtx)
-	ctx.Request.Header.SetMethod("GET")
-	ctx.Request.SetRequestURI("/hello")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		a.Handler(ctx)
-	}
-}
-
-func BenchmarkRouterANY(b *testing.B) {
-	a := NewTestApp()
-
-	a.Get("/data", func(ctx *Context) {})
-	a.Any("/", func(ctx *Context) {})
-
-	ctx := new(fasthttp.RequestCtx)
-	ctx.Request.Header.SetMethod("GET")
-	ctx.Request.SetRequestURI("/")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		a.Handler(ctx)
-	}
-}
-
-func BenchmarkRouterGet_ANY(b *testing.B) {
-	var (
-		resp    = "Bench GET"
-		respANY = "Bench GET (ANY)"
-	)
-
-	a := NewTestApp()
+	r2.Get("/", func(ctx *Context) {
+		host2 = true
+	})
 
 	a.Get("/", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusOK).Text(resp)
-	})
-	a.Any("/", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusOK).Text(respANY)
+		hostother = true
 	})
 
-	ctx := new(fasthttp.RequestCtx)
-	ctx.Request.Header.SetMethod("UNICORN")
-	ctx.Request.SetRequestURI("/")
+	a.Start(t)
+	defer a.Stop()
 
-	b.ResetTimer()
+	tc := a.TestClient()
 
-	for i := 0; i < b.N; i++ {
-		a.Handler(ctx)
-	}
-}
+	resp, err := tc.Get("/", tc.WithHost("host1"))
+	require.NoError(t, err)
+	fasthttp.ReleaseResponse(resp)
+	assert.True(t, host1, "host1 handler not called")
 
-func BenchmarkRouterNotFound(b *testing.B) {
-	a := NewTestApp()
+	resp, err = tc.Get("/", tc.WithHost("host2"))
+	require.NoError(t, err)
+	fasthttp.ReleaseResponse(resp)
+	assert.True(t, host2, "host2 handler not called")
 
-	a.Get("/bench", func(ctx *Context) {})
-
-	ctx := new(fasthttp.RequestCtx)
-	ctx.Request.Header.SetMethod("GET")
-	ctx.Request.SetRequestURI("/notfound")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		a.Handler(ctx)
-	}
-}
-
-func BenchmarkRouterFindCaseInsensitive(b *testing.B) {
-	a := NewTestApp()
-
-	a.Get("/bench", func(ctx *Context) {})
-
-	ctx := new(fasthttp.RequestCtx)
-	ctx.Request.Header.SetMethod("GET")
-	ctx.Request.SetRequestURI("/BenCh/.")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		a.Handler(ctx)
-	}
-}
-
-func BenchmarkRouterRedirectTrailingSlash(b *testing.B) {
-	a := NewTestApp()
-
-	a.Get("/bench/", func(ctx *Context) {})
-
-	ctx := new(fasthttp.RequestCtx)
-	ctx.Request.Header.SetMethod("GET")
-	ctx.Request.SetRequestURI("/bench")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		a.Handler(ctx)
-	}
-}
-
-func Benchmark_Get(b *testing.B) {
-	handler := func(ctx *Context) {}
-
-	a := NewTestApp()
-
-	a.Get("/", handler)
-	a.Get("/plaintext", handler)
-	a.Get("/json", handler)
-	a.Get("/fortune", handler)
-	a.Get("/fortune-quick", handler)
-	a.Get("/db", handler)
-	a.Get("/queries", handler)
-	a.Get("/update", handler)
-
-	ctx := new(fasthttp.RequestCtx)
-	ctx.Request.Header.SetMethod("GET")
-	ctx.Request.SetRequestURI("/update")
-
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
-		a.Handler(ctx)
-	}
+	resp, err = tc.Get("/", tc.WithHost("host3"))
+	require.NoError(t, err)
+	fasthttp.ReleaseResponse(resp)
+	assert.True(t, hostother, "default handler not called")
 }

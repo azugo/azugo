@@ -59,7 +59,7 @@ func TestRealIPMiddleware(t *testing.T) {
 			a := azugo.NewTestApp()
 			defer a.Stop()
 
-			a.RouterOptions.Proxy.Clear().Add("*").ForwardLimit = test.limit
+			a.RouterOptions().Proxy.Clear().Add("*").ForwardLimit = test.limit
 			a.Use(RealIP)
 
 			a.Get("/", func(ctx *azugo.Context) {

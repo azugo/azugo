@@ -25,7 +25,8 @@ func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
 		conf = config.New()
 		c = conf
 		opt.Configuration = conf
-	} else if configurable, ok := c.(config.Configurable); ok {
+	}
+	if configurable, ok := c.(config.Configurable); ok {
 		conf = configurable.ServerCore()
 	} else {
 		return nil, errors.New("configuration must implement Configurable interface")
@@ -39,7 +40,7 @@ func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
 	a.App = ca
 
 	// Apply configuration.
-	applyConfig(a)
+	a.ApplyConfig()
 
 	// Proxy support for client IP
 	a.Use(middleware.RealIP)
@@ -50,30 +51,9 @@ func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
 		a.Use(middleware.Metrics(a.Config().Metrics.Path))
 	}
 	// Support CORS headers
-	a.Use(middleware.CORS(&a.RouterOptions.CORS))
+	a.Use(middleware.CORS(&a.RouterOptions().CORS))
 
 	return a, nil
-}
-
-func applyConfig(a *azugo.App) {
-	conf := a.Config()
-
-	// Apply CORS configuration.
-	if len(conf.CORS.Origins) > 0 {
-		a.RouterOptions.CORS.SetOrigins(conf.CORS.Origins...)
-	}
-	// Apply Proxy configuration.
-	a.RouterOptions.Proxy.Clear().ForwardLimit = conf.Proxy.Limit
-	for _, p := range conf.Proxy.Address {
-		a.RouterOptions.Proxy.Add(p)
-	}
-	// Apply Metrics configuration.
-	if conf.Metrics.Enabled {
-		a.MetricsOptions.Clear()
-		for _, p := range conf.Metrics.Address {
-			a.MetricsOptions.Add(p)
-		}
-	}
 }
 
 // Run starts an application and waits for it to finish

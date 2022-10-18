@@ -61,19 +61,19 @@ func (opts *ProxyOptions) Add(ipnet string) *ProxyOptions {
 
 // IsTrustedProxy checks whether the proxy that request is coming from can be trusted.
 func (ctx *Context) IsTrustedProxy() bool {
-	if ctx.app.RouterOptions.Proxy.TrustAll {
+	if ctx.RouterOptions().Proxy.TrustAll {
 		return true
 	}
 	ip := ctx.IP()
 	if ip == nil {
 		return false
 	}
-	for _, tip := range ctx.app.RouterOptions.Proxy.TrustedIPs {
+	for _, tip := range ctx.RouterOptions().Proxy.TrustedIPs {
 		if tip.Equal(ip) {
 			return true
 		}
 	}
-	for _, tnet := range ctx.app.RouterOptions.Proxy.TrustedNetworks {
+	for _, tnet := range ctx.RouterOptions().Proxy.TrustedNetworks {
 		if tnet.Contains(ip) {
 			return true
 		}

@@ -33,7 +33,7 @@ func NewTestApp(app ...*App) *TestApp {
 	}
 
 	// Trust all proxy headers for test app
-	a.RouterOptions.Proxy.TrustAll = true
+	a.defaultMux.RouterOptions.Proxy.TrustAll = true
 
 	conf := config.New()
 	a.SetConfig(nil, conf)
@@ -47,15 +47,22 @@ func NewTestApp(app ...*App) *TestApp {
 
 func (a *TestApp) initLogs() {
 	observedZapCore, observedLogs := observer.New(zap.InfoLevel)
-	a.ReplaceLogger(zap.New(observedZapCore))
+	_ = a.ReplaceLogger(zap.New(observedZapCore))
 
 	a.logs = observedLogs
 }
 
+func (a *TestApp) applyConfig() {
+	if len(a.Config().Server.Path) > 0 {
+		a.RouterOptions().BasePath = a.Config().Server.Path
+	}
+}
+
 // Start starts testing web server instance
 func (a *TestApp) Start(t *testing.T) {
+	a.applyConfig()
 	a.initLogs()
-	a.App.App.Start()
+	require.NoError(t, a.App.App.Start())
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
@@ -73,8 +80,11 @@ func (a *TestApp) Start(t *testing.T) {
 
 // StartBenchmark starts benchmarking web server instance
 func (a *TestApp) StartBenchmark() {
+	a.applyConfig()
 	a.initLogs()
-	a.App.App.Start()
+	if err := a.App.App.Start(); err != nil {
+		panic(err)
+	}
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,

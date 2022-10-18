@@ -94,7 +94,7 @@ type StandardUser struct {
 	ID         string                  `json:"id"`
 	Authorized bool                    `json:"authorized"`
 	Claims     map[string]ClaimStrings `json:"claims"`
-	rights     map[string][]string
+	// rights     map[string][]string
 }
 
 // NewStandardUser returns new empty user instance
@@ -140,13 +140,13 @@ func (u *StandardUser) DisplayName() string {
 	// TODO: Check alternative claim names and display name claim
 
 	if claim := u.ClaimValue("firstName"); len(claim) > 0 {
-		displayName.WriteString(claim)
+		_, _ = displayName.WriteString(claim)
 	}
 	if claim := u.ClaimValue("lastName"); len(claim) > 0 {
 		if displayName.Len() > 0 {
-			displayName.WriteByte(' ')
+			_ = displayName.WriteByte(' ')
 		}
-		displayName.WriteString(claim)
+		_, _ = displayName.WriteString(claim)
 	}
 
 	return displayName.String()

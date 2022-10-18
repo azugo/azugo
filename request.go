@@ -41,6 +41,7 @@ type Context struct {
 	routerPath string // HTTP path as registered in the router
 
 	app  *App
+	mux  *mux
 	user User
 
 	// Header access methods
@@ -55,7 +56,7 @@ type Context struct {
 	Params ParamsCtx
 }
 
-func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
+func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 	v := a.ctxPool.Get()
 	var ctx *Context
 	if v == nil {
@@ -102,6 +103,9 @@ func (a *App) acquireCtx(path string, c *fasthttp.RequestCtx) *Context {
 	// Attach base fastHTTP request context
 	ctx.context = c
 
+	// Attach mux to request context
+	ctx.mux = m
+
 	return ctx
 }
 
@@ -134,6 +138,7 @@ func (ctx *Context) reset() {
 	ctx.Form.form = nilArgsValuer
 	ctx.user = nil
 	ctx.context = nil
+	ctx.mux = nil
 }
 
 // App returns the application.
@@ -149,6 +154,11 @@ func (ctx *Context) Log() *zap.Logger {
 // Env returns the application environment.
 func (ctx *Context) Env() core.Environment {
 	return ctx.app.Env()
+}
+
+// RouterOptions returns the router options.
+func (ctx *Context) RouterOptions() *RouterOptions {
+	return ctx.mux.RouterOptions
 }
 
 // Context returns *fasthttp.RequestCtx that carries a deadline
@@ -197,9 +207,10 @@ func (ctx *Context) IsTLS() bool {
 // If the request comes from trusted proxy it will use X-Forwarded-Host header.
 func (ctx *Context) Host() string {
 	// Check if custom host is set
-	if len(ctx.app.RouterOptions.Host) > 0 {
-		return ctx.app.RouterOptions.Host
+	if host := ctx.mux.Host(); len(host) > 0 {
+		return host
 	}
+
 	// Use proxy set header
 	if ctx.IsTrustedProxy() {
 		if host := ctx.context.Request.Header.PeekBytes(headerXForwardedHost); len(host) > 0 {
@@ -212,7 +223,7 @@ func (ctx *Context) Host() string {
 
 // BasePath returns the base path.
 func (ctx *Context) BasePath() string {
-	return ctx.app.basePath()
+	return ctx.mux.BasePath()
 }
 
 // BaseURL returns the base URL for the request.
