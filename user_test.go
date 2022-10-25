@@ -3,6 +3,9 @@ package azugo
 import (
 	"testing"
 
+	"azugo.io/azugo/token"
+	"azugo.io/azugo/user"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/valyala/fasthttp"
@@ -13,11 +16,10 @@ func TestUser(t *testing.T) {
 
 	app.Use(func(h RequestHandler) RequestHandler {
 		return func(ctx *Context) {
-			user := NewStandardUser()
-			user.ID = "Test"
-			user.Authorized = true
-			user.Claims["firstName"] = ClaimStrings{"John"}
-			user.Claims["lastName"] = ClaimStrings{"Doe"}
+			user := user.New(map[string]token.ClaimStrings{
+				"given_name":  {"John"},
+				"family_name": {"Doe"},
+			})
 
 			ctx.SetUser(user)
 
@@ -29,6 +31,7 @@ func TestUser(t *testing.T) {
 		user := ctx.User()
 		assert.NotNil(t, user)
 		assert.Equal(t, "John Doe", user.DisplayName())
+		assert.True(t, user.Authorized())
 	})
 
 	app.Start(t)

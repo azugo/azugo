@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"azugo.io/azugo/internal/utils"
+	"azugo.io/azugo/user"
 
 	"azugo.io/core"
 	"azugo.io/core/paginator"
@@ -105,6 +106,9 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 
 	// Attach mux to request context
 	ctx.mux = m
+
+	// Set default user as anonymous
+	ctx.user = user.Anonymous{}
 
 	return ctx
 }
