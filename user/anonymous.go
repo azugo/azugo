@@ -53,3 +53,8 @@ func (u Anonymous) HasScope(name string) bool {
 func (u Anonymous) HasScopeLevel(name string, level string) bool {
 	return false
 }
+
+// ID returns user ID.
+func (u Anonymous) ID() string {
+	return ""
+}

@@ -150,6 +150,14 @@ func (u *Basic) Authorized() bool {
 	return u != nil
 }
 
+// ID returns user ID.
+func (u *Basic) ID() string {
+	if u == nil {
+		return ""
+	}
+	return u.ClaimValue("sub", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
+}
+
 // HasScopeGroup checks if user has any granted scopes in specified group.
 func (u *Basic) HasScopeGroup(name string) bool {
 	if u == nil {

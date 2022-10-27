@@ -17,6 +17,7 @@ func TestUser(t *testing.T) {
 	app.Use(func(h RequestHandler) RequestHandler {
 		return func(ctx *Context) {
 			user := user.New(map[string]token.ClaimStrings{
+				"sub":         {"123"},
 				"given_name":  {"John"},
 				"family_name": {"Doe"},
 			})
@@ -32,6 +33,7 @@ func TestUser(t *testing.T) {
 		assert.NotNil(t, user)
 		assert.Equal(t, "John Doe", user.DisplayName())
 		assert.True(t, user.Authorized())
+		assert.Equal(t, "123", user.ID())
 	})
 
 	app.Start(t)

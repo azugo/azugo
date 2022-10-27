@@ -44,6 +44,9 @@ type User interface {
 	UserDisplayNamer
 	UserGrantedScopes
 	UserClaimer
+
+	// ID returns user ID.
+	ID() string
 }
 
 // SetUser sets authorized user.
