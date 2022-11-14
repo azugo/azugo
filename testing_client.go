@@ -67,6 +67,11 @@ func (c *TestClient) WithQuery(params map[string]any) TestClientOption {
 	}
 }
 
+// Client returns the underlying fasthttp client.
+func (c *TestClient) Client() *fasthttp.Client {
+	return c.client
+}
+
 // CallRaw calls the given method and endpoint with the given body and options.
 func (c *TestClient) CallRaw(method, endpoint, body []byte, options ...TestClientOption) (*fasthttp.Response, error) {
 	req := fasthttp.AcquireRequest()
