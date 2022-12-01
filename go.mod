@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.18
 
 require (
-	azugo.io/core v0.8.1
+	azugo.io/core v0.9.1
 	github.com/beevik/etree v1.1.0
 	github.com/dgrr/http2 v0.3.5
 	github.com/go-playground/validator/v10 v10.11.1
