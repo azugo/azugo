@@ -32,7 +32,7 @@ func (g *RouteGroup) Group(path string) Router {
 	n := &RouteGroup{
 		mux:         g.mux,
 		prefix:      g.prefix + path,
-		middlewares: append([]RequestHandlerFunc{}, g.mux.middlewares...),
+		middlewares: make([]RequestHandlerFunc, 0),
 	}
 	n.Use(g.middlewares...)
 	return n

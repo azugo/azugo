@@ -427,7 +427,7 @@ func (m *mux) Group(path string) Router {
 	return &RouteGroup{
 		mux:         m,
 		prefix:      path,
-		middlewares: append([]RequestHandlerFunc{}, m.middlewares...),
+		middlewares: make([]RequestHandlerFunc, 0),
 	}
 }
 

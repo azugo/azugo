@@ -215,7 +215,7 @@ func (a *App) Group(path string) Router {
 	return &RouteGroup{
 		mux:         a.defaultMux,
 		prefix:      path,
-		middlewares: append([]RequestHandlerFunc{}, a.defaultMux.middlewares...),
+		middlewares: make([]RequestHandlerFunc, 0),
 	}
 }
 

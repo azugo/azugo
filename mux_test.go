@@ -3,8 +3,44 @@ package azugo
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/valyala/fasthttp"
 )
+
+func TestMuxGroup(t *testing.T) {
+	handlerFunc := func(*Context) {}
+
+	var (
+		muxUseCalled   int
+		groupUseCalled int
+	)
+
+	m := newMux(NewTestApp().App)
+	m.Use(func(next RequestHandler) RequestHandler {
+		return func(ctx *Context) {
+			muxUseCalled++
+			next(ctx)
+		}
+	})
+	g := m.Group("/group")
+	{
+		g.Use(func(next RequestHandler) RequestHandler {
+			return func(ctx *Context) {
+				groupUseCalled++
+				next(ctx)
+			}
+		})
+		g.Get("/path", handlerFunc)
+	}
+
+	ctx := new(fasthttp.RequestCtx)
+	ctx.Request.Header.SetMethod("GET")
+	ctx.Request.SetRequestURI("/group/path")
+
+	m.Handler(ctx)
+	assert.Equal(t, 1, muxUseCalled)
+	assert.Equal(t, 1, groupUseCalled)
+}
 
 func BenchmarkAllowed(b *testing.B) {
 	handlerFunc := func(*Context) {}
