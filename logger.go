@@ -30,6 +30,9 @@ func (ctx *Context) initLoggerFields() {
 
 // AddLogFields add fields to context logger.
 func (ctx *Context) AddLogFields(fields ...zap.Field) error {
+	if len(fields) == 0 {
+		return nil
+	}
 	for _, field := range fields {
 		ctx.loggerFields[field.Key] = field
 	}
