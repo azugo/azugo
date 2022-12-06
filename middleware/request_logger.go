@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"bytes"
+	"os"
 	"strconv"
 	"time"
 
@@ -20,11 +21,13 @@ var (
 
 func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 	var logger *zap.Logger
+	enabled := os.Getenv("ACCESS_LOG_ENABLED") == "" || os.Getenv("ACCESS_LOG_ENABLED") == "true"
+
 	return func(ctx *azugo.Context) {
 		if logger == nil {
 			logger = ctx.App().Log().Named("http")
 		}
-		ctx.SetUserValue("log_request", true)
+		ctx.SetUserValue("log_request", enabled)
 
 		t1 := time.Now()
 
