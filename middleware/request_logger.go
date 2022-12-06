@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"strconv"
+	"sync"
 	"time"
 
 	"azugo.io/azugo"
@@ -20,13 +21,14 @@ var (
 )
 
 func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
+	var init sync.Once
 	var logger *zap.Logger
 	enabled := os.Getenv("ACCESS_LOG_ENABLED") == "" || os.Getenv("ACCESS_LOG_ENABLED") == "true"
 
 	return func(ctx *azugo.Context) {
-		if logger == nil {
+		init.Do(func() {
 			logger = ctx.App().Log().Named("http")
-		}
+		})
 		ctx.SetUserValue("log_request", enabled)
 
 		t1 := time.Now()
