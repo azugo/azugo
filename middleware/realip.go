@@ -9,6 +9,7 @@ import (
 	"azugo.io/azugo/internal/utils"
 
 	"github.com/valyala/bytebufferpool"
+	"go.uber.org/zap"
 )
 
 const (
@@ -90,6 +91,8 @@ func realIPOrForwardedFor(ctx *azugo.Context) net.Addr {
 func RealIP(next azugo.RequestHandler) azugo.RequestHandler {
 	return func(ctx *azugo.Context) {
 		ctx.Context().SetRemoteAddr(realIPOrForwardedFor(ctx))
+		// Update logger with new source IP field
+		_ = ctx.AddLogFields(zap.String("source.ip", ctx.IP().String()))
 		next(ctx)
 	}
 }

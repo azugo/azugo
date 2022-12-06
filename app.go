@@ -1,6 +1,7 @@
 package azugo
 
 import (
+	"crypto/rand"
 	"fmt"
 	"sync"
 
@@ -9,6 +10,7 @@ import (
 	"azugo.io/core"
 	"azugo.io/core/cert"
 	"github.com/dgrr/http2"
+	"github.com/oklog/ulid/v2"
 	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -19,6 +21,7 @@ type App struct {
 
 	router     RouteSwitcher
 	defaultMux *mux
+	entropy    ulid.MonotonicReader
 
 	// Request context pool
 	ctxPool sync.Pool
@@ -52,6 +55,9 @@ type ServerOptions struct {
 func New() *App {
 	a := &App{
 		App: core.New(),
+		entropy: &ulid.LockedMonotonicReader{
+			MonotonicReader: ulid.Monotonic(rand.Reader, 0),
+		},
 
 		ServerOptions: ServerOptions{
 			RequestReadBufferSize:   8192,

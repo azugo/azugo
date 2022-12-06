@@ -16,6 +16,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.43.0
 	go.uber.org/zap v1.24.0
+	golang.org/x/exp v0.0.0-20221205204356-47842c84f3db
 )
 
 require (

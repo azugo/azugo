@@ -4,15 +4,18 @@ import (
 	"bytes"
 	"net"
 	"strings"
+	"time"
 
 	"azugo.io/azugo/internal/utils"
 	"azugo.io/azugo/user"
 
 	"azugo.io/core"
 	"azugo.io/core/paginator"
+	"github.com/oklog/ulid/v2"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
+	"golang.org/x/exp/maps"
 )
 
 const defaultPageSize = 20
@@ -29,6 +32,7 @@ var (
 	contentTypeMultipartFormData = []byte("multipart/form-data")
 
 	nilArgsValuer formKeyValuer = &nilArgs{}
+	nilRequestID                = ulid.ULID{}
 )
 
 type Context struct {
@@ -37,13 +41,20 @@ type Context struct {
 	// Base fastHTTP request context
 	context *fasthttp.RequestCtx
 
-	method     string // HTTP method
-	path       string // HTTP path with the modifications by the configuration -> string copy from pathBuffer
-	routerPath string // HTTP path as registered in the router
+	method     string    // HTTP method
+	path       string    // HTTP path with the modifications by the configuration -> string copy from pathBuffer
+	routerPath string    // HTTP path as registered in the router
+	requestID  ulid.ULID // Request ID
 
+	// Core data
 	app  *App
 	mux  *mux
 	user User
+
+	// Logger
+	loggerCore   *zap.Logger
+	loggerFields map[string]zap.Field
+	logger       *zap.Logger
 
 	// Header access methods
 	Header HeaderCtx
@@ -63,6 +74,7 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 	if v == nil {
 		ctx = new(Context)
 		ctx.app = a
+		ctx.loggerFields = make(map[string]zap.Field, 10)
 		ctx.Header.app = a
 		ctx.Header.ctx = ctx
 		ctx.Query.app = a
@@ -101,6 +113,9 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 		}
 	}
 
+	// Ignore error
+	ctx.requestID, _ = ulid.New(ulid.Timestamp(time.Now().UTC()), a.entropy)
+
 	// Attach base fastHTTP request context
 	ctx.context = c
 
@@ -109,6 +124,12 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 
 	// Set default user as anonymous
 	ctx.user = user.Anonymous{}
+
+	// Attach logger to request context
+	if c != nil {
+		ctx.initLoggerFields()
+	}
+	_ = ctx.ReplaceLogger(a.Log())
 
 	return ctx
 }
@@ -143,16 +164,15 @@ func (ctx *Context) reset() {
 	ctx.user = nil
 	ctx.context = nil
 	ctx.mux = nil
+	maps.Clear(ctx.loggerFields)
+	ctx.loggerCore = nil
+	ctx.logger = nil
+	ctx.requestID = nilRequestID
 }
 
 // App returns the application.
 func (ctx *Context) App() *App {
 	return ctx.app
-}
-
-// Log returns the logger.
-func (ctx *Context) Log() *zap.Logger {
-	return ctx.app.Log()
 }
 
 // Env returns the application environment.
@@ -176,6 +196,11 @@ func (ctx *Context) Context() *fasthttp.RequestCtx {
 // https://godoc.org/github.com/valyala/fasthttp#Request
 func (ctx *Context) Request() *fasthttp.Request {
 	return &ctx.context.Request
+}
+
+// ID returns the unique request identifier.
+func (ctx *Context) ID() string {
+	return ctx.requestID.String()
 }
 
 // IP returns the client's network IP address.

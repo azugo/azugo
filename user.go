@@ -2,6 +2,7 @@ package azugo
 
 import (
 	"azugo.io/azugo/token"
+	"go.uber.org/zap"
 )
 
 // UserAuthorizer is an interface to check if user is authorized.
@@ -52,6 +53,12 @@ type User interface {
 // SetUser sets authorized user.
 func (ctx *Context) SetUser(u User) {
 	ctx.user = u
+	if u != nil && u.Authorized() {
+		_ = ctx.AddLogFields(
+			zap.String("user.id", u.ID()),
+			zap.String("user.full_name", u.DisplayName()),
+		)
+	}
 }
 
 // User returns authorized user or
