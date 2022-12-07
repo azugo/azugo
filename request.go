@@ -126,10 +126,10 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 	ctx.user = user.Anonymous{}
 
 	// Attach logger to request context
+	_ = ctx.ReplaceLogger(a.Log())
 	if c != nil {
 		ctx.initLoggerFields()
 	}
-	_ = ctx.ReplaceLogger(a.Log())
 
 	return ctx
 }
