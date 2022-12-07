@@ -1,6 +1,8 @@
 package azugo
 
 import (
+	"fmt"
+
 	"go.uber.org/zap"
 	"golang.org/x/exp/maps"
 )
@@ -46,6 +48,7 @@ func (ctx *Context) ReplaceLogger(logger *zap.Logger) error {
 	}
 	ctx.loggerCore = logger
 	ctx.logger = logger.With(maps.Values(ctx.loggerFields)...)
+	fmt.Printf("loggerCore: %#v\nlogger: %#v\n", ctx.loggerCore, ctx.logger)
 	return nil
 }
 
