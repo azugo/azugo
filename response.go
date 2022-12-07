@@ -92,7 +92,7 @@ func (ctx *Context) SetPaging(values map[string]string, paginator *paginator.Pag
 	}
 	curl, err := url.Parse(ctx.BaseURL() + route)
 	if err != nil {
-		ctx.app.Log().Error("Failed to prepare paging header", zap.Error((err)))
+		ctx.Log().Error("Failed to prepare paging header", zap.Error((err)))
 		return
 	}
 	paginator.SetURL(curl)

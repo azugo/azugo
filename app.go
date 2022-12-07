@@ -17,6 +17,8 @@ import (
 )
 
 type App struct {
+	noCopy noCopy //nolint:unused,structcheck
+
 	*core.App
 
 	router     RouteSwitcher
@@ -52,9 +54,15 @@ type ServerOptions struct {
 	ResponseWriteBufferSize int
 }
 
-func New() *App {
+func New(opts ...*core.App) *App {
+	var app *core.App
+	if len(opts) > 0 {
+		app = opts[0]
+	} else {
+		app = core.New()
+	}
 	a := &App{
-		App: core.New(),
+		App: app,
 		entropy: &ulid.LockedMonotonicReader{
 			MonotonicReader: ulid.Monotonic(rand.Reader, 0),
 		},

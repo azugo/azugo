@@ -16,8 +16,6 @@ type ServerOptions server.ServerOptions
 
 // New returns new Azugo pre-configured server with default set of middlewares and default router options.
 func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
-	a := azugo.New()
-
 	// Support extended configuration.
 	var conf *config.Configuration
 	c := opt.Configuration
@@ -31,13 +29,13 @@ func New(cmd *cobra.Command, opt ServerOptions) (*azugo.App, error) {
 	} else {
 		return nil, errors.New("configuration must implement Configurable interface")
 	}
-	a.SetConfig(cmd, conf)
 
 	ca, err := server.New(cmd, server.ServerOptions(opt))
 	if err != nil {
 		return nil, err
 	}
-	a.App = ca
+	a := azugo.New(ca)
+	a.SetConfig(cmd, conf)
 
 	// Apply configuration.
 	a.ApplyConfig()
