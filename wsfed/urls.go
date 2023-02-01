@@ -48,7 +48,9 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 
 	u := *p.IDPEndpoint
 
-	rp := &requestParams{}
+	rp := &requestParams{
+		Params: make([]*customRequestParam, 0),
+	}
 	for _, o := range options {
 		o.apply(rp)
 	}
