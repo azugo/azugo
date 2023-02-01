@@ -8,6 +8,12 @@ import (
 
 type requestParams struct {
 	Wreply string
+	Params []*customRequestParam
+}
+
+type customRequestParam struct {
+	Name  string
+	Value string
 }
 
 // RequestOption is an optional parameters for the request.
@@ -22,6 +28,18 @@ func (o WithRequestWreply) apply(p *requestParams) {
 	p.Wreply = string(o)
 }
 
+func (o *customRequestParam) apply(p *requestParams) {
+	p.Params = append(p.Params, o)
+}
+
+// WithRequestParam is an optional custom parameter for request.
+func WithRequestParam(name, value string) RequestOption {
+	return &customRequestParam{
+		Name:  name,
+		Value: value,
+	}
+}
+
 // SigninURL returns the signin URL.
 func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...RequestOption) (string, error) {
 	if err := p.check(p.defaultHttpClient(), false); err != nil {
@@ -30,7 +48,9 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 
 	u := *p.IDPEndpoint
 
-	rp := &requestParams{}
+	rp := &requestParams{
+		Params: make([]*customRequestParam, 0),
+	}
 	for _, o := range options {
 		o.apply(rp)
 	}
@@ -47,6 +67,9 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 	}
 	params.Add("wct", p.clock.Now().UTC().Format(time.RFC3339))
 	params.Add("wctx", wctx)
+	for _, param := range rp.Params {
+		params.Add(param.Name, param.Value)
+	}
 
 	u.RawQuery = params.Encode()
 

@@ -23,7 +23,7 @@ func TestSigninURL(t *testing.T) {
 	ws.clock = clockwork.NewFakeClockAt(time.Date(2022, time.January, 2, 14, 32, 15, 0, time.UTC))
 	require.NoError(t, err)
 
-	signinURL, err := ws.SigninURL(context.TODO(), "urn:test")
+	signinURL, err := ws.SigninURL(context.TODO(), "urn:test", WithRequestParam("lang", "en"))
 	require.NoError(t, err)
 
 	u, err := url.Parse(signinURL)
@@ -37,6 +37,7 @@ func TestSigninURL(t *testing.T) {
 	assert.Equal(t, "urn:test", v.Get("wtrealm"), "invalid wtrealm value")
 	assert.Equal(t, "2022-01-02T14:32:15Z", v.Get("wct"), "invalid wct value")
 	require.NotEmpty(t, v.Get("wctx"), "wctx is empty")
+	assert.Equal(t, "en", v.Get("lang"), "invalid lang value")
 
 	valid, err := ws.NonceStore.Verify(context.TODO(), v.Get("wctx"))
 	require.NoError(t, err)
