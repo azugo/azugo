@@ -23,7 +23,7 @@ func TestSigninURL(t *testing.T) {
 	ws.clock = clockwork.NewFakeClockAt(time.Date(2022, time.January, 2, 14, 32, 15, 0, time.UTC))
 	require.NoError(t, err)
 
-	signinURL, err := ws.SigninURL(context.TODO(), "urn:test", WithRequestLang("en"))
+	signinURL, err := ws.SigninURL(context.TODO(), "urn:test", WithRequestParam("lang", "en"))
 	require.NoError(t, err)
 
 	u, err := url.Parse(signinURL)

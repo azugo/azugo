@@ -7,8 +7,13 @@ import (
 )
 
 type requestParams struct {
-	Wreply   string
-	Language string
+	Wreply string
+	Params []*customRequestParam
+}
+
+type customRequestParam struct {
+	Name  string
+	Value string
 }
 
 // RequestOption is an optional parameters for the request.
@@ -23,11 +28,16 @@ func (o WithRequestWreply) apply(p *requestParams) {
 	p.Wreply = string(o)
 }
 
-// WithRequestLang is an optional language URL parameter for request (ISO 639-1 format).
-type WithRequestLang string
+func (o *customRequestParam) apply(p *requestParams) {
+	p.Params = append(p.Params, o)
+}
 
-func (o WithRequestLang) apply(p *requestParams) {
-	p.Language = string(o)
+// WithRequestParam is an optional custom parameter for request.
+func WithRequestParam(name, value string) RequestOption {
+	return &customRequestParam{
+		Name:  name,
+		Value: value,
+	}
 }
 
 // SigninURL returns the signin URL.
@@ -55,8 +65,8 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 	}
 	params.Add("wct", p.clock.Now().UTC().Format(time.RFC3339))
 	params.Add("wctx", wctx)
-	if rp.Language != "" {
-		params.Add("lang", rp.Language)
+	for _, param := range rp.Params {
+		params.Add(param.Name, param.Value)
 	}
 
 	u.RawQuery = params.Encode()
