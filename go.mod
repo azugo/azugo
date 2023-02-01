@@ -1,6 +1,6 @@
 module azugo.io/azugo
 
-go 1.18
+go 1.19
 
 require (
 	azugo.io/core v0.12.0
@@ -18,8 +18,6 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/exp v0.0.0-20230131160201-f062dba9d201
 )
-
-require github.com/redis/go-redis/v9 v9.0.2 // indirect
 
 require (
 	github.com/andybalholm/brotli v1.0.4 // indirect
@@ -50,6 +48,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
+	github.com/redis/go-redis/v9 v9.0.2 // indirect
 	github.com/spf13/afero v1.9.3 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
