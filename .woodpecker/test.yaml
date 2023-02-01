@@ -1,0 +1,20 @@
+when:
+  branch:
+    - main
+  event:
+    - push
+    - pull_request
+
+matrix:
+  GO_VERSION:
+    - 1.19
+    - 1.20-rc
+
+pipeline:
+  - name: test
+    image: golang:${GO_VERSION}-alpine
+    pull: true
+    environment:
+      - CGO_ENABLED=0
+    commands:
+      - go test -cover -coverprofile=coverage.out -covermode=atomic -json ./... > report.json
