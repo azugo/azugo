@@ -50,3 +50,22 @@ func TestRouteInvalidParams(t *testing.T) {
 
 	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
 }
+
+func TestRouteNonexistingParams(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user/{id}", func(ctx *Context) {
+		assert.False(t, ctx.Params.Has("type"))
+		assert.True(t, ctx.Params.Has("id"))
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	resp, err := a.TestClient().Get("/user/gopher")
+	defer fasthttp.ReleaseResponse(resp)
+	require.NoError(t, err)
+
+	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+}

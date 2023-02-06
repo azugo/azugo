@@ -12,9 +12,18 @@ type ParamsCtx struct {
 	ctx *Context
 }
 
+// Has the given name specified in route params.
+func (p *ParamsCtx) Has(key string) bool {
+	return p.ctx.context.Value(key) != nil
+}
+
 // String gets the first value associated with the given name in route params.
 func (p *ParamsCtx) String(key string) string {
-	return p.ctx.context.Value(key).(string)
+	v := p.ctx.context.Value(key)
+	if v == nil {
+		return ""
+	}
+	return v.(string)
 }
 
 // Int64 returns the value of the parameter as int64.
