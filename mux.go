@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -298,6 +299,9 @@ func (m *mux) HandleNotFound(ctx *Context) {
 
 func (m *mux) HandleError(ctx *Context, err error) {
 	if m.RouterOptions.ErrorHandler != nil {
+		// Log debug information about error
+		m.app.Log().Debug(fmt.Sprintf("calling custom handler for error: %s", err.Error()), zap.Error(err))
+
 		m.RouterOptions.ErrorHandler(ctx, err)
 		return
 	}
@@ -317,6 +321,9 @@ func (m *mux) HandleError(ctx *Context, err error) {
 	} else {
 		ctx.StatusCode(fasthttp.StatusInternalServerError)
 	}
+
+	// Log debug information about error
+	m.app.Log().Debug(fmt.Sprintf("handling error: %s", err.Error()), zap.Error(err))
 
 	// Log the error only if it's server error
 	if ctx.Response().StatusCode()/100 == 5 {
