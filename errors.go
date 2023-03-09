@@ -126,3 +126,27 @@ func (e ErrParamInvalid) SafeError() string {
 func (e ErrParamInvalid) StatusCode() int {
 	return fasthttp.StatusBadRequest
 }
+
+// ErrParamInvalid is an error that occurs when user access is denied.
+type ErrForbidden struct{}
+
+func (e ErrForbidden) Error() string {
+	return "access forbidden"
+}
+
+func (e ErrForbidden) StatusCode() int {
+	return fasthttp.StatusForbidden
+}
+
+// ErrNotFound is an error that occurs when searched resource is not found.
+type ErrNotFound struct {
+	MissingResource string
+}
+
+func (e ErrNotFound) Error() string {
+	return fmt.Sprintf("%s not found", e.MissingResource)
+}
+
+func (e ErrNotFound) StatusCode() int {
+	return fasthttp.StatusNotFound
+}
