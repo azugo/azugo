@@ -37,11 +37,11 @@ func (q *QueryCtx) Values(key string) []string {
 }
 
 // String gets the first value associated with the given key in query.
-// If there are no values associated with the key or value is empty returns ErrParamRequired error.
+// If there are no values associated with the key or value is empty returns ParamRequiredError error.
 func (q *QueryCtx) String(key string) (string, error) {
 	v := q.ctx.Request().URI().QueryArgs().Peek(key)
 	if len(v) == 0 {
-		return "", ErrParamRequired{key}
+		return "", ParamRequiredError{key}
 	}
 	return utils.B2S(v), nil
 }
@@ -64,7 +64,7 @@ func (q *QueryCtx) Int64(key string) (int64, error) {
 	}
 	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return 0, ErrParamInvalid{key, "numeric", err}
+		return 0, ParamInvalidError{key, "numeric", err}
 	}
 	return v, nil
 }
@@ -77,7 +77,7 @@ func (q *QueryCtx) Int64Optional(key string) (*int64, error) {
 	}
 	v, err := strconv.ParseInt(*s, 10, 64)
 	if err != nil {
-		return nil, ErrParamInvalid{key, "numeric", err}
+		return nil, ParamInvalidError{key, "numeric", err}
 	}
 	return &v, nil
 }
