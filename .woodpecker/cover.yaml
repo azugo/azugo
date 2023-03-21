@@ -1,0 +1,14 @@
+when:
+  branch:
+    - main
+  event:
+    - push
+
+pipeline:
+  - name: test
+    image: golang:1.20
+    pull: true
+    environment:
+      - CGO_ENABLED=1
+    commands:
+      - go test -cover -race -coverprofile=coverage.out -covermode=atomic -json ./... > report.json

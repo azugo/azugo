@@ -2,12 +2,11 @@ when:
   branch:
     - main
   event:
-    - push
     - pull_request
 
 pipeline:
   - name: golangci-lint
-    image: golangci/golangci-lint:v1.50-alpine
+    image: golangci/golangci-lint:v1.52-alpine
     pull: true
     commands:
       - golangci-lint run --timeout 3m --out-format=checkstyle:golangci-lint.out,colored-line-number

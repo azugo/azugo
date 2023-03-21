@@ -2,7 +2,6 @@ when:
   branch:
     - main
   event:
-    - push
     - pull_request
 
 matrix:
@@ -12,9 +11,9 @@ matrix:
 
 pipeline:
   - name: test
-    image: golang:${GO_VERSION}-alpine
+    image: golang:${GO_VERSION}
     pull: true
     environment:
-      - CGO_ENABLED=0
+      - CGO_ENABLED=1
     commands:
-      - go test -cover -coverprofile=coverage.out -covermode=atomic -json ./... > report.json
+      - go test -race ./...
