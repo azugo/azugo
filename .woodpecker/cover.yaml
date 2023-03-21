@@ -8,7 +8,5 @@ pipeline:
   - name: test
     image: golang:1.20-alpine
     pull: true
-    environment:
-      - CGO_ENABLED=0
     commands:
       - go test -cover -race -coverprofile=coverage.out -covermode=atomic -json ./... > report.json
