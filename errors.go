@@ -153,11 +153,14 @@ func (e ForbiddenError) StatusCode() int {
 
 // NotFoundError is an error that occurs when searched resource is not found.
 type NotFoundError struct {
-	MissingResource string
+	Resource string
 }
 
 func (e NotFoundError) Error() string {
-	return fmt.Sprintf("%s not found", e.MissingResource)
+	if e.Resource == "" {
+		return "resource not found"
+	}
+	return fmt.Sprintf("%s not found", e.Resource)
 }
 
 func (e NotFoundError) StatusCode() int {
