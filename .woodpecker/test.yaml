@@ -13,5 +13,7 @@ pipeline:
   - name: test
     image: golang:${GO_VERSION}-alpine
     pull: true
+    environment:
+      - CGO_ENABLED=1
     commands:
       - go test -race ./...
