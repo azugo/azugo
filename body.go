@@ -31,10 +31,10 @@ func (b *BodyCtx) WriteTo(w io.Writer) error {
 func (b *BodyCtx) JSON(v any) error {
 	buf := b.Bytes()
 	if len(buf) == 0 {
-		return ErrParamRequired{"body"}
+		return ParamRequiredError{"body"}
 	}
 	if err := json.Unmarshal(buf, v); err != nil {
-		return ErrParamInvalid{"body", "json", err}
+		return ParamInvalidError{"body", "json", err}
 	}
 	if v, ok := v.(Validator); ok {
 		return v.Validate(b.ctx)
@@ -46,10 +46,10 @@ func (b *BodyCtx) JSON(v any) error {
 func (b *BodyCtx) XML(v any) error {
 	buf := b.Bytes()
 	if len(buf) == 0 {
-		return ErrParamRequired{"body"}
+		return ParamRequiredError{"body"}
 	}
 	if err := xml.Unmarshal(buf, v); err != nil {
-		return ErrParamInvalid{"body", "xml", err}
+		return ParamInvalidError{"body", "xml", err}
 	}
 	return nil
 }

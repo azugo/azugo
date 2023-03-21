@@ -57,19 +57,19 @@ func TestQueryRequiredError(t *testing.T) {
 		assert.Len(t, v, 0, "Query parameter multi should be empty")
 
 		_, err := ctx.Query.String("s")
-		assert.ErrorIs(t, err, ErrParamRequired{"s"}, "Query parameter s should result in required error")
+		assert.ErrorIs(t, err, ParamRequiredError{"s"}, "Query parameter s should result in required error")
 		assert.Equal(t, "Key: 's' Error:Field validation for 's' failed on the 'required' tag", err.(SafeError).SafeError())
 
 		_, err = ctx.Query.Int("i")
-		assert.ErrorIs(t, err, ErrParamRequired{"i"}, "Query parameter i should result in required error")
+		assert.ErrorIs(t, err, ParamRequiredError{"i"}, "Query parameter i should result in required error")
 		assert.Equal(t, "Key: 'i' Error:Field validation for 'i' failed on the 'required' tag", err.(SafeError).SafeError())
 
 		_, err = ctx.Query.Int64("l")
-		assert.ErrorIs(t, err, ErrParamRequired{"l"}, "Query parameter l should result in required error")
+		assert.ErrorIs(t, err, ParamRequiredError{"l"}, "Query parameter l should result in required error")
 		assert.Equal(t, "Key: 'l' Error:Field validation for 'l' failed on the 'required' tag", err.(SafeError).SafeError())
 
 		_, err = ctx.Query.Bool("b")
-		assert.ErrorIs(t, err, ErrParamRequired{"b"}, "Query parameter b should result in required error")
+		assert.ErrorIs(t, err, ParamRequiredError{"b"}, "Query parameter b should result in required error")
 		assert.Equal(t, "Key: 'b' Error:Field validation for 'b' failed on the 'required' tag", err.(SafeError).SafeError())
 
 		ctx.StatusCode(fasthttp.StatusOK)
@@ -89,11 +89,11 @@ func TestQueryInvalidValueError(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		_, err := ctx.Query.Int("i")
-		assert.ErrorAs(t, err, &ErrParamInvalid{}, "Query parameter i should result in invalid parameter error")
+		assert.ErrorAs(t, err, &ParamInvalidError{}, "Query parameter i should result in invalid parameter error")
 		assert.Equal(t, "Key: 'i' Error:Field validation for 'i' failed on the 'numeric' tag", err.(SafeError).SafeError())
 
 		_, err = ctx.Query.Int64("l")
-		assert.ErrorAs(t, err, &ErrParamInvalid{}, "Query parameter i should result in invalid parameter error")
+		assert.ErrorAs(t, err, &ParamInvalidError{}, "Query parameter i should result in invalid parameter error")
 		assert.Equal(t, "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag", err.(SafeError).SafeError())
 
 		ctx.StatusCode(fasthttp.StatusOK)
@@ -197,11 +197,11 @@ func TestQueryOptionalInvalidValueError(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		_, err := ctx.Query.IntOptional("i")
-		assert.ErrorAs(t, err, &ErrParamInvalid{}, "Query parameter i should result in invalid parameter error")
+		assert.ErrorAs(t, err, &ParamInvalidError{}, "Query parameter i should result in invalid parameter error")
 		assert.Equal(t, "Key: 'i' Error:Field validation for 'i' failed on the 'numeric' tag", err.(SafeError).SafeError())
 
 		_, err = ctx.Query.Int64Optional("l")
-		assert.ErrorAs(t, err, &ErrParamInvalid{}, "Query parameter i should result in invalid parameter error")
+		assert.ErrorAs(t, err, &ParamInvalidError{}, "Query parameter i should result in invalid parameter error")
 		assert.Equal(t, "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag", err.(SafeError).SafeError())
 
 		ctx.StatusCode(fasthttp.StatusOK)

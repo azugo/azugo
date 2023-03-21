@@ -129,11 +129,11 @@ func (f *FormCtx) Values(key string) []string {
 }
 
 // String gets the first value associated with the given key in form.
-// If there are no values associated with the key or value is empty returns ErrParamRequired error.
+// If there are no values associated with the key or value is empty returns ParamRequiredError error.
 func (f *FormCtx) String(key string) (string, error) {
 	v := f.form.Value(key)
 	if len(v) == 0 {
-		return "", ErrParamRequired{key}
+		return "", ParamRequiredError{key}
 	}
 	return v, nil
 }
@@ -155,7 +155,7 @@ func (f *FormCtx) Int64(key string) (int64, error) {
 	}
 	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
-		return 0, ErrParamInvalid{key, "numeric", err}
+		return 0, ParamInvalidError{key, "numeric", err}
 	}
 	return v, nil
 }
@@ -168,7 +168,7 @@ func (f *FormCtx) Int64Optional(key string) (*int64, error) {
 	}
 	v, err := strconv.ParseInt(*s, 10, 64)
 	if err != nil {
-		return nil, ErrParamInvalid{key, "numeric", err}
+		return nil, ParamInvalidError{key, "numeric", err}
 	}
 	return &v, nil
 }
@@ -222,7 +222,7 @@ func (f *FormCtx) BoolOptional(key string) (*bool, error) {
 func (f *FormCtx) File(key string) (*multipart.FileHeader, error) {
 	v := f.form.File(key)
 	if v == nil {
-		return nil, ErrParamRequired{key}
+		return nil, ParamRequiredError{key}
 	}
 	return v, nil
 }

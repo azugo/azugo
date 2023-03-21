@@ -88,41 +88,81 @@ func NewErrorResponse(err error) *ErrorResponse {
 	}
 }
 
-// ErrParamRequired is an error that occurs when a required parameter is not provided.
-type ErrParamRequired struct {
+// ParamRequiredError is an error that occurs when a required parameter is not provided.
+type ParamRequiredError struct {
 	Name string
 }
 
-func (e ErrParamRequired) Error() string {
+func (e ParamRequiredError) Error() string {
 	return "parameter required"
 }
 
-func (e ErrParamRequired) SafeError() string {
+func (e ParamRequiredError) SafeError() string {
 	return fmt.Sprintf(fieldErrMsg, e.Name, e.Name, "required")
 }
 
-func (e ErrParamRequired) StatusCode() int {
+func (e ParamRequiredError) StatusCode() int {
 	return fasthttp.StatusBadRequest
 }
 
-// ErrParamInvalid is an error that occurs when a parameter is invalid.
-type ErrParamInvalid struct {
+// ParamInvalidError is an error that occurs when a parameter is invalid.
+type ParamInvalidError struct {
 	Name string
 	Tag  string
 	Err  error
 }
 
-func (e ErrParamInvalid) Error() string {
+func (e ParamInvalidError) Error() string {
 	if e.Err == nil {
 		return "invalid parameter value"
 	}
 	return e.Err.Error()
 }
 
-func (e ErrParamInvalid) SafeError() string {
+func (e ParamInvalidError) SafeError() string {
 	return fmt.Sprintf(fieldErrMsg, e.Name, e.Name, e.Tag)
 }
 
-func (e ErrParamInvalid) StatusCode() int {
+func (e ParamInvalidError) StatusCode() int {
 	return fasthttp.StatusBadRequest
+}
+
+// BadRequestError is an error that occurs when request is malformed.
+type BadRequestError struct {
+	Description string
+}
+
+func (e BadRequestError) Error() string {
+	return fmt.Sprintf("malformed request: %s", e.Description)
+}
+
+func (e BadRequestError) StatusCode() int {
+	return fasthttp.StatusBadRequest
+}
+
+// ForbiddenError is an error that occurs when user access is denied.
+type ForbiddenError struct{}
+
+func (e ForbiddenError) Error() string {
+	return "access forbidden"
+}
+
+func (e ForbiddenError) StatusCode() int {
+	return fasthttp.StatusForbidden
+}
+
+// NotFoundError is an error that occurs when searched resource is not found.
+type NotFoundError struct {
+	Resource string
+}
+
+func (e NotFoundError) Error() string {
+	if e.Resource == "" {
+		return "resource not found"
+	}
+	return fmt.Sprintf("%s not found", e.Resource)
+}
+
+func (e NotFoundError) StatusCode() int {
+	return fasthttp.StatusNotFound
 }
