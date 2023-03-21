@@ -11,7 +11,7 @@ matrix:
 
 pipeline:
   - name: test
-    image: golang:${GO_VERSION}-alpine
+    image: golang:${GO_VERSION}
     pull: true
     environment:
       - CGO_ENABLED=1

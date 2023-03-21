@@ -6,7 +6,7 @@ when:
 
 pipeline:
   - name: test
-    image: golang:1.20-alpine
+    image: golang:1.20
     pull: true
     environment:
       - CGO_ENABLED=1
