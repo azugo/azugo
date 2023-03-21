@@ -2,7 +2,6 @@ when:
   branch:
     - main
   event:
-    - push
     - pull_request
 
 matrix:
@@ -17,4 +16,4 @@ pipeline:
     environment:
       - CGO_ENABLED=0
     commands:
-      - go test -cover -coverprofile=coverage.out -covermode=atomic -json ./... > report.json
+      - go test -race ./...
