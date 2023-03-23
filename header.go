@@ -13,11 +13,15 @@ const (
 	HeaderTotalCount                 string = "X-Total-Count"
 	HeaderLink                       string = "Link"
 	HeaderAccessControlExposeHeaders string = "Access-Control-Expose-Headers"
+	HeaderContentType                string = "Content-Type"
+	HeaderContentDisposition         string = "Content-Disposition"
+	HeaderContentTransferEncoding    string = "Content-Transfer-Encoding"
 )
 
 const (
-	ContentTypeJSON string = "application/json"
-	ContentTypeXML  string = "application/xml"
+	ContentTypeJSON        string = "application/json"
+	ContentTypeXML         string = "application/xml"
+	ContentTypeOctetStream string = "application/octet-stream"
 )
 
 // HeaderCtx represents the key-value pairs in an HTTP header.
