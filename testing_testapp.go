@@ -28,6 +28,7 @@ func NewTestApp(app ...*App) *TestApp {
 	if len(app) == 0 {
 		a = New()
 		a.AppName = "Azugo TestApp"
+		a.AppVer = "1.0"
 	} else {
 		a = app[0]
 	}

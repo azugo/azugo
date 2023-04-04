@@ -2,6 +2,7 @@ package wsfed
 
 import (
 	"crypto/x509"
+	"fmt"
 	"net/url"
 	"sync"
 	"time"
@@ -38,6 +39,7 @@ type WsFederation struct {
 	signCertStore dsig.X509CertificateStore
 	ready         bool
 	clock         clockwork.Clock
+	ua            []byte
 }
 
 // New creates a new WS-Federation service instance.
@@ -62,6 +64,7 @@ func New(app *azugo.App, metadataURL string) (*WsFederation, error) {
 		NonceStore:  nonce.NewCacheNonceStore(st),
 
 		clock: clockwork.NewRealClock(),
+		ua:    []byte(fmt.Sprintf("%s/%s", app.AppName, app.AppVer)),
 		signCertStore: &dsig.MemoryX509CertificateStore{
 			Roots: []*x509.Certificate{},
 		},
