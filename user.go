@@ -30,7 +30,7 @@ type UserGrantedScopes interface {
 	// HasScopeLevel checks if user has granted scope with exact level.
 	HasScopeLevel(name string, level string) bool
 	// HasScopeAnyLevel checks if user has granted scope with one of levels.
-	HasScopeAnyLevel(name string, levels []string) bool
+	HasScopeAnyLevel(name string, levels ...string) bool
 }
 
 // UserClaimer is an interface that provides methods to get user claims.

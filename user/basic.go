@@ -198,7 +198,7 @@ func (u *Basic) HasScopeLevel(name string, level string) bool {
 }
 
 // HasScopeAnyLevel checks if user has granted scope with one of levels.
-func (u *Basic) HasScopeAnyLevel(name string, levels []string) bool {
+func (u *Basic) HasScopeAnyLevel(name string, levels ...string) bool {
 	if u == nil {
 		return false
 	}

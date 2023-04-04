@@ -55,7 +55,7 @@ func (u Anonymous) HasScopeLevel(name string, level string) bool {
 }
 
 // HasScopeLevel checks if user has granted scope with exact level.
-func (u Anonymous) HasScopeAnyLevel(name string, levels []string) bool {
+func (u Anonymous) HasScopeAnyLevel(name string, levels ...string) bool {
 	return false
 }
 
