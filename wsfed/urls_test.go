@@ -26,6 +26,9 @@ func TestSigninURL(t *testing.T) {
 	signinURL, err := ws.SigninURL(context.TODO(), "urn:test", WithRequestParam("lang", "en"))
 	require.NoError(t, err)
 
+	// Wait for cache to sync
+	time.Sleep(50 * time.Millisecond)
+
 	u, err := url.Parse(signinURL)
 	require.NoError(t, err)
 

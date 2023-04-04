@@ -59,6 +59,7 @@ func (p *WsFederation) check(client *fasthttp.Client, force bool) error {
 	}
 
 	req := fasthttp.AcquireRequest()
+	req.Header.SetUserAgentBytes(p.ua)
 	req.Header.SetMethod(fasthttp.MethodGet)
 	req.SetRequestURI(p.MetadataURL.String())
 
