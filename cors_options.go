@@ -5,16 +5,18 @@ import "strings"
 var (
 	defaultAllowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
 	defaultCORSOptions    = CORSOptions{
-		allowedMethods: strings.Join(defaultAllowedMethods, ", "),
+		allowedMethods:   strings.Join(defaultAllowedMethods, ", "),
+		allowCredentials: false,
 	}
 )
 
 // CORSOptions is options for CORS middleware.
 type CORSOptions struct {
-	allowedMethods  string
-	allowedHeaders  string
-	allowAllOrigins bool
-	allowedOrigins  map[string]struct{}
+	allowedMethods   string
+	allowedHeaders   string
+	allowAllOrigins  bool
+	allowedOrigins   map[string]struct{}
+	allowCredentials bool
 }
 
 // SetMethods sets allowed CORS methods.
@@ -26,6 +28,11 @@ func (c *CORSOptions) SetMethods(methods ...string) *CORSOptions {
 // Methods returns allowed CORS methods.
 func (c *CORSOptions) Methods() string {
 	return c.allowedMethods
+}
+
+// AllowCredentials returns flag if CORS credentials are alloweds.
+func (c *CORSOptions) AllowCredentials() bool {
+	return c.allowCredentials
 }
 
 // SetHeaders sets allowed CORS methods.

@@ -5,10 +5,11 @@ import (
 )
 
 const (
-	headerOrigin       string = "Origin"
-	headerAllowOrigin  string = "Access-Control-Allow-Origin"
-	headerAllowMethods string = "Access-Control-Allow-Methods"
-	headerAllowHeaders string = "Access-Control-Allow-Headers"
+	headerOrigin           string = "Origin"
+	headerAllowOrigin      string = "Access-Control-Allow-Origin"
+	headerAllowMethods     string = "Access-Control-Allow-Methods"
+	headerAllowHeaders     string = "Access-Control-Allow-Headers"
+	headerAllowCredentials string = "Access-Control-Allow-Credentials"
 )
 
 // CORS is a middleware for handling CORS requests.
@@ -26,6 +27,9 @@ func CORS(opts *azugo.CORSOptions) func(azugo.RequestHandler) azugo.RequestHandl
 			ctx.Header.Set(headerAllowOrigin, origin)
 			ctx.Header.Set(headerAllowMethods, opts.Methods())
 			ctx.Header.Set(headerAllowHeaders, opts.Headers())
+			if opts.AllowCredentials() {
+				ctx.Header.Set(headerAllowCredentials, "true")
+			}
 			if h != nil {
 				h(ctx)
 			}
