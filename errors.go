@@ -166,3 +166,16 @@ func (e NotFoundError) Error() string {
 func (e NotFoundError) StatusCode() int {
 	return fasthttp.StatusNotFound
 }
+
+// UnprocessableEntityError is an error that occurs when request is well formed, but logically incorrect.
+type UnprocessableEntityError struct {
+	Description string
+}
+
+func (e UnprocessableEntityError) Error() string {
+	return fmt.Sprintf("unprocessable entity: %s", e.Description)
+}
+
+func (e UnprocessableEntityError) StatusCode() int {
+	return fasthttp.StatusUnprocessableEntity
+}
