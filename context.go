@@ -1,11 +1,16 @@
 package azugo
 
-import "time"
+import (
+	"time"
+)
 
 // Deadline returns the time when work done on behalf of this context
 // should be canceled. Deadline returns ok==false when no deadline is
 // set. Successive calls to Deadline return the same results.
 func (c *Context) Deadline() (deadline time.Time, ok bool) {
+	if c == nil || c.context == nil {
+		return
+	}
 	return c.context.Deadline()
 }
 
@@ -41,6 +46,9 @@ func (c *Context) Deadline() (deadline time.Time, ok bool) {
 // See https://blog.golang.org/pipelines for more examples of how to use
 // a Done channel for cancellation.
 func (c *Context) Done() <-chan struct{} {
+	if c == nil || c.context == nil {
+		return nil
+	}
 	return c.context.Done()
 }
 
@@ -50,6 +58,9 @@ func (c *Context) Done() <-chan struct{} {
 // or DeadlineExceeded if the context's deadline passed.
 // After Err returns a non-nil error, successive calls to Err return the same error.
 func (c *Context) Err() error {
+	if c == nil || c.context == nil {
+		return nil
+	}
 	return c.context.Err()
 }
 
@@ -99,5 +110,8 @@ func (c *Context) Err() error {
 // 		return u, ok
 // 	}
 func (c *Context) Value(key any) any {
+	if c == nil || c.context == nil {
+		return nil
+	}
 	return c.context.Value(key)
 }
