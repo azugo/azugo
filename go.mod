@@ -5,10 +5,10 @@ go 1.19
 require (
 	azugo.io/core v0.14.0
 	github.com/beevik/etree v1.2.0
-	github.com/dgrr/http2 v0.3.5
 	github.com/go-playground/validator/v10 v10.15.5
 	github.com/goccy/go-json v0.10.2
 	github.com/jonboulle/clockwork v0.4.0
+	github.com/lafriks/http2 v0.5.0
 	github.com/oklog/ulid/v2 v2.1.0
 	github.com/russellhaering/goxmldsig v1.4.0
 	github.com/spf13/cobra v1.7.0
@@ -71,5 +71,3 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace github.com/dgrr/http2 v0.3.5 => github.com/lafriks-fork/http2 v0.4.2

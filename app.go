@@ -9,7 +9,7 @@ import (
 
 	"azugo.io/core"
 	"azugo.io/core/cert"
-	"github.com/dgrr/http2"
+	"github.com/lafriks/http2"
 	"github.com/oklog/ulid/v2"
 	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
