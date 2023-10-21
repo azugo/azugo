@@ -100,7 +100,12 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 			return
 		}
 		elapsed := float64(time.Since(ctx.Context().ConnTime())) / float64(time.Second)
-		respSize := float64(len(ctx.Response().Body()))
+		var respSize float64
+		if l := ctx.Response().Header.ContentLength(); l > 0 {
+			respSize = float64(l)
+		} else if !ctx.Response().IsBodyStream() {
+			respSize = float64(len(ctx.Response().Body()))
+		}
 		path := ctx.RouterPath()
 		if path == "" {
 			path = ctx.Path()

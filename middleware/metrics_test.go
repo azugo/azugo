@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"bytes"
 	"net"
 	"net/netip"
 	"strings"
@@ -31,6 +32,11 @@ func TestMetricsHandler(t *testing.T) {
 		ctx.ContentType("application/json")
 		ctx.StatusCode(fasthttp.StatusOK).Text("Hello, world!")
 	})
+	a.Get("/stream", func(ctx *azugo.Context) {
+		ctx.ContentType("application/json")
+		ctx.Header.Set("Content-Length", "4")
+		ctx.Response().SetBodyStream(bytes.NewReader([]byte("test")), 4)
+	})
 
 	a.Start(t)
 	defer a.Stop()
@@ -40,6 +46,10 @@ func TestMetricsHandler(t *testing.T) {
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/test")
+	require.NoError(t, err)
+	fasthttp.ReleaseResponse(resp)
+
+	resp, err = a.TestClient().Get("/stream")
 	require.NoError(t, err)
 	fasthttp.ReleaseResponse(resp)
 
