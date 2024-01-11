@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	azugo.io/core v0.14.1-0.20240111212119-b2b417a2d74f
-	github.com/beevik/etree v1.2.0
-	github.com/go-playground/validator/v10 v10.15.5
+	github.com/beevik/etree v1.1.0
+	github.com/go-playground/validator/v10 v10.12.0
 	github.com/goccy/go-json v0.10.2
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/lafriks/http2 v0.5.0
@@ -21,11 +21,6 @@ require (
 )
 
 require github.com/lafriks/pkcs8 v1.2.0 // indirect
-
-require (
-	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
-	golang.org/x/net v0.17.0 // indirect
-)
 
 require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
@@ -69,12 +64,12 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
 	go.elastic.co/ecszap v1.0.2-0.20221202064908-84f272fcdcbb // indirect
-	go.uber.org/multierr v1.10.0 // indirect
+	go.uber.org/multierr v1.8.0 // indirect
 	golang.org/x/crypto v0.14.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
-	google.golang.org/protobuf v1.31.0 // indirect
+	google.golang.org/protobuf v1.28.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
