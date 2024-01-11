@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.19
 
 require (
-	azugo.io/core v0.14.0
+	azugo.io/core v0.14.1-0.20240111212119-b2b417a2d74f
 	github.com/beevik/etree v1.2.0
 	github.com/go-playground/validator/v10 v10.15.5
 	github.com/goccy/go-json v0.10.2
@@ -19,6 +19,8 @@ require (
 	go.uber.org/zap v1.26.0
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d
 )
+
+require github.com/lafriks/pkcs8 v1.2.0 // indirect
 
 require (
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect

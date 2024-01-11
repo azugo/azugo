@@ -18,8 +18,6 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-const defaultPageSize = 20
-
 var (
 	protocolHTTP      = []byte("http")
 	protocolHTTPS     = []byte("https")
@@ -307,7 +305,12 @@ func (ctx *Context) UserValue(name string) any {
 	return ctx.context.UserValue(name)
 }
 
-// Returns Paginator with page size from query parameters
+// Sets default size of the page if not specified in the http request.
+func (ctx *Context) SetPagingDefaultPageSize(pageSize int) {
+	paginator.DefaultPageSize = pageSize
+}
+
+// Returns Paginator with page size from query parameters.
 func (ctx *Context) Paging() *paginator.Paginator {
 	page, err := ctx.Query.Int(paginator.QueryParameterPage)
 	if err != nil || page <= 0 {
@@ -315,7 +318,7 @@ func (ctx *Context) Paging() *paginator.Paginator {
 	}
 	pageSize, err := ctx.Query.Int(paginator.QueryParameterPerPage)
 	if err != nil || pageSize <= 0 {
-		pageSize = defaultPageSize
+		pageSize = paginator.DefaultPageSize
 	}
 	return paginator.New(page*pageSize, pageSize, page)
 }
