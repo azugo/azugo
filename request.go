@@ -305,11 +305,6 @@ func (ctx *Context) UserValue(name string) any {
 	return ctx.context.UserValue(name)
 }
 
-// Sets default size of the page if not specified in the http request.
-func (ctx *Context) SetPagingDefaultPageSize(pageSize int) {
-	paginator.DefaultPageSize = pageSize
-}
-
 // Returns Paginator with page size from query parameters.
 func (ctx *Context) Paging() *paginator.Paginator {
 	page, err := ctx.Query.Int(paginator.QueryParameterPage)
