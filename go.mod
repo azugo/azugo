@@ -3,9 +3,9 @@ module azugo.io/azugo
 go 1.19
 
 require (
-	azugo.io/core v0.14.0
-	github.com/beevik/etree v1.2.0
-	github.com/go-playground/validator/v10 v10.15.5
+	azugo.io/core v0.14.1-0.20240111212119-b2b417a2d74f
+	github.com/beevik/etree v1.3.0
+	github.com/go-playground/validator/v10 v10.16.0
 	github.com/goccy/go-json v0.10.2
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/lafriks/http2 v0.5.0
