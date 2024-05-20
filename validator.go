@@ -12,6 +12,6 @@ type Validator interface {
 }
 
 // Validate returns validation service instance.
-func (ctx *Context) Validate() *validation.Validate {
-	return ctx.app.Validate()
+func (c *Context) Validate() *validation.Validate {
+	return c.app.Validate()
 }

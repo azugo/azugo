@@ -30,6 +30,7 @@ func (opts *ProxyOptions) Clear() *ProxyOptions {
 	opts.TrustAll = false
 	opts.TrustedIPs = make([]net.IP, 0)
 	opts.TrustedNetworks = make([]*net.IPNet, 0)
+
 	return opts
 }
 
@@ -39,6 +40,7 @@ func (opts *ProxyOptions) Add(ipnet string) *ProxyOptions {
 	// Special option to trust all proxies if IP address is set as wildcard
 	if ipnet == "*" {
 		opts.TrustAll = true
+
 		return opts
 	}
 	// CIDR format
@@ -47,7 +49,9 @@ func (opts *ProxyOptions) Add(ipnet string) *ProxyOptions {
 		if err != nil || netmask == nil {
 			return opts
 		}
+
 		opts.TrustedNetworks = append(opts.TrustedNetworks, netmask)
+
 		return opts
 	}
 	// Single IP address
@@ -55,28 +59,34 @@ func (opts *ProxyOptions) Add(ipnet string) *ProxyOptions {
 	if ipaddr == nil {
 		return opts
 	}
+
 	opts.TrustedIPs = append(opts.TrustedIPs, ipaddr)
+
 	return opts
 }
 
 // IsTrustedProxy checks whether the proxy that request is coming from can be trusted.
-func (ctx *Context) IsTrustedProxy() bool {
-	if ctx.RouterOptions().Proxy.TrustAll {
+func (c *Context) IsTrustedProxy() bool {
+	if c.RouterOptions().Proxy.TrustAll {
 		return true
 	}
-	ip := ctx.IP()
+
+	ip := c.IP()
 	if ip == nil {
 		return false
 	}
-	for _, tip := range ctx.RouterOptions().Proxy.TrustedIPs {
+
+	for _, tip := range c.RouterOptions().Proxy.TrustedIPs {
 		if tip.Equal(ip) {
 			return true
 		}
 	}
-	for _, tnet := range ctx.RouterOptions().Proxy.TrustedNetworks {
+
+	for _, tnet := range c.RouterOptions().Proxy.TrustedNetworks {
 		if tnet.Contains(ip) {
 			return true
 		}
 	}
+
 	return false
 }

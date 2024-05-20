@@ -48,6 +48,7 @@ func (t *Token) ClaimValue(name string) string {
 	if ok && len(c) > 0 {
 		return c[0]
 	}
+
 	return ""
 }
 
@@ -67,7 +68,7 @@ type tokenParseOptions struct {
 }
 
 type TokenParseOption interface {
-	apply(*tokenParseOptions)
+	apply(opts *tokenParseOptions)
 }
 
 // SaveToken is an option to save the token raw and validated XML.
@@ -120,10 +121,10 @@ func (o TokenValidateNotBefore) apply(p *tokenParseOptions) {
 }
 
 // Parse parses and validates a WS-Federation token.
-func (s *WsFederation) Parse(token []byte, opt ...TokenParseOption) (*Token, error) {
+func (p *WsFederation) Parse(token []byte, opt ...TokenParseOption) (*Token, error) {
 	opts := &tokenParseOptions{
 		SaveToken:   false,
-		ClockSkew:   s.ClockSkew,
+		ClockSkew:   p.ClockSkew,
 		CheckIssuer: true,
 		CheckExp:    true,
 		CheckIat:    true,
@@ -133,13 +134,13 @@ func (s *WsFederation) Parse(token []byte, opt ...TokenParseOption) (*Token, err
 		o.apply(opts)
 	}
 
-	t, err := s.decodeResponse(token, opts)
+	t, err := p.decodeResponse(token, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	v := verifyIss(s.Issuer, t.Claims.Issuer, true)
-	if opts.CheckIssuer && s.Issuer != "" && !v {
+	v := verifyIss(p.Issuer, t.Claims.Issuer, true)
+	if opts.CheckIssuer && p.Issuer != "" && !v {
 		err = ErrTokenInvalidIssuer
 	}
 
@@ -148,15 +149,15 @@ func (s *WsFederation) Parse(token []byte, opt ...TokenParseOption) (*Token, err
 		err = ErrTokenInvalidAudience
 	}
 
-	if !verifyIat(t.Claims.IssuedAt, s.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckIat {
+	if !verifyIat(t.Claims.IssuedAt, p.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckIat {
 		err = ErrTokenUsedBeforeIssued
 	}
 
-	if !verifyExp(t.Claims.ExpiresAt, s.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckExp {
+	if !verifyExp(t.Claims.ExpiresAt, p.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckExp {
 		err = ErrTokenExpired
 	}
 
-	if !verifyNbf(t.Claims.NotBefore, s.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckNbf {
+	if !verifyNbf(t.Claims.NotBefore, p.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckNbf {
 		err = ErrTokenNotValidYet
 	}
 

@@ -3,8 +3,7 @@ package azugo
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -15,36 +14,36 @@ func TestQueryValidParams(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		v := ctx.Query.Values("multi")
-		assert.ElementsMatch(t, []string{"a", "b", "c"}, v, "Query parameter multi values should match")
+		qt.Check(t, qt.ContentEquals(v, []string{"a", "b", "c"}), qt.Commentf("Query parameter multi values should match"))
 
 		s, err := ctx.Query.String("s")
-		assert.NoError(t, err, "Query parameter s should be present")
-		assert.Equal(t, "test", s, "Query parameter s should be equal to test")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter s should not be nil"))
+		qt.Check(t, qt.Equals(s, "test"), qt.Commentf("Query parameter s should be equal to test"))
 
 		i, err := ctx.Query.Int("i")
-		assert.NoError(t, err, "Query parameter i should be present")
-		assert.Equal(t, 1, i, "Query parameter i should be equal to 1")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter i should not be nil"))
+		qt.Check(t, qt.Equals(i, 1), qt.Commentf("Query parameter i should be equal to 1"))
 
 		l, err := ctx.Query.Int64("l")
-		assert.NoError(t, err, "Query parameter l should be present")
-		assert.Equal(t, int64(500), l, "Query parameter l should be equal to 500")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter l should not be nil"))
+		qt.Check(t, qt.Equals(l, int64(500)), qt.Commentf("Query parameter l should be equal to 500"))
 
 		b, err := ctx.Query.Bool("b")
-		assert.NoError(t, err, "Query parameter b should be present")
-		assert.True(t, b, "Query parameter b should be true")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter b should not be nil"))
+		qt.Check(t, qt.IsTrue(b), qt.Commentf("Query parameter b should be true"))
 
 		b, err = ctx.Query.Bool("bb")
-		assert.NoError(t, err, "Query parameter bb should be present")
-		assert.False(t, b, "Query parameter bb should be false")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter bb should not be nil"))
+		qt.Check(t, qt.IsFalse(b), qt.Commentf("Query parameter bb should be false"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user?multi=a,c&i=1&multi=b&s=test&l=500&b=TRUE&bb=0")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestQueryRequiredError(t *testing.T) {
@@ -54,32 +53,32 @@ func TestQueryRequiredError(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		v := ctx.Query.Values("multi")
-		assert.Len(t, v, 0, "Query parameter multi should be empty")
+		qt.Check(t, qt.HasLen(v, 0), qt.Commentf("Query parameter multi should be empty"))
 
 		_, err := ctx.Query.String("s")
-		assert.ErrorIs(t, err, ParamRequiredError{"s"}, "Query parameter s should result in required error")
-		assert.Equal(t, "Key: 's' Error:Field validation for 's' failed on the 'required' tag", err.(SafeError).SafeError())
+		qt.Check(t, qt.ErrorIs(err, ParamRequiredError{"s"}), qt.Commentf("Query parameter s should result in required error"))
+		qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 's' Error:Field validation for 's' failed on the 'required' tag"))
 
 		_, err = ctx.Query.Int("i")
-		assert.ErrorIs(t, err, ParamRequiredError{"i"}, "Query parameter i should result in required error")
-		assert.Equal(t, "Key: 'i' Error:Field validation for 'i' failed on the 'required' tag", err.(SafeError).SafeError())
+		qt.Check(t, qt.ErrorIs(err, ParamRequiredError{"i"}), qt.Commentf("Query parameter i should result in required error"))
+		qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'i' Error:Field validation for 'i' failed on the 'required' tag"))
 
 		_, err = ctx.Query.Int64("l")
-		assert.ErrorIs(t, err, ParamRequiredError{"l"}, "Query parameter l should result in required error")
-		assert.Equal(t, "Key: 'l' Error:Field validation for 'l' failed on the 'required' tag", err.(SafeError).SafeError())
+		qt.Check(t, qt.ErrorIs(err, ParamRequiredError{"l"}), qt.Commentf("Query parameter l should result in required error"))
+		qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'l' Error:Field validation for 'l' failed on the 'required' tag"))
 
 		_, err = ctx.Query.Bool("b")
-		assert.ErrorIs(t, err, ParamRequiredError{"b"}, "Query parameter b should result in required error")
-		assert.Equal(t, "Key: 'b' Error:Field validation for 'b' failed on the 'required' tag", err.(SafeError).SafeError())
+		qt.Check(t, qt.ErrorIs(err, ParamRequiredError{"b"}), qt.Commentf("Query parameter b should result in required error"))
+		qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'b' Error:Field validation for 'b' failed on the 'required' tag"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestQueryInvalidValueError(t *testing.T) {
@@ -89,12 +88,12 @@ func TestQueryInvalidValueError(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		_, err := ctx.Query.Int("i")
-		assert.ErrorAs(t, err, &ParamInvalidError{}, "Query parameter i should result in invalid parameter error")
-		assert.Equal(t, "Key: 'i' Error:Field validation for 'i' failed on the 'numeric' tag", err.(SafeError).SafeError())
+		qt.Check(t, qt.ErrorAs(err, &ParamInvalidError{}), qt.Commentf("Query parameter i should result in invalid parameter error"))
+		qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'i' Error:Field validation for 'i' failed on the 'numeric' tag"))
 
 		_, err = ctx.Query.Int64("l")
-		assert.ErrorAs(t, err, &ParamInvalidError{}, "Query parameter i should result in invalid parameter error")
-		assert.Equal(t, "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag", err.(SafeError).SafeError())
+		qt.Check(t, qt.ErrorAs(err, &ParamInvalidError{}), qt.Commentf("Query parameter i should result in invalid parameter error"))
+		qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -105,9 +104,9 @@ func TestQueryInvalidValueError(t *testing.T) {
 		"l": "test",
 	}))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestQueryOptionalValidParams(t *testing.T) {
@@ -117,27 +116,23 @@ func TestQueryOptionalValidParams(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		s := ctx.Query.StringOptional("s")
-		assert.NotNil(t, s, "Query parameter s should not be nil")
-		if s != nil {
-			assert.Equal(t, "test", *s, "Query parameter s should be equal to test")
+		if qt.Check(t, qt.IsNotNil(s), qt.Commentf("Query parameter s should not be nil")) {
+			qt.Check(t, qt.Equals(*s, "test"), qt.Commentf("Query parameter s should be equal to test"))
 		}
 
 		i, err := ctx.Query.IntOptional("i")
-		assert.NoError(t, err, "Query parameter i should not be nil")
-		if i != nil {
-			assert.Equal(t, 1, *i, "Query parameter i should be equal to 1")
+		if qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter i should not be nil")) {
+			qt.Check(t, qt.Equals(*i, 1), qt.Commentf("Query parameter i should be equal to 1"))
 		}
 
 		l, err := ctx.Query.Int64Optional("l")
-		assert.NoError(t, err, "Query parameter l should not be nil")
-		if l != nil {
-			assert.Equal(t, int64(500), *l, "Query parameter l should be equal to 500")
+		if qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter l should not be nil")) {
+			qt.Check(t, qt.Equals(*l, int64(500)), qt.Commentf("Query parameter l should be equal to 500"))
 		}
 
 		b, err := ctx.Query.BoolOptional("b")
-		assert.NoError(t, err, "Query parameter b should not be nil")
-		if b != nil {
-			assert.True(t, *b, "Query parameter b should be true")
+		if qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter b should not be nil")) {
+			qt.Check(t, qt.IsTrue(*b), qt.Commentf("Query parameter b should be true"))
 		}
 
 		ctx.StatusCode(fasthttp.StatusOK)
@@ -151,9 +146,9 @@ func TestQueryOptionalValidParams(t *testing.T) {
 		"b": true,
 	}))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestQueryOptionalNoValues(t *testing.T) {
@@ -163,31 +158,34 @@ func TestQueryOptionalNoValues(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		v := ctx.Query.Values("multi")
-		assert.Len(t, v, 0, "Query parameter multi should be empty")
+		qt.Check(t, qt.HasLen(v, 0), qt.Commentf("Query parameter multi should be empty"))
 
 		s := ctx.Query.StringOptional("s")
-		assert.Nil(t, s, "Query parameter s should be nil")
+		qt.Check(t, qt.IsNil(s), qt.Commentf("Query parameter s should be nil"))
 
 		i, err := ctx.Query.IntOptional("i")
-		assert.NoError(t, err)
-		assert.Nil(t, i, "Query parameter i should be nil")
+		if qt.Check(t, qt.IsNil(err)) {
+			qt.Check(t, qt.IsNil(i), qt.Commentf("Query parameter i should be nil"))
+		}
 
 		l, err := ctx.Query.Int64Optional("l")
-		assert.NoError(t, err)
-		assert.Nil(t, l, "Query parameter l should be nil")
+		if qt.Check(t, qt.IsNil(err)) {
+			qt.Check(t, qt.IsNil(l), qt.Commentf("Query parameter l should be nil"))
+		}
 
 		b, err := ctx.Query.BoolOptional("b")
-		assert.NoError(t, err)
-		assert.Nil(t, b, "Query parameter b should be nil")
+		if qt.Check(t, qt.IsNil(err)) {
+			qt.Check(t, qt.IsNil(b), qt.Commentf("Query parameter b should be nil"))
+		}
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestQueryOptionalInvalidValueError(t *testing.T) {
@@ -197,12 +195,14 @@ func TestQueryOptionalInvalidValueError(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		_, err := ctx.Query.IntOptional("i")
-		assert.ErrorAs(t, err, &ParamInvalidError{}, "Query parameter i should result in invalid parameter error")
-		assert.Equal(t, "Key: 'i' Error:Field validation for 'i' failed on the 'numeric' tag", err.(SafeError).SafeError())
+		if qt.Check(t, qt.ErrorAs(err, &ParamInvalidError{}), qt.Commentf("Query parameter i should result in invalid parameter error")) {
+			qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'i' Error:Field validation for 'i' failed on the 'numeric' tag"))
+		}
 
 		_, err = ctx.Query.Int64Optional("l")
-		assert.ErrorAs(t, err, &ParamInvalidError{}, "Query parameter i should result in invalid parameter error")
-		assert.Equal(t, "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag", err.(SafeError).SafeError())
+		if qt.Check(t, qt.ErrorAs(err, &ParamInvalidError{}), qt.Commentf("Query parameter i should result in invalid parameter error")) {
+			qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag"))
+		}
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -213,7 +213,7 @@ func TestQueryOptionalInvalidValueError(t *testing.T) {
 		"l": "test",
 	}))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }

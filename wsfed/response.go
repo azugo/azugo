@@ -2,6 +2,7 @@ package wsfed
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"time"
 
@@ -22,8 +23,10 @@ func elementToString(el *etree.Element) (string, error) {
 	if el == nil {
 		return "", nil
 	}
+
 	doc := etree.NewDocument()
 	doc.SetRoot(el.Copy())
+
 	return doc.WriteToString()
 }
 
@@ -58,15 +61,17 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 
 	validated, err := ctx.Validate(el)
 	if err != nil {
-		if err == dsig.ErrMissingSignature {
+		if errors.Is(err, dsig.ErrMissingSignature) {
 			return nil, ErrTokenUnverifiable
-		} else if err == dsig.ErrInvalidSignature {
+		} else if errors.Is(err, dsig.ErrInvalidSignature) {
 			return nil, ErrTokenSignatureInvalid
 		}
+
 		return nil, ErrTokenSignatureInvalid
 	}
 
 	var raw, signature, validatedRaw string
+
 	if opts.SaveToken {
 		var err error
 		// Token RAW XML
@@ -80,6 +85,7 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 		if signel == nil {
 			return nil, ErrTokenMalformed
 		}
+
 		signature, err = elementToString(signel)
 		if err != nil {
 			return nil, err
@@ -103,6 +109,7 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 		if err != nil {
 			return nil, err
 		}
+
 		claims.IssuedAt = &t
 	}
 
@@ -126,19 +133,23 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 			if err != nil {
 				return nil, err
 			}
+
 			claims.NotBefore = &t
 		}
+
 		if exp := cond.SelectAttrValue("NotOnOrAfter", ""); len(exp) > 0 {
 			t, err := parseISO8601Time(exp)
 			if err != nil {
 				return nil, err
 			}
+
 			claims.ExpiresAt = &t
 		}
 
 		for _, aud := range cond.FindElements("./AudienceRestrictionCondition/Audience") {
 			claims.Audience = append(claims.Audience, aud.Text())
 		}
+
 		for _, aud := range cond.FindElements("./AudienceRestriction/Audience") {
 			claims.Audience = append(claims.Audience, aud.Text())
 		}
@@ -149,17 +160,21 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 		if len(name) == 0 {
 			ns := attr.SelectAttrValue("AttributeNamespace", "")
 			name = attr.SelectAttrValue("AttributeName", "")
+
 			if len(ns) > 0 && len(name) > 0 {
 				name = fmt.Sprintf("%s/%s", ns, name)
 			}
 		}
+
 		if len(name) == 0 {
 			return nil, ErrTokenMalformed
 		}
+
 		vals := make([]string, 0, 1)
 		for _, val := range attr.FindElements("./AttributeValue") {
 			vals = append(vals, val.Text())
 		}
+
 		claims.Attributes[name] = vals
 	}
 
@@ -205,6 +220,7 @@ func (p *WsFederation) ReadResponse(ctx *azugo.Context, opt ...TokenParseOption)
 		if !ok {
 			return nil, ErrTokenNonceInvalid
 		}
+
 		return nil, err
 	}
 

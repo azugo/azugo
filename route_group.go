@@ -4,7 +4,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// RouteGroup is a sub-router to group paths
+// RouteGroup is a sub-router to group paths.
 type RouteGroup struct {
 	mux         *mux
 	middlewares []RequestHandlerFunc
@@ -15,13 +15,14 @@ func (g *RouteGroup) chain(handler RequestHandler) RequestHandler {
 	for i := len(g.middlewares) - 1; i >= 0; i-- {
 		handler = g.middlewares[i](handler)
 	}
+
 	return handler
 }
 
 // Mutable allows updating the route handler. Sets for all router not only for group.
 //
 // Disabled by default.
-// WARNING: Use with care. It could generate unexpected behaviors
+// WARNING: Use with care. It could generate unexpected behaviors.
 func (g *RouteGroup) Mutable(v bool) {
 	g.mux.Mutable(v)
 }
@@ -35,6 +36,7 @@ func (g *RouteGroup) Group(path string) Router {
 		middlewares: make([]RequestHandlerFunc, 0),
 	}
 	n.Use(g.middlewares...)
+
 	return n
 }
 
@@ -58,66 +60,68 @@ func (g *RouteGroup) Handle(method, path string, handler RequestHandler) {
 	g.mux.Handle(method, g.prefix+path, g.chain(handler))
 }
 
-// Get is a shortcut for HTTP GET method handler
+// Get is a shortcut for HTTP GET method handler.
 func (g *RouteGroup) Get(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodGet, path, handler)
 }
 
-// Head is a shortcut for HTTP HEAD method handler
+// Head is a shortcut for HTTP HEAD method handler.
 func (g *RouteGroup) Head(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodHead, path, handler)
 }
 
-// Post is a shortcut for HTTP POST method handler
+// Post is a shortcut for HTTP POST method handler.
 func (g *RouteGroup) Post(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodPost, path, handler)
 }
 
-// Put is a shortcut for HTTP PUT method handler
+// Put is a shortcut for HTTP PUT method handler.
 func (g *RouteGroup) Put(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodPut, path, handler)
 }
 
-// Patch is a shortcut for HTTP PATCH method handler
+// Patch is a shortcut for HTTP PATCH method handler.
 func (g *RouteGroup) Patch(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodPatch, path, handler)
 }
 
-// Delete is a shortcut for HTTP DELETE method handler
+// Delete is a shortcut for HTTP DELETE method handler.
 func (g *RouteGroup) Delete(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodDelete, path, handler)
 }
 
-// Connect is a shortcut for HTTP CONNECT method handler
+// Connect is a shortcut for HTTP CONNECT method handler.
 func (g *RouteGroup) Connect(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodConnect, path, handler)
 }
 
-// Options is a shortcut for HTTP OPTIONS method handler
+// Options is a shortcut for HTTP OPTIONS method handler.
 func (g *RouteGroup) Options(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodOptions, path, handler)
 }
 
-// Trace is a shortcut for HTTP TRACE method handler
+// Trace is a shortcut for HTTP TRACE method handler.
 func (g *RouteGroup) Trace(path string, handler RequestHandler) {
 	g.Handle(fasthttp.MethodTrace, path, handler)
 }
 
-// Proxy is helper to proxy requests to another host
+// Proxy is helper to proxy requests to another host.
 func (g *RouteGroup) Proxy(path string, options ...ProxyOption) {
 	p := g.mux.newUpstreamProxy(path, options...)
 	handler := g.chain(Handle(p))
 
 	g.Any(path, handler)
+
 	if len(path) > 0 && path[len(path)-1] != '/' {
 		path += "/"
 	}
+
 	g.Any(path+"{path:*}", handler)
 }
 
 // Any is a shortcut for all HTTP methods handler
 //
-// WARNING: Use only for routes where the request method is not important
+// WARNING: Use only for routes where the request method is not important.
 func (g *RouteGroup) Any(path string, handler RequestHandler) {
 	g.Handle(MethodWild, path, handler)
 }

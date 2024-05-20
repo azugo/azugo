@@ -42,7 +42,7 @@ func WithRequestParam(name, value string) RequestOption {
 
 // SigninURL returns the signin URL.
 func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...RequestOption) (string, error) {
-	if err := p.check(p.defaultHttpClient(), false); err != nil {
+	if err := p.check(p.defaultHTTPClient(), false); err != nil {
 		return "", err
 	}
 
@@ -54,6 +54,7 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 	for _, o := range options {
 		o.apply(rp)
 	}
+
 	wctx, err := p.NonceStore.Create(ctx)
 	if err != nil {
 		return "", err
@@ -62,11 +63,14 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 	params := url.Values{}
 	params.Add("wa", "wsignin1.0")
 	params.Add("wtrealm", realm)
+
 	if rp.Wreply != "" {
 		params.Add("wreply", rp.Wreply)
 	}
+
 	params.Add("wct", p.clock.Now().UTC().Format(time.RFC3339))
 	params.Add("wctx", wctx)
+
 	for _, param := range rp.Params {
 		params.Add(param.Name, param.Value)
 	}
@@ -78,7 +82,7 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 
 // SignoutURL returns the signout URL.
 func (p *WsFederation) SignoutURL(realm string, options ...RequestOption) (string, error) {
-	if err := p.check(p.defaultHttpClient(), false); err != nil {
+	if err := p.check(p.defaultHTTPClient(), false); err != nil {
 		return "", err
 	}
 
@@ -92,6 +96,7 @@ func (p *WsFederation) SignoutURL(realm string, options ...RequestOption) (strin
 	params := url.Values{}
 	params.Add("wa", "wsignout1.0")
 	params.Add("wtrealm", realm)
+
 	if rp.Wreply != "" {
 		params.Add("wreply", rp.Wreply)
 	}

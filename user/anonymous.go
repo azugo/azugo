@@ -9,13 +9,13 @@ type Anonymous struct{}
 
 // ClaimValue returns claim value.
 // If multiple names are provided, claim that matches first name will be returned.
-func (u Anonymous) ClaimValue(name ...string) string {
+func (u Anonymous) ClaimValue(_ ...string) string {
 	return ""
 }
 
 // Claim returns all claims with specified name.
 // If multiple names are provided, claim that matches first name will be returned.
-func (u Anonymous) Claim(name ...string) token.ClaimStrings {
+func (u Anonymous) Claim(_ ...string) token.ClaimStrings {
 	return nil
 }
 
@@ -40,22 +40,22 @@ func (u Anonymous) Authorized() bool {
 }
 
 // HasScopeGroup checks if user has any granted scopes in specified group.
-func (u Anonymous) HasScopeGroup(name string) bool {
+func (u Anonymous) HasScopeGroup(_ string) bool {
 	return false
 }
 
 // HasScope checks if user has granted scope with any level.
-func (u Anonymous) HasScope(name string) bool {
+func (u Anonymous) HasScope(_ string) bool {
 	return false
 }
 
 // HasScopeLevel checks if user has granted scope with exact level.
-func (u Anonymous) HasScopeLevel(name string, level string) bool {
+func (u Anonymous) HasScopeLevel(_, _ string) bool {
 	return false
 }
 
 // HasScopeLevel checks if user has granted scope with at least one of levels.
-func (u Anonymous) HasScopeAnyLevel(name string, levels ...string) bool {
+func (u Anonymous) HasScopeAnyLevel(_ string, _ ...string) bool {
 	return false
 }
 

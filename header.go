@@ -41,6 +41,7 @@ func (h *HeaderCtx) Get(key string) string {
 // Values returns all values associated with the given key in request.
 func (h *HeaderCtx) Values(key string) []string {
 	data := make([]string, 0, 1)
+
 	h.ctx.Request().Header.VisitAll(func(k, val []byte) {
 		if !strings.EqualFold(key, utils.B2S(k)) {
 			return
@@ -55,6 +56,7 @@ func (h *HeaderCtx) Values(key string) []string {
 			data = append(data, utils.B2S(val))
 		}
 	})
+
 	return data
 }
 

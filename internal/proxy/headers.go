@@ -13,7 +13,7 @@ var hopHeaders = []string{
 }
 
 type HeaderDel interface {
-	Del(string)
+	Del(key string)
 }
 
 // StripHeaders removes hop-by-hop headers from the response or request.

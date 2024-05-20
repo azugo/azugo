@@ -9,6 +9,7 @@ import (
 
 	"azugo.io/core"
 	"azugo.io/core/cert"
+	"azugo.io/core/http"
 	"github.com/lafriks/http2"
 	"github.com/oklog/ulid/v2"
 	"github.com/spf13/cobra"
@@ -30,6 +31,11 @@ type App struct {
 
 	// Configuration
 	config *config.Configuration
+
+	// HTTP client
+	http     http.Client
+	httpOpts []http.Option
+	httpSync sync.RWMutex
 
 	// Metrics options
 	MetricsOptions MetricsOptions
@@ -61,6 +67,7 @@ func New(opts ...*core.App) *App {
 	} else {
 		app = core.New()
 	}
+
 	a := &App{
 		App: app,
 		entropy: &ulid.LockedMonotonicReader{
@@ -74,8 +81,10 @@ func New(opts ...*core.App) *App {
 
 		MetricsOptions: defaultMetricsOptions,
 	}
+
 	a.defaultMux = newMux(a)
 	a.router = defaultRouter{App: a}
+
 	return a
 }
 
@@ -85,7 +94,7 @@ func (a *App) RouterOptions() *RouterOptions {
 }
 
 // SetConfig binds application configuration to the application.
-func (a *App) SetConfig(cmd *cobra.Command, conf *config.Configuration) {
+func (a *App) SetConfig(_ *cobra.Command, conf *config.Configuration) {
 	if a.config != nil && a.config.Ready() {
 		return
 	}
@@ -102,6 +111,7 @@ func (a *App) ApplyConfig() {
 	// Apply Metrics configuration.
 	if conf.Metrics.Enabled {
 		a.MetricsOptions.Clear()
+
 		for _, p := range conf.Metrics.Address {
 			a.MetricsOptions.Add(p)
 		}
@@ -112,8 +122,10 @@ func (a *App) ApplyConfig() {
 func (a *App) SetRouterSwitch(r RouteSwitcher) {
 	if r == nil {
 		a.router = defaultRouter{App: a}
+
 		return
 	}
+
 	a.router = customRouter{App: a, custom: r}
 }
 
@@ -124,6 +136,7 @@ func (a *App) Config() *config.Configuration {
 	if a.config == nil || !a.config.Ready() {
 		panic("configuration is not loaded")
 	}
+
 	return a.config
 }
 
@@ -151,6 +164,7 @@ func (a *App) Start() error {
 	}
 
 	var wg sync.WaitGroup
+
 	if conf.HTTP != nil && conf.HTTP.Enabled {
 		addr := conf.HTTP.Address
 		if addr == "0.0.0.0" {
@@ -162,6 +176,7 @@ func (a *App) Start() error {
 		go func() {
 			defer wg.Done()
 			a.Log().Info(fmt.Sprintf("Listening on http://%s:%d%s...", conf.HTTP.Address, conf.HTTP.Port, conf.Path))
+
 			if err := server.ListenAndServe(fmt.Sprintf("%s:%d", addr, conf.HTTP.Port)); err != nil {
 				a.Log().Error("failed to start HTTP server", zap.Error(err))
 			}
@@ -174,19 +189,24 @@ func (a *App) Start() error {
 			addr = ""
 		}
 
-		var certData []byte
-		var keyData []byte
-		var err error
+		var (
+			certData, keyData []byte
+
+			err error
+		)
+
 		if len(conf.HTTPS.CertificatePEMFile) > 0 {
 			certData, keyData, err = cert.LoadPEMFromFile(conf.HTTPS.CertificatePEMFile)
 			if err != nil {
 				a.Log().Error("failed to load TLS certificate", zap.Error(err))
+
 				return err
 			}
 		} else {
 			certData, keyData, err = cert.DevPEMFile("azugo", "localhost")
 			if err != nil {
 				a.Log().Error("failed to load or generate self-signed TLS certificate", zap.Error(err))
+
 				return err
 			}
 		}
@@ -196,6 +216,7 @@ func (a *App) Start() error {
 		go func() {
 			defer wg.Done()
 			a.Log().Info(fmt.Sprintf("Listening on https://%s:%d%s...", conf.HTTPS.Address, conf.HTTPS.Port, conf.Path))
+
 			if err := server.ListenAndServeTLSEmbed(fmt.Sprintf("%s:%d", addr, conf.HTTPS.Port), certData, keyData); err != nil {
 				a.Log().Error("failed to start HTTPS server", zap.Error(err))
 			}

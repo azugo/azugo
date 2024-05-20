@@ -21,8 +21,11 @@ var (
 )
 
 func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
-	var init sync.Once
-	var logger *zap.Logger
+	var (
+		init   sync.Once
+		logger *zap.Logger
+	)
+
 	enabled := os.Getenv("ACCESS_LOG_ENABLED") == "" || os.Getenv("ACCESS_LOG_ENABLED") == "true"
 
 	return func(ctx *azugo.Context) {
@@ -37,13 +40,14 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		ns := time.Since(t1).Nanoseconds()
 
-		if !ctx.UserValue("log_request").(bool) {
+		if val, ok := ctx.UserValue("log_request").(bool); !ok || !val {
 			return
 		}
 
 		method := ctx.Method()
 		path := ctx.Path()
 		cleanedPath := path
+
 		basePath := ctx.BasePath()
 		if len(basePath) > 0 && len(basePath) < len(path) && basePath == path[:len(basePath)] {
 			cleanedPath = path[len(basePath):]
@@ -97,6 +101,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 		} else {
 			_ = msg.WriteByte('-')
 		}
+
 		_ = msg.WriteByte('"')
 
 		// User agent
@@ -106,6 +111,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 		} else {
 			_ = msg.WriteByte('-')
 		}
+
 		_ = msg.WriteByte('"')
 
 		fields := make([]zap.Field, 0, 10)
@@ -116,24 +122,29 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 			zap.String("http.request.id", ctx.ID()),
 			zap.String("http.request.method", method),
 		)
+
 		if len(referer) > 0 {
 			fields = append(fields, zap.String("http.request.referer", referer))
 		}
+
 		if ct := ctx.Request().Header.ContentType(); len(ct) > 0 {
 			fields = append(fields, zap.String("http.request.mime_type", utils.B2S(ct)))
 		}
+
 		if len(userAgent) > 0 {
 			fields = append(fields, zap.String("user_agent.original", userAgent))
 		}
 
 		// URL
 		u := ctx.Request().URI()
+
 		scheme := u.Scheme()
 		if bytes.Equal(scheme, protocolHTTP) && ctx.IsTLS() {
 			scheme = protocolHTTPS
 		} else if bytes.Equal(scheme, protocolHTTPS) && !ctx.IsTLS() {
 			scheme = protocolHTTP
 		}
+
 		fields = append(fields,
 			zap.String("url.full", buildFullURI(ctx, cleanedPath, u)),
 			zap.String("url.original", utils.B2S(u.Path())),
@@ -141,12 +152,15 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 			zap.String("url.domain", utils.B2S(u.Host())),
 			zap.String("url.path", cleanedPath),
 		)
+
 		if usr := u.Username(); len(usr) > 0 {
 			fields = append(fields, zap.String("url.username", utils.B2S(usr)))
 		}
+
 		if q := u.QueryString(); len(q) > 0 {
 			fields = append(fields, zap.String("url.query", utils.B2S(q)))
 		}
+
 		if h := u.Hash(); len(h) > 0 {
 			fields = append(fields, zap.String("url.fragment", utils.B2S(h)))
 		}
@@ -155,6 +169,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 		fields = append(fields,
 			zap.Int("http.response.status_code", ctx.Response().StatusCode()),
 		)
+
 		if ct := ctx.Response().Header.ContentType(); len(ct) > 0 {
 			fields = append(fields, zap.String("http.response.mime_type", utils.B2S(ct)))
 		}
@@ -181,10 +196,12 @@ func buildFullURI(ctx *azugo.Context, path string, u *fasthttp.URI) string {
 
 	_, _ = fullURI.WriteString(ctx.BaseURL())
 	_, _ = fullURI.WriteString(path)
+
 	if q := u.QueryString(); len(q) > 0 {
 		_ = fullURI.WriteByte('?')
 		_, _ = fullURI.Write(q)
 	}
+
 	if h := u.Hash(); len(h) > 0 {
 		_ = fullURI.WriteByte('#')
 		_, _ = fullURI.Write(h)

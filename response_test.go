@@ -5,8 +5,7 @@ import (
 	"testing"
 
 	"azugo.io/core/paginator"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -25,13 +24,13 @@ func TestResponseJSON(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
 	var user testBodyUser
 	err = json.Unmarshal(resp.Body(), &user)
-	require.NoError(t, err)
-	assert.Equal(t, "application/json", string(resp.Header.ContentType()))
-	assert.Equal(t, "test", user.Name, "wrong response value")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(string(resp.Header.ContentType()), "application/json"))
+	qt.Check(t, qt.Equals(user.Name, "test"))
 }
 
 func TestResponseContentType(t *testing.T) {
@@ -40,18 +39,17 @@ func TestResponseContentType(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		ctx.
-			ContentType("application/xml", "UTF-8").
-			Raw([]byte("<test></test>"))
+		ctx.ContentType("application/xml", "UTF-8")
+		ctx.Raw([]byte("<test></test>"))
 	})
 
 	c := a.TestClient()
 	resp, err := c.Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, "application/xml; charset=UTF-8", string(resp.Header.ContentType()))
-	assert.Equal(t, "<test></test>", string(resp.Body()), "wrong response value")
+	qt.Check(t, qt.Equals(string(resp.Header.ContentType()), "application/xml; charset=UTF-8"))
+	qt.Check(t, qt.Equals(string(resp.Body()), "<test></test>"))
 }
 
 func TestResponsePaging(t *testing.T) {
@@ -75,11 +73,11 @@ func TestResponsePaging(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/user/test")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, "100", string(resp.Header.Peek(HeaderTotalCount)))
-	assert.Equal(t, `<http://test/user/test?page=2&per_page=20>; rel="next",<http://test/user/test?page=5&per_page=20>; rel="last"`, string(resp.Header.Peek(HeaderLink)))
-	assert.Equal(t, "X-Total-Count, Link", string(resp.Header.Peek(HeaderAccessControlExposeHeaders)))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(HeaderTotalCount)), "100"))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(HeaderLink)), `<http://test/user/test?page=2&per_page=20>; rel="next",<http://test/user/test?page=5&per_page=20>; rel="last"`))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(HeaderAccessControlExposeHeaders)), "X-Total-Count, Link"))
 }
 
 func TestResponseRedirect(t *testing.T) {
@@ -94,10 +92,10 @@ func TestResponseRedirect(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusFound, resp.StatusCode())
-	assert.Equal(t, "http://test/", string(resp.Header.Peek("Location")))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusFound))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek("Location")), "http://test/"))
 }
 
 func TestResponseRedirectStatusCode(t *testing.T) {
@@ -106,14 +104,15 @@ func TestResponseRedirectStatusCode(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusPermanentRedirect).Redirect("http://test/")
+		ctx.StatusCode(fasthttp.StatusPermanentRedirect)
+		ctx.Redirect("http://test/")
 	})
 
 	c := a.TestClient()
 	resp, err := c.Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusPermanentRedirect, resp.StatusCode())
-	assert.Equal(t, "http://test/", string(resp.Header.Peek("Location")))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusPermanentRedirect))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek("Location")), "http://test/"))
 }

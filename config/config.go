@@ -2,6 +2,7 @@ package config
 
 import (
 	"azugo.io/core/config"
+	"azugo.io/core/http"
 	"azugo.io/core/validation"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -19,6 +20,8 @@ type Configuration struct {
 	Proxy *Proxy `mapstructure:"proxy"`
 	// Metrics configuration section.
 	Metrics *Metrics `mapstructure:"metrics"`
+	// HTTPClient configuration section.
+	HTTPClient *http.Configuration `mapstructure:"http_client"`
 }
 
 // New returns a new configuration.
@@ -45,6 +48,7 @@ func (c *Configuration) Bind(_ string, v *viper.Viper) {
 	c.CORS = config.Bind(c.CORS, "cors", v)
 	c.Proxy = config.Bind(c.Proxy, "proxy", v)
 	c.Metrics = config.Bind(c.Metrics, "metrics", v)
+	c.HTTPClient = config.Bind(c.HTTPClient, "http_client", v)
 }
 
 // BindCmd adds configuration bindings from command arguments.
@@ -63,14 +67,22 @@ func (c *Configuration) Validate(validate *validation.Validate) error {
 	if err := c.Server.Validate(validate); err != nil {
 		return err
 	}
+
 	if err := c.CORS.Validate(validate); err != nil {
 		return err
 	}
+
 	if err := c.Proxy.Validate(validate); err != nil {
 		return err
 	}
+
 	if err := c.Metrics.Validate(validate); err != nil {
 		return err
 	}
+
+	if err := c.HTTPClient.Validate(validate); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -22,6 +22,7 @@ type CORSOptions struct {
 // SetMethods sets allowed CORS methods.
 func (c *CORSOptions) SetMethods(methods ...string) *CORSOptions {
 	c.allowedMethods = strings.Join(methods, ", ")
+
 	return c
 }
 
@@ -38,6 +39,7 @@ func (c *CORSOptions) AllowCredentials() bool {
 // SetHeaders sets allowed CORS methods.
 func (c *CORSOptions) SetHeaders(headers ...string) *CORSOptions {
 	c.allowedHeaders = strings.Join(headers, ", ")
+
 	return c
 }
 
@@ -50,13 +52,17 @@ func (c *CORSOptions) Headers() string {
 func (c *CORSOptions) SetOrigins(origins ...string) *CORSOptions {
 	c.allowedOrigins = make(map[string]struct{}, len(origins))
 	c.allowAllOrigins = false
+
 	for _, origin := range origins {
 		if origin == "*" {
 			c.allowAllOrigins = true
+
 			break
 		}
+
 		c.allowedOrigins[origin] = struct{}{}
 	}
+
 	return c
 }
 
@@ -65,6 +71,8 @@ func (c *CORSOptions) ValidOrigin(origin string) bool {
 	if c.allowAllOrigins {
 		return true
 	}
+
 	_, ok := c.allowedOrigins[origin]
+
 	return ok
 }

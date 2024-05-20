@@ -16,7 +16,7 @@ type formKeyValuer interface {
 	Values(key string) []string
 	File(key string) *multipart.FileHeader
 	Files(key string) []*multipart.FileHeader
-	Reset(*Context)
+	Reset(ctx *Context)
 }
 
 // FormCtx represents the post form key-value pairs.
@@ -64,6 +64,7 @@ func (a *postArgs) Value(key string) string {
 
 func (a *postArgs) Values(key string) []string {
 	data := make([]string, 0, 1)
+
 	a.args.VisitAll(func(k, val []byte) {
 		if !strings.EqualFold(key, utils.B2S(k)) {
 			return
@@ -78,6 +79,7 @@ func (a *postArgs) Values(key string) []string {
 			data = append(data, utils.B2S(val))
 		}
 	})
+
 	return data
 }
 
@@ -101,6 +103,7 @@ func (a *multiPartArgs) Value(key string) string {
 	if v, ok := a.args.Value[key]; ok && len(v) > 0 {
 		return v[0]
 	}
+
 	return ""
 }
 
@@ -112,6 +115,7 @@ func (a *multiPartArgs) File(key string) *multipart.FileHeader {
 	if v, ok := a.args.File[key]; ok && len(v) > 0 {
 		return a.args.File[key][0]
 	}
+
 	return nil
 }
 
@@ -135,6 +139,7 @@ func (f *FormCtx) String(key string) (string, error) {
 	if len(v) == 0 {
 		return "", ParamRequiredError{key}
 	}
+
 	return v, nil
 }
 
@@ -144,6 +149,7 @@ func (f *FormCtx) StringOptional(key string) *string {
 	if len(v) == 0 {
 		return nil
 	}
+
 	return &v
 }
 
@@ -153,10 +159,12 @@ func (f *FormCtx) Int64(key string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 0, ParamInvalidError{key, "numeric", err}
 	}
+
 	return v, nil
 }
 
@@ -166,10 +174,12 @@ func (f *FormCtx) Int64Optional(key string) (*int64, error) {
 	if s == nil {
 		return nil, nil
 	}
+
 	v, err := strconv.ParseInt(*s, 10, 64)
 	if err != nil {
 		return nil, ParamInvalidError{key, "numeric", err}
 	}
+
 	return &v, nil
 }
 
@@ -179,6 +189,7 @@ func (f *FormCtx) Int(key string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return int(v), nil
 }
 
@@ -188,10 +199,13 @@ func (f *FormCtx) IntOptional(key string) (*int, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if v == nil {
 		return nil, nil
 	}
+
 	iv := int(*v)
+
 	return &iv, nil
 }
 
@@ -203,6 +217,7 @@ func (f *FormCtx) Bool(key string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	return strings.ToLower(v) == "true" || v == "1", nil
 }
 
@@ -214,7 +229,9 @@ func (f *FormCtx) BoolOptional(key string) (*bool, error) {
 	if v == nil {
 		return nil, nil
 	}
+
 	iv := strings.ToLower(*v) == "true" || *v == "1"
+
 	return &iv, nil
 }
 
@@ -224,6 +241,7 @@ func (f *FormCtx) File(key string) (*multipart.FileHeader, error) {
 	if v == nil {
 		return nil, ParamRequiredError{key}
 	}
+
 	return v, nil
 }
 

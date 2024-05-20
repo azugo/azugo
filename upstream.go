@@ -28,7 +28,7 @@ type Proxy struct {
 
 // ProxyOption is a proxy option.
 type ProxyOption interface {
-	apply(*proxyOptions)
+	apply(opts *proxyOptions)
 }
 
 type proxyOptions struct {
@@ -102,6 +102,7 @@ func (m *mux) newUpstreamProxy(basePath string, options ...ProxyOption) *Proxy {
 		client: &fasthttp.Client{
 			NoDefaultUserAgentHeader: true,
 			TLSConfig: &tls.Config{
+				//nolint:gosec
 				InsecureSkipVerify: opt.InsecureSkipVerify,
 			},
 			ReadBufferSize:  m.app.ServerOptions.ResponseWriteBufferSize,
@@ -114,7 +115,9 @@ func (m *mux) newUpstreamProxy(basePath string, options ...ProxyOption) *Proxy {
 // Handler implements azugo.Handler to handle incoming request.
 func (p *Proxy) Handler(ctx *Context) {
 	if len(p.options.Upstream) == 0 {
-		ctx.StatusCode(fasthttp.StatusBadGateway).Text(fasthttp.StatusMessage(fasthttp.StatusBadGateway))
+		ctx.StatusCode(fasthttp.StatusBadGateway)
+		ctx.Text(fasthttp.StatusMessage(fasthttp.StatusBadGateway))
+
 		return
 	}
 
@@ -141,13 +144,16 @@ func (p *Proxy) Handler(ctx *Context) {
 
 	if err := p.client.Do(req, resp); err != nil {
 		ctx.Log().With(zap.Error(err)).Warn("proxy upstream failed")
-		ctx.StatusCode(fasthttp.StatusBadGateway).Text(fasthttp.StatusMessage(fasthttp.StatusBadGateway))
+		ctx.StatusCode(fasthttp.StatusBadGateway)
+		ctx.Text(fasthttp.StatusMessage(fasthttp.StatusBadGateway))
+
 		return
 	}
 
 	proxy.StripHeaders(&resp.Header)
 	proxy.RewriteCookies(ctx.IsTLS(), ctx.Host(), resp)
+
 	if p.options.BodyRewriter != nil && p.options.BodyRewriter.Enabled() {
-		p.options.BodyRewriter.RewriteResponse(append([]byte(ctx.BaseURL()), []byte(p.options.BasePath)...), []byte(upstream.BaseURL), resp)
+		p.options.BodyRewriter.RewriteResponse(append([]byte(ctx.BaseURL()), []byte(p.options.BasePath)...), upstream.BaseURL, resp)
 	}
 }

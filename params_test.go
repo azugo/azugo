@@ -3,8 +3,7 @@ package azugo
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -15,20 +14,20 @@ func TestRouteValidParams(t *testing.T) {
 
 	a.Get("/user/{name}/{id}", func(ctx *Context) {
 		name := ctx.Params.String("name")
-		assert.Equal(t, "gopher", name, "Route parameter name should be equal to gopher")
+		qt.Check(t, qt.Equals(name, "gopher"), qt.Commentf("Route parameter name should be equal to gopher"))
 
 		id, err := ctx.Params.Int("id")
-		assert.NoError(t, err, "Route parameter id should not be nil")
-		assert.Equal(t, 1, id, "Route parameter id should be equal to 1")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Route parameter id should not be nil"))
+		qt.Check(t, qt.Equals(id, 1), qt.Commentf("Route parameter id should be equal to 1"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user/gopher/1")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestRouteInvalidParams(t *testing.T) {
@@ -38,17 +37,17 @@ func TestRouteInvalidParams(t *testing.T) {
 
 	a.Get("/user/{id}", func(ctx *Context) {
 		id, err := ctx.Params.Int64("id")
-		assert.Error(t, err, "Route parameter name should have error")
-		assert.Equal(t, int64(0), id, "Route parameter name should be equal to 0")
+		qt.Check(t, qt.IsNotNil(err), qt.Commentf("Route parameter name should have error"))
+		qt.Check(t, qt.Equals(id, 0), qt.Commentf("Route parameter name should be equal to 0"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user/gopher")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Check(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestRouteNonexistingParams(t *testing.T) {
@@ -57,15 +56,15 @@ func TestRouteNonexistingParams(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user/{id}", func(ctx *Context) {
-		assert.False(t, ctx.Params.Has("type"))
-		assert.True(t, ctx.Params.Has("id"))
+		qt.Check(t, qt.IsFalse(ctx.Params.Has("type")))
+		qt.Check(t, qt.IsTrue(ctx.Params.Has("id")))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user/gopher")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }

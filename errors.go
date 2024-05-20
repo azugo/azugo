@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"azugo.io/core/http"
 	"github.com/go-playground/validator/v10"
 	"github.com/valyala/fasthttp"
 )
@@ -19,24 +20,7 @@ type SafeError interface {
 	SafeError() string
 }
 
-// ResponseStatusCode is an interface that error can implement to return
-// status code that will be set for the response.
-type ResponseStatusCode interface {
-	StatusCode() int
-}
-
-// ErrorResponseError is an error response error details.
-type ErrorResponseError struct {
-	Type    string `json:"type" xml:"Type"`
-	Message string `json:"message" xml:"Message"`
-}
-
-// ErrorResponse represents an error response.
-type ErrorResponse struct {
-	Errors []*ErrorResponseError `json:"errors" xml:"Errors>Error"`
-}
-
-func fromSafeError(err SafeError) *ErrorResponseError {
+func fromSafeError(err SafeError) *http.ErrorResponseError {
 	msg := err.SafeError()
 	if len(msg) == 0 {
 		return nil
@@ -47,25 +31,25 @@ func fromSafeError(err SafeError) *ErrorResponseError {
 		t = t.Elem()
 	}
 
-	return &ErrorResponseError{
+	return &http.ErrorResponseError{
 		Type:    t.Name(),
 		Message: msg,
 	}
 }
 
 // NewErrorResponse creates an error response from the given error.
-func NewErrorResponse(err error) *ErrorResponse {
+func NewErrorResponse(err error) *http.ErrorResponse {
 	if err == nil {
 		return nil
 	}
 
-	errs := make([]*ErrorResponseError, 0, 1)
+	errs := make([]*http.ErrorResponseError, 0, 1)
 
 	// Detect validation errors
 	var verr validator.ValidationErrors
 	if errors.As(err, &verr) {
 		for _, e := range verr {
-			errs = append(errs, &ErrorResponseError{
+			errs = append(errs, &http.ErrorResponseError{
 				Type:    "FieldError",
 				Message: e.Error(),
 			})
@@ -83,7 +67,7 @@ func NewErrorResponse(err error) *ErrorResponse {
 		return nil
 	}
 
-	return &ErrorResponse{
+	return &http.ErrorResponse{
 		Errors: errs,
 	}
 }
@@ -116,6 +100,7 @@ func (e ParamInvalidError) Error() string {
 	if e.Err == nil {
 		return "invalid parameter value"
 	}
+
 	return e.Err.Error()
 }
 
@@ -133,49 +118,13 @@ type BadRequestError struct {
 }
 
 func (e BadRequestError) Error() string {
-	return fmt.Sprintf("malformed request: %s", e.Description)
+	if e.Description == "" {
+		return "malformed request"
+	}
+
+	return "malformed request: " + e.Description
 }
 
 func (e BadRequestError) StatusCode() int {
 	return fasthttp.StatusBadRequest
-}
-
-// ForbiddenError is an error that occurs when user access is denied.
-type ForbiddenError struct{}
-
-func (e ForbiddenError) Error() string {
-	return "access forbidden"
-}
-
-func (e ForbiddenError) StatusCode() int {
-	return fasthttp.StatusForbidden
-}
-
-// NotFoundError is an error that occurs when searched resource is not found.
-type NotFoundError struct {
-	Resource string
-}
-
-func (e NotFoundError) Error() string {
-	if e.Resource == "" {
-		return "resource not found"
-	}
-	return fmt.Sprintf("%s not found", e.Resource)
-}
-
-func (e NotFoundError) StatusCode() int {
-	return fasthttp.StatusNotFound
-}
-
-// UnprocessableEntityError is an error that occurs when request is well formed, but logically incorrect.
-type UnprocessableEntityError struct {
-	Description string
-}
-
-func (e UnprocessableEntityError) Error() string {
-	return fmt.Sprintf("unprocessable entity: %s", e.Description)
-}
-
-func (e UnprocessableEntityError) StatusCode() int {
-	return fasthttp.StatusUnprocessableEntity
 }

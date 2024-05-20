@@ -45,8 +45,10 @@ type WsFederation struct {
 // New creates a new WS-Federation service instance.
 func New(app *azugo.App, metadataURL string) (*WsFederation, error) {
 	var u *url.URL
+
 	if metadataURL != "" {
 		var err error
+
 		u, err = url.Parse(metadataURL)
 		if err != nil {
 			return nil, err
@@ -80,8 +82,10 @@ func (p *WsFederation) ClearCertificateStore() {
 
 // AddTrustedSigningCertificate adds a trusted certificate to the certificate store.
 func (p *WsFederation) AddTrustedSigningCertificate(cert *x509.Certificate) {
-	s := p.signCertStore.(*dsig.MemoryX509CertificateStore)
-	s.Roots = append(s.Roots, cert)
+	s, ok := p.signCertStore.(*dsig.MemoryX509CertificateStore)
+	if ok {
+		s.Roots = append(s.Roots, cert)
+	}
 }
 
 // RefreshMetadata updates the metadata.
@@ -90,16 +94,17 @@ func (p *WsFederation) RefreshMetadata() error {
 		return nil
 	}
 
-	return p.check(p.defaultHttpClient(), true)
+	return p.check(p.defaultHTTPClient(), true)
 }
 
 // Ready returns true if the service is ready.
 func (p *WsFederation) Ready() bool {
-	if p.check(p.defaultHttpClient(), false) != nil {
+	if p.check(p.defaultHTTPClient(), false) != nil {
 		return false
 	}
 
 	p.lock.RLock()
 	defer p.lock.RUnlock()
+
 	return p.ready
 }

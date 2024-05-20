@@ -7,10 +7,11 @@ import (
 // Deadline returns the time when work done on behalf of this context
 // should be canceled. Deadline returns ok==false when no deadline is
 // set. Successive calls to Deadline return the same results.
-func (c *Context) Deadline() (deadline time.Time, ok bool) {
+func (c *Context) Deadline() (time.Time, bool) {
 	if c == nil || c.context == nil {
-		return
+		return time.Time{}, false
 	}
+
 	return c.context.Deadline()
 }
 
@@ -27,21 +28,21 @@ func (c *Context) Deadline() (deadline time.Time, ok bool) {
 //
 // Done is provided for use in select statements:
 //
-//  // Stream generates values with DoSomething and sends them to out
-//  // until DoSomething returns an error or ctx.Done is closed.
-//  func Stream(ctx context.Context, out chan<- Value) error {
-//  	for {
-//  		v, err := DoSomething(ctx)
-//  		if err != nil {
-//  			return err
-//  		}
-//  		select {
-//  		case <-ctx.Done():
-//  			return ctx.Err()
-//  		case out <- v:
-//  		}
-//  	}
-//  }
+//	// Stream generates values with DoSomething and sends them to out
+//	// until DoSomething returns an error or ctx.Done is closed.
+//	func Stream(ctx context.Context, out chan<- Value) error {
+//		for {
+//			v, err := DoSomething(ctx)
+//			if err != nil {
+//				return err
+//			}
+//			select {
+//			case <-ctx.Done():
+//				return ctx.Err()
+//			case out <- v:
+//			}
+//		}
+//	}
 //
 // See https://blog.golang.org/pipelines for more examples of how to use
 // a Done channel for cancellation.
@@ -49,6 +50,7 @@ func (c *Context) Done() <-chan struct{} {
 	if c == nil || c.context == nil {
 		return nil
 	}
+
 	return c.context.Done()
 }
 
@@ -61,6 +63,7 @@ func (c *Context) Err() error {
 	if c == nil || c.context == nil {
 		return nil
 	}
+
 	return c.context.Err()
 }
 
@@ -82,36 +85,37 @@ func (c *Context) Err() error {
 // Packages that define a Context key should provide type-safe accessors
 // for the values stored using that key:
 //
-// 	// Package user defines a User type that's stored in Contexts.
-// 	package user
+//	// Package user defines a User type that's stored in Contexts.
+//	package user
 //
-// 	import "context"
+//	import "context"
 //
-// 	// User is the type of value stored in the Contexts.
-// 	type User struct {...}
+//	// User is the type of value stored in the Contexts.
+//	type User struct {...}
 //
-// 	// key is an unexported type for keys defined in this package.
-// 	// This prevents collisions with keys defined in other packages.
-// 	type key int
+//	// key is an unexported type for keys defined in this package.
+//	// This prevents collisions with keys defined in other packages.
+//	type key int
 //
-// 	// userKey is the key for user.User values in Contexts. It is
-// 	// unexported; clients use user.NewContext and user.FromContext
-// 	// instead of using this key directly.
-// 	var userKey key
+//	// userKey is the key for user.User values in Contexts. It is
+//	// unexported; clients use user.NewContext and user.FromContext
+//	// instead of using this key directly.
+//	var userKey key
 //
-// 	// NewContext returns a new Context that carries value u.
-// 	func NewContext(ctx context.Context, u *User) context.Context {
-// 		return context.WithValue(ctx, userKey, u)
-// 	}
+//	// NewContext returns a new Context that carries value u.
+//	func NewContext(ctx context.Context, u *User) context.Context {
+//		return context.WithValue(ctx, userKey, u)
+//	}
 //
-// 	// FromContext returns the User value stored in ctx, if any.
-// 	func FromContext(ctx context.Context) (*User, bool) {
-// 		u, ok := ctx.Value(userKey).(*User)
-// 		return u, ok
-// 	}
+//	// FromContext returns the User value stored in ctx, if any.
+//	func FromContext(ctx context.Context) (*User, bool) {
+//		u, ok := ctx.Value(userKey).(*User)
+//		return u, ok
+//	}
 func (c *Context) Value(key any) any {
 	if c == nil || c.context == nil {
 		return nil
 	}
+
 	return c.context.Value(key)
 }

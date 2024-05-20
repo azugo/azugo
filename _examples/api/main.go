@@ -8,13 +8,14 @@ import (
 	"azugo.io/azugo/server"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
+	"go.uber.org/zap"
 )
 
 type CustomConfiguration struct {
 	Value string `mapstructure:"value"`
 }
 
-// Configuration represents application configuration
+// Configuration represents application configuration.
 type Configuration struct {
 	*config.Configuration `mapstructure:",squash"`
 
@@ -41,7 +42,7 @@ func main() {
 		Configuration: config.New(),
 	}
 
-	a, err := server.New(nil, server.ServerOptions{
+	a, err := server.New(nil, server.Options{
 		AppName: "REST API Example",
 
 		Configuration: conf,
@@ -52,14 +53,26 @@ func main() {
 
 	a.Get("/hello", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
-		ctx.StatusCode(fasthttp.StatusOK).Text("Hello, world!")
+		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.Text("Hello, world!")
 	})
 	a.Post("/test", func(ctx *azugo.Context) {
 		req := &TestRequest{}
 		if err := ctx.Body.JSON(req); err != nil {
 			ctx.Error(err)
+
 			return
 		}
+
+		content, err := ctx.HTTPClient().Get("https://example.com/")
+		if err != nil {
+			ctx.Error(err)
+
+			return
+		}
+
+		ctx.Log().Debug("response", zap.String("content", string(content)))
+
 		ctx.JSON(struct {
 			ID int `json:"id"`
 		}{1})
@@ -69,6 +82,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
 	a.Proxy("/example", azugo.ProxyUpstream(u))
 
 	server.Run(a)

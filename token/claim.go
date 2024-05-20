@@ -9,10 +9,10 @@ import (
 // ClaimStrings is basically just a slice of strings, but it can be either serialized from a string array or just a string.
 type ClaimStrings []string
 
-func (s *ClaimStrings) UnmarshalJSON(data []byte) (err error) {
+func (s *ClaimStrings) UnmarshalJSON(data []byte) error {
 	var value interface{}
 
-	if err = json.Unmarshal(data, &value); err != nil {
+	if err := json.Unmarshal(data, &value); err != nil {
 		return err
 	}
 
@@ -29,6 +29,7 @@ func (s *ClaimStrings) UnmarshalJSON(data []byte) (err error) {
 			if !ok {
 				return &json.UnsupportedTypeError{Type: reflect.TypeOf(vv)}
 			}
+
 			val = append(val, vs)
 		}
 	case nil:
@@ -39,10 +40,10 @@ func (s *ClaimStrings) UnmarshalJSON(data []byte) (err error) {
 
 	*s = val
 
-	return
+	return nil
 }
 
-func (s ClaimStrings) MarshalJSON() (b []byte, err error) {
+func (s ClaimStrings) MarshalJSON() ([]byte, error) {
 	if len(s) == 1 {
 		return json.Marshal(s[0])
 	}
@@ -55,5 +56,6 @@ func (s ClaimStrings) Value() string {
 	if len(s) == 0 {
 		return ""
 	}
+
 	return s[0]
 }

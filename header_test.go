@@ -3,8 +3,7 @@ package azugo
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -17,7 +16,7 @@ func TestHeaders(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		param := ctx.Header.Get("X-USER")
-		assert.Equal(t, want, param, "wrong request header value")
+		qt.Check(t, qt.Equals(param, want), qt.Commentf("wrong request header value"))
 
 		ctx.Header.Set("X-Real-User", param)
 	})
@@ -25,9 +24,10 @@ func TestHeaders(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/user", c.WithHeader("X-User", want))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
 
-	assert.Equal(t, want, string(resp.Header.Peek("X-Real-User")), "wrong response header value")
+	qt.Assert(t, qt.IsNil(err))
+
+	qt.Check(t, qt.DeepEquals(resp.Header.Peek("X-Real-User"), []byte(want)), qt.Commentf("wrong response header value"))
 }
 
 func TestHeaderDel(t *testing.T) {
@@ -37,18 +37,18 @@ func TestHeaderDel(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		param := ctx.Header.Get("X-USER")
-		assert.NotEmpty(t, param, "request header value should not be empty")
+		qt.Check(t, qt.Not(qt.HasLen(param, 0)), qt.Commentf("request header value should not be empty"))
 
 		ctx.Header.Del("X-user")
 
 		param = ctx.Header.Get("X-USER")
-		assert.Empty(t, param, "request header value should be empty")
+		qt.Check(t, qt.HasLen(param, 0), qt.Commentf("request header value should be empty"))
 	})
 
 	c := a.TestClient()
 	resp, err := c.Get("/user", c.WithHeader("X-User", "gopher"))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestHeaderValues(t *testing.T) {
@@ -59,16 +59,18 @@ func TestHeaderValues(t *testing.T) {
 	a.Get("/user", func(ctx *Context) {
 		param := ctx.Header.Values("X-Users")
 
-		assert.ElementsMatch(t, []string{"gopher", "user", "test"}, param, "wrong request header values")
+		qt.Check(t, qt.ContentEquals(param, []string{"gopher", "user", "test"}), qt.Commentf("wrong request header values"))
 
 		param = ctx.Header.Values("X-User")
-		assert.ElementsMatch(t, []string{"gopher"}, param, "wrong request header values")
+
+		qt.Check(t, qt.ContentEquals(param, []string{"gopher"}), qt.Commentf("wrong request header values"))
 	})
 
 	c := a.TestClient()
 	resp, err := c.Get("/user", c.WithHeader("X-Users", "gopher,user"), c.WithHeader("X-Users", "test"), c.WithHeader("X-User", "gopher"))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestHeaderAdd(t *testing.T) {
@@ -83,7 +85,7 @@ func TestHeaderAdd(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
 	values := make([]string, 0)
 	resp.Header.VisitAll(func(key, value []byte) {
@@ -92,5 +94,5 @@ func TestHeaderAdd(t *testing.T) {
 		}
 	})
 
-	assert.ElementsMatch(t, []string{"gopher", "test"}, values, "wrong response header values")
+	qt.Assert(t, qt.ContentEquals(values, []string{"gopher", "test"}), qt.Commentf("wrong response header values"))
 }

@@ -33,12 +33,15 @@ func (b *BodyCtx) JSON(v any) error {
 	if len(buf) == 0 {
 		return ParamRequiredError{"body"}
 	}
+
 	if err := json.Unmarshal(buf, v); err != nil {
 		return ParamInvalidError{"body", "json", err}
 	}
+
 	if v, ok := v.(Validator); ok {
 		return v.Validate(b.ctx)
 	}
+
 	return nil
 }
 
@@ -48,8 +51,10 @@ func (b *BodyCtx) XML(v any) error {
 	if len(buf) == 0 {
 		return ParamRequiredError{"body"}
 	}
+
 	if err := xml.Unmarshal(buf, v); err != nil {
 		return ParamInvalidError{"body", "xml", err}
 	}
+
 	return nil
 }

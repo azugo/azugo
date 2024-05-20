@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"azugo.io/azugo"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -30,7 +30,8 @@ func TestMetricsHandler(t *testing.T) {
 
 	a.Get("/test", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
-		ctx.StatusCode(fasthttp.StatusOK).Text("Hello, world!")
+		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.Text("Hello, world!")
 	})
 	a.Get("/stream", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
@@ -42,25 +43,28 @@ func TestMetricsHandler(t *testing.T) {
 	defer a.Stop()
 
 	resp, err := a.TestClient().Get("/")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/test")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/stream")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/skip")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/metrics")
-	require.NoError(t, err)
+
+	qt.Assert(t, qt.IsNil(err))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+
 	i := strings.Index(string(resp.Body()), "requests_total")
 	fasthttp.ReleaseResponse(resp)
 
-	assert.True(t, i > -1, "metrics handler not returning expected metrics")
+	qt.Check(t, qt.IsTrue(i > -1), qt.Commentf("metrics handler not returning expected metrics"))
 }

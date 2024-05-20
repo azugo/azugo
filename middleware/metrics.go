@@ -27,25 +27,27 @@ type metricsHandler struct {
 	Subsystem string
 }
 
-// Interface for metrics handler options
+// Interface for metrics handler options.
 type MetricsOption interface {
-	apply(*metricsHandler)
+	apply(h *metricsHandler)
 }
 
-// MetricsSubsystem represents subsystem name for Prometheus metric structuring
+// MetricsSubsystem represents subsystem name for Prometheus metric structuring.
 type MetricsSubsystem string
 
 func (m MetricsSubsystem) apply(p *metricsHandler) {
 	p.Subsystem = string(m)
 }
 
-// Metrics initializes and returns Prometheus metrics middleware
+// Metrics initializes and returns Prometheus metrics middleware.
 func Metrics(path string, options ...MetricsOption) azugo.RequestHandlerFunc {
 	p := &metricsHandler{MetricsPath: path}
 	for _, opt := range options {
 		opt.apply(p)
 	}
+
 	p.registerMetrics()
+
 	return p.Handler
 }
 
@@ -56,6 +58,7 @@ func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
 		s += len(req.URI().Path())
 		s += len(req.URI().Host())
 	}
+
 	s += len(req.Header.Method())
 	s += len(req.Header.Protocol())
 	req.Header.VisitAll(func(key, value []byte) {
@@ -63,6 +66,7 @@ func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
 			s += len(key) + len(value)
 		}
 	})
+
 	if req.Header.ContentLength() != -1 {
 		s += req.Header.ContentLength()
 	}
@@ -73,43 +77,56 @@ func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
 // skipping paths from SkipPaths list
 //
 // Handles MetricsPath requests from trusted IPs and trusted networks
-// which returns application metrics results
+// which returns application metrics results.
 func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 	metricsHandler := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
+
 	return func(ctx *azugo.Context) {
 		if strings.EqualFold(ctx.Path(), p.MetricsPath) && p.isTrusted(ctx) {
 			metricsHandler(ctx.Context())
+
 			return
 		}
+
 		for _, path := range ctx.App().MetricsOptions.SkipPaths {
 			if strings.HasPrefix(strings.ToLower(ctx.Path()), path) {
 				h(ctx)
+
 				return
 			}
 		}
+
 		reqSize := make(chan int)
 		frc := acquireRequestFromPool()
 		ctx.Request().CopyTo(frc)
+
 		go func() {
 			defer releaseRequestToPool(frc)
 			computeApproximateRequestSize(frc, reqSize)
 		}()
+
 		h(ctx)
+
 		status := ctx.Response().StatusCode()
 		if status == fasthttp.StatusNotFound {
 			return
 		}
+
 		elapsed := float64(time.Since(ctx.Context().ConnTime())) / float64(time.Second)
+
 		var respSize float64
+
 		if l := ctx.Response().Header.ContentLength(); l > 0 {
 			respSize = float64(l)
 		} else if !ctx.Response().IsBodyStream() {
 			respSize = float64(len(ctx.Response().Body()))
 		}
+
 		path := ctx.RouterPath()
 		if path == "" {
 			path = ctx.Path()
 		}
+
 		p.reqDur.WithLabelValues(strconv.Itoa(status), ctx.Method(), path).Observe(elapsed)
 		p.reqCnt.WithLabelValues(strconv.Itoa(status), ctx.Method(), path).Inc()
 		p.reqSize.Observe(float64(<-reqSize))
@@ -122,17 +139,21 @@ func (p *metricsHandler) isTrusted(ctx *azugo.Context) bool {
 	if opts.TrustAll {
 		return true
 	}
+
 	ip := ctx.IP()
+
 	for _, tip := range opts.TrustedIPs {
 		if tip.Equal(ip) {
 			return true
 		}
 	}
+
 	for _, tnet := range opts.TrustedNetworks {
 		if tnet.Contains(ip) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -177,7 +198,13 @@ func acquireRequestFromPool() *fasthttp.Request {
 	if v == nil {
 		return &fasthttp.Request{}
 	}
-	return v.(*fasthttp.Request)
+
+	req, ok := v.(*fasthttp.Request)
+	if !ok {
+		return &fasthttp.Request{}
+	}
+
+	return req
 }
 
 func releaseRequestToPool(req *fasthttp.Request) {

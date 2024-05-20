@@ -19,6 +19,7 @@ type QueryCtx struct {
 // Values returns all values associated with the given key in query.
 func (q *QueryCtx) Values(key string) []string {
 	data := make([]string, 0, 1)
+
 	q.ctx.Request().URI().QueryArgs().VisitAll(func(k, val []byte) {
 		if !strings.EqualFold(key, utils.B2S(k)) {
 			return
@@ -33,6 +34,7 @@ func (q *QueryCtx) Values(key string) []string {
 			data = append(data, utils.B2S(val))
 		}
 	})
+
 	return data
 }
 
@@ -43,6 +45,7 @@ func (q *QueryCtx) String(key string) (string, error) {
 	if len(v) == 0 {
 		return "", ParamRequiredError{key}
 	}
+
 	return utils.B2S(v), nil
 }
 
@@ -52,7 +55,9 @@ func (q *QueryCtx) StringOptional(key string) *string {
 	if len(v) == 0 {
 		return nil
 	}
+
 	s := utils.B2S(v)
+
 	return &s
 }
 
@@ -62,10 +67,12 @@ func (q *QueryCtx) Int64(key string) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 0, ParamInvalidError{key, "numeric", err}
 	}
+
 	return v, nil
 }
 
@@ -75,10 +82,12 @@ func (q *QueryCtx) Int64Optional(key string) (*int64, error) {
 	if s == nil {
 		return nil, nil
 	}
+
 	v, err := strconv.ParseInt(*s, 10, 64)
 	if err != nil {
 		return nil, ParamInvalidError{key, "numeric", err}
 	}
+
 	return &v, nil
 }
 
@@ -88,6 +97,7 @@ func (q *QueryCtx) Int(key string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return int(v), nil
 }
 
@@ -97,10 +107,13 @@ func (q *QueryCtx) IntOptional(key string) (*int, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	if v == nil {
 		return nil, nil
 	}
+
 	iv := int(*v)
+
 	return &iv, nil
 }
 
@@ -112,6 +125,7 @@ func (q *QueryCtx) Bool(key string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
+
 	return strings.ToLower(v) == "true" || v == "1", nil
 }
 
@@ -123,6 +137,8 @@ func (q *QueryCtx) BoolOptional(key string) (*bool, error) {
 	if v == nil {
 		return nil, nil
 	}
+
 	iv := strings.ToLower(*v) == "true" || *v == "1"
+
 	return &iv, nil
 }

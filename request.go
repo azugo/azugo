@@ -15,7 +15,6 @@ import (
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
-	"golang.org/x/exp/maps"
 )
 
 var (
@@ -67,9 +66,19 @@ type Context struct {
 }
 
 func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
-	v := a.ctxPool.Get()
 	var ctx *Context
-	if v == nil {
+
+	v := a.ctxPool.Get()
+	if v != nil {
+		p, ok := v.(*Context)
+		if ok {
+			ctx = p
+		} else {
+			a.ctxPool.Put(v)
+		}
+	}
+
+	if ctx == nil {
 		ctx = new(Context)
 		ctx.app = a
 		ctx.loggerFields = make(map[string]zap.Field, 10)
@@ -84,8 +93,6 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 		ctx.Form.form = nilArgsValuer
 		ctx.Params.app = a
 		ctx.Params.ctx = ctx
-	} else {
-		ctx = v.(*Context)
 	}
 
 	// Set method
@@ -95,6 +102,7 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 			ctx.path = utils.B2S(u.Path())
 		}
 	}
+
 	ctx.routerPath = path
 
 	if ctx.method == fasthttp.MethodPost || ctx.method == fasthttp.MethodPut || ctx.method == fasthttp.MethodPatch {
@@ -125,6 +133,7 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 
 	// Attach logger to request context
 	_ = ctx.ReplaceLogger(a.Log())
+
 	if c != nil {
 		ctx.initLoggerFields()
 	}
@@ -147,7 +156,7 @@ type RequestHandler func(ctx *Context)
 
 // Handler is an adapter to process incoming requests using object method.
 type Handler interface {
-	Handler(*Context)
+	Handler(ctx *Context)
 }
 
 // Handle allows to use object method that implements Handler interface to
@@ -156,133 +165,136 @@ func Handle(h Handler) RequestHandler {
 	return h.Handler
 }
 
-func (ctx *Context) reset() {
-	ctx.Form.form.Reset(ctx)
-	ctx.Form.form = nilArgsValuer
-	ctx.user = nil
-	ctx.context = nil
-	ctx.mux = nil
-	maps.Clear(ctx.loggerFields)
-	ctx.loggerCore = nil
-	ctx.logger = nil
-	ctx.requestID = nilRequestID
+func (c *Context) reset() {
+	c.Form.form.Reset(c)
+	c.Form.form = nilArgsValuer
+	c.user = nil
+	c.context = nil
+	c.mux = nil
+	clear(c.loggerFields)
+	c.loggerCore = nil
+	c.logger = nil
+	c.requestID = nilRequestID
 }
 
 // App returns the application.
-func (ctx *Context) App() *App {
-	return ctx.app
+func (c *Context) App() *App {
+	return c.app
 }
 
 // Env returns the application environment.
-func (ctx *Context) Env() core.Environment {
-	return ctx.app.Env()
+func (c *Context) Env() core.Environment {
+	return c.app.Env()
 }
 
 // RouterOptions returns the router options.
-func (ctx *Context) RouterOptions() *RouterOptions {
-	return ctx.mux.RouterOptions
+func (c *Context) RouterOptions() *RouterOptions {
+	return c.mux.RouterOptions
 }
 
 // Context returns *fasthttp.RequestCtx that carries a deadline
 // a cancellation signal, and other values across API boundaries.
-func (ctx *Context) Context() *fasthttp.RequestCtx {
-	return ctx.context
+func (c *Context) Context() *fasthttp.RequestCtx {
+	return c.context
 }
 
 // Request return the *fasthttp.Request object
 // This allows you to use all fasthttp request methods
 // https://godoc.org/github.com/valyala/fasthttp#Request
-func (ctx *Context) Request() *fasthttp.Request {
-	return &ctx.context.Request
+func (c *Context) Request() *fasthttp.Request {
+	return &c.context.Request
 }
 
 // ID returns the unique request identifier.
-func (ctx *Context) ID() string {
-	return ctx.requestID.String()
+func (c *Context) ID() string {
+	return c.requestID.String()
 }
 
 // IP returns the client's network IP address.
-func (ctx *Context) IP() net.IP {
-	t, ok := ctx.context.RemoteAddr().(*net.TCPAddr)
+func (c *Context) IP() net.IP {
+	t, ok := c.context.RemoteAddr().(*net.TCPAddr)
 	if !ok || t.IP == nil {
 		return nil
 	}
+
 	return t.IP
 }
 
 // Method returns the request method.
-func (ctx *Context) Method() string {
-	return ctx.method
+func (c *Context) Method() string {
+	return c.method
 }
 
 // IsTLS returns true if the underlying connection is TLS.
 //
 // If the request comes from trusted proxy it will use X-Forwarded-Proto header.
-func (ctx *Context) IsTLS() bool {
-	if ctx.IsTrustedProxy() {
-		if bytes.Equal(ctx.Request().Header.PeekBytes(headerXForwardedProto), protocolHTTPS) {
+func (c *Context) IsTLS() bool {
+	if c.IsTrustedProxy() {
+		if bytes.Equal(c.Request().Header.PeekBytes(headerXForwardedProto), protocolHTTPS) {
 			return true
-		} else if bytes.Equal(ctx.Request().Header.PeekBytes(headerXForwardedProto), protocolHTTP) {
+		} else if bytes.Equal(c.Request().Header.PeekBytes(headerXForwardedProto), protocolHTTP) {
 			return false
 		}
 	}
-	return ctx.context.IsTLS()
+
+	return c.context.IsTLS()
 }
 
 // Host returns requested host.
 //
 // If the request comes from trusted proxy it will use X-Forwarded-Host header.
-func (ctx *Context) Host() string {
+func (c *Context) Host() string {
 	// Check if custom host is set
-	if host := ctx.mux.Host(); len(host) > 0 {
+	if host := c.mux.Host(); len(host) > 0 {
 		return host
 	}
 
 	// Use proxy set header
-	if ctx.IsTrustedProxy() {
-		if host := ctx.context.Request.Header.PeekBytes(headerXForwardedHost); len(host) > 0 {
+	if c.IsTrustedProxy() {
+		if host := c.context.Request.Header.PeekBytes(headerXForwardedHost); len(host) > 0 {
 			return utils.B2S(host)
 		}
 	}
 	// Detect from request
-	return utils.B2S(ctx.context.Host())
+	return utils.B2S(c.context.Host())
 }
 
 // BasePath returns the base path.
-func (ctx *Context) BasePath() string {
-	return ctx.mux.BasePath()
+func (c *Context) BasePath() string {
+	return c.mux.BasePath()
 }
 
 // BaseURL returns the base URL for the request.
-func (ctx *Context) BaseURL() string {
+func (c *Context) BaseURL() string {
 	url := bytebufferpool.Get()
 	defer bytebufferpool.Put(url)
 
-	if ctx.IsTLS() {
+	if c.IsTLS() {
 		_, _ = url.Write(protocolHTTPS)
 	} else {
 		_, _ = url.Write(protocolHTTP)
 	}
+
 	_, _ = url.Write(protocolSeparator)
-	_, _ = url.WriteString(ctx.Host())
-	_, _ = url.WriteString(ctx.BasePath())
+	_, _ = url.WriteString(c.Host())
+	_, _ = url.WriteString(c.BasePath())
 
 	return url.String()
 }
 
 // RouterPath returns the registered router path.
-func (ctx *Context) RouterPath() string {
-	return ctx.routerPath
+func (c *Context) RouterPath() string {
+	return c.routerPath
 }
 
 // Path returns the path part of the request URL.
-func (ctx *Context) Path() string {
-	return ctx.path
+func (c *Context) Path() string {
+	return c.path
 }
 
 // UserAgent returns the client's User-Agent, if sent in the request.
-func (ctx *Context) UserAgent() string {
-	return utils.B2S(ctx.context.Request.Header.UserAgent())
+func (c *Context) UserAgent() string {
+	return utils.B2S(c.context.Request.Header.UserAgent())
 }
 
 // SetUserValue stores the given value (arbitrary object)
@@ -296,40 +308,45 @@ func (ctx *Context) UserAgent() string {
 // All the values are removed from context after returning from the top
 // RequestHandler. Additionally, Close method is called on each value
 // implementing io.Closer before removing the value from context.
-func (ctx *Context) SetUserValue(name string, value any) {
-	ctx.context.SetUserValue(name, value)
+func (c *Context) SetUserValue(name string, value any) {
+	c.context.SetUserValue(name, value)
 }
 
 // UserValue returns the value stored via SetUserValue under the given key.
-func (ctx *Context) UserValue(name string) any {
-	return ctx.context.UserValue(name)
+func (c *Context) UserValue(name string) any {
+	return c.context.UserValue(name)
 }
 
 // Returns Paginator with page size from query parameters.
-func (ctx *Context) Paging() *paginator.Paginator {
-	page, err := ctx.Query.Int(paginator.QueryParameterPage)
+func (c *Context) Paging() *paginator.Paginator {
+	page, err := c.Query.Int(paginator.QueryParameterPage)
 	if err != nil || page <= 0 {
 		page = 1
 	}
-	pageSize, err := ctx.Query.Int(paginator.QueryParameterPerPage)
+
+	pageSize, err := c.Query.Int(paginator.QueryParameterPerPage)
 	if err != nil || pageSize <= 0 {
 		pageSize = paginator.DefaultPageSize
 	}
+
 	return paginator.New(page*pageSize, pageSize, page)
 }
 
 // Accepts checks if provided content type is acceptable for client.
-func (ctx *Context) Accepts(contentType string) bool {
-	h := ctx.Header.Get(HeaderAccept)
+func (c *Context) Accepts(contentType string) bool {
+	h := c.Header.Get(HeaderAccept)
 	if len(h) == 0 {
 		return true
 	}
 
 	ctGroup, _, _ := strings.Cut(contentType, "/")
-	ctGroup = ctGroup + "/*"
+	ctGroup += "/*"
 
-	var part string
-	var pos int
+	var (
+		part string
+		pos  int
+	)
+
 	for len(h) > 0 && pos != -1 {
 		pos = strings.IndexByte(h, ',')
 		if pos != -1 {
@@ -341,34 +358,42 @@ func (ctx *Context) Accepts(contentType string) bool {
 		if f := strings.IndexByte(part, ';'); f != -1 {
 			part = strings.TrimRight(part[:f], " ")
 		}
+
 		if part == "*/*" {
 			return true
 		}
+
 		if part == contentType {
 			return true
 		}
+
 		if part == ctGroup {
 			return true
 		}
+
 		if pos != -1 {
 			h = h[pos+1:]
 		}
 	}
+
 	return false
 }
 
 // AcceptsExplicit checks if provided content type is explicitly acceptable for client.
-func (ctx *Context) AcceptsExplicit(contentType string) bool {
-	h := ctx.Header.Get(HeaderAccept)
+func (c *Context) AcceptsExplicit(contentType string) bool {
+	h := c.Header.Get(HeaderAccept)
 	if len(h) == 0 {
 		return false
 	}
 
 	ctGroup, _, _ := strings.Cut(contentType, "/")
-	ctGroup = ctGroup + "/*"
+	ctGroup += "/*"
 
-	var part string
-	var pos int
+	var (
+		part string
+		pos  int
+	)
+
 	for len(h) > 0 && pos != -1 {
 		pos = strings.IndexByte(h, ',')
 		if pos != -1 {
@@ -376,19 +401,24 @@ func (ctx *Context) AcceptsExplicit(contentType string) bool {
 		} else {
 			part = strings.Trim(h, " ")
 		}
+
 		// Ignore priority
 		if f := strings.IndexByte(part, ';'); f != -1 {
 			part = strings.TrimRight(part[:f], " ")
 		}
+
 		if part == contentType {
 			return true
 		}
+
 		if part == ctGroup {
 			return true
 		}
+
 		if pos != -1 {
 			h = h[pos+1:]
 		}
 	}
+
 	return false
 }

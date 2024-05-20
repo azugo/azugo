@@ -7,8 +7,7 @@ import (
 
 	"azugo.io/azugo/internal/utils"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -94,7 +93,7 @@ func TestGetOptionalPath(t *testing.T) {
 
 		h, tsr := routerLookupRequest(a.defaultMux, fasthttp.MethodGet, e.path, ctx)
 
-		assert.Equal(t, e.tsr, tsr, "TSR (path: %s)", e.path)
+		qt.Check(t, qt.Equals(tsr, e.tsr), qt.Commentf("TSR (path: %s)", e.path))
 
 		if (e.handler == nil && h != nil) || (e.handler != nil && h == nil) {
 			t.Errorf("Handler (path: %s) == %p, want %p", e.path, h, e.handler)
@@ -114,18 +113,18 @@ func TestRouter(t *testing.T) {
 		routed = true
 
 		param, ok := ctx.UserValue("name").(string)
-		assert.True(t, ok, "wrong wildcard value missing")
-		assert.Equal(t, want, param, "wrong wildcard value")
+		qt.Check(t, qt.IsTrue(ok), qt.Commentf("wrong wildcard value missing"))
+		qt.Check(t, qt.Equals(param, want), qt.Commentf("wrong wildcard value"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get(fmt.Sprintf("/user/%s", want))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.True(t, routed, "routing failed")
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.IsTrue(routed), qt.Commentf("routing failed"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestRouterAPI(t *testing.T) {
@@ -171,59 +170,59 @@ func TestRouterAPI(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/GET")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, get, "GET route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(get), qt.Commentf("GET route not handled"))
 
 	resp, err = a.TestClient().Head("/HEAD")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, head, "HEAD route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(head), qt.Commentf("HEAD route not handled"))
 
 	resp, err = a.TestClient().Post("/POST", nil)
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, post, "POST route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(post), qt.Commentf("POST route not handled"))
 
 	resp, err = a.TestClient().Put("/PUT", nil)
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, put, "PUT route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(put), qt.Commentf("PUT route not handled"))
 
 	resp, err = a.TestClient().Patch("/PATCH", nil)
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, patch, "PATCH route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(patch), qt.Commentf("PATCH route not handled"))
 
 	resp, err = a.TestClient().Delete("/DELETE")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, delete, "DELETE route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(delete), qt.Commentf("DELETE route not handled"))
 
 	resp, err = a.TestClient().Connect("/CONNECT")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, connect, "CONNECT route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(connect), qt.Commentf("CONNECT route not handled"))
 
 	resp, err = a.TestClient().Options("/OPTIONS")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, options, "OPTIONS route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(options), qt.Commentf("OPTIONS route not handled"))
 
 	resp, err = a.TestClient().Trace("/TRACE")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, trace, "TRACE route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(trace), qt.Commentf("TRACE route not handled"))
 
 	resp, err = a.TestClient().Get("/Handler")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, handled, "Handler route not handled")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(handled), qt.Commentf("Handler route not handled"))
 
 	for _, method := range httpMethods {
 		resp, err = a.TestClient().Call(method, "/ANY", nil)
 		fasthttp.ReleaseResponse(resp)
-		require.NoError(t, err)
-		assert.True(t, any, "ANY route not handled")
+		qt.Assert(t, qt.IsNil(err))
+		qt.Check(t, qt.IsTrue(any), qt.Commentf("ANY route not handled"))
 		any = false
 	}
 }
@@ -244,10 +243,10 @@ func TestRouterBasePath(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.True(t, routed, "routing failed")
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.IsTrue(routed), qt.Commentf("routing failed"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestRouterBasePathMatchWithStrippedBase(t *testing.T) {
@@ -266,10 +265,10 @@ func TestRouterBasePathMatchWithStrippedBase(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/p")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.True(t, routed, "routing failed")
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.IsTrue(routed), qt.Commentf("routing failed"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
 func TestRouterInvalidInput(t *testing.T) {
@@ -279,21 +278,21 @@ func TestRouterInvalidInput(t *testing.T) {
 
 	handle := func(*Context) {}
 
-	assert.Panics(t, func() {
+	qt.Check(t, qt.PanicMatches(func() {
 		a.Handle("", "/", handle)
-	}, "registering empty method did not panic")
+	}, "method must not be empty"))
 
-	assert.Panics(t, func() {
+	qt.Check(t, qt.PanicMatches(func() {
 		a.Get("", handle)
-	}, "registering empty path did not panic")
+	}, "path must begin with '/' in path ''"))
 
-	assert.Panics(t, func() {
+	qt.Check(t, qt.PanicMatches(func() {
 		a.Get("noSlashRoot", handle)
-	}, "registering path without leading slash did not panic")
+	}, "path must begin with '/' in path 'noSlashRoot'"))
 
-	assert.Panics(t, func() {
+	qt.Check(t, qt.PanicMatches(func() {
 		a.Get("/", nil)
-	}, "registering nil handler did not panic")
+	}, "handler must not be nil"))
 }
 
 func TestRouterRegexUserValues(t *testing.T) {
@@ -316,13 +315,13 @@ func TestRouterRegexUserValues(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/v4/123/click")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.Equal(t, "123", v1, "user value should be set")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(v1, "123"), qt.Commentf("user value not set"))
 
 	resp, err = a.TestClient().Get("/metrics")
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.Equal(t, "123", v1, "user value should not change after second call")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(v1, "123"), qt.Commentf("user value should not change after second call"))
 }
 
 func TestRouterMutable(t *testing.T) {
@@ -337,14 +336,14 @@ func TestRouterMutable(t *testing.T) {
 
 	a := NewTestApp()
 	a.Mutable(true)
-	require.True(t, a.defaultMux.treeMutable, "router tree should be mutable")
+	qt.Assert(t, qt.IsTrue(a.defaultMux.treeMutable))
 
 	for _, method := range httpMethods {
 		a.Handle(method, "/", handler1)
 	}
 
 	for method := range a.defaultMux.trees {
-		assert.True(t, a.defaultMux.trees[method].Mutable, "router tree should be mutable")
+		qt.Check(t, qt.IsTrue(a.defaultMux.trees[method].Mutable), qt.Commentf("router tree should be mutable"))
 	}
 
 	routes := []string{
@@ -362,14 +361,14 @@ func TestRouterMutable(t *testing.T) {
 		}
 
 		for _, method := range httpMethods {
-			assert.Panics(t, func() {
+			qt.Check(t, qt.PanicMatches(func() {
 				a.Handle(method, route, handler2)
-			}, "registering route for none mutable router did not panic")
+			}, "a .*handler is already registered for path '.*'"))
 
 			h, _ := routerLookupRequest(a.defaultMux, method, route, nil)
-			assert.NotNil(t, h, "handler should not be nil")
+			qt.Check(t, qt.IsNotNil(h), qt.Commentf("handler should not be nil"))
 			h(nil)
-			assert.True(t, called1, "handler should not be changed")
+			qt.Check(t, qt.IsTrue(called1), qt.Commentf("handler should not be changed"))
 			called1 = false
 		}
 
@@ -379,9 +378,9 @@ func TestRouterMutable(t *testing.T) {
 			a.Handle(method, route, handler2)
 
 			h, _ := routerLookupRequest(a.defaultMux, method, route, nil)
-			assert.NotNil(t, h, "handler should not be nil")
+			qt.Check(t, qt.IsNotNil(h), qt.Commentf("handler should be nil"))
 			h(nil)
-			assert.True(t, called2, "handler should be changed")
+			qt.Check(t, qt.IsTrue(called2), qt.Commentf("handler should be changed"))
 			called2 = false
 		}
 	}
@@ -398,9 +397,10 @@ func TestRouterOPTIONS(t *testing.T) {
 
 	checkHandling := func(path, expectedAllowed string, expectedStatusCode int) {
 		resp, err := a.TestClient().Options(path)
-		require.NoError(t, err)
-		assert.Equal(t, expectedStatusCode, resp.StatusCode(), "unexpected response status code")
-		assert.Equal(t, expectedAllowed, string(resp.Header.Peek("Allow")), "unexpected response header")
+		if qt.Check(t, qt.IsNil(err)) {
+			qt.Check(t, qt.Equals(resp.StatusCode(), expectedStatusCode))
+			qt.Check(t, qt.Equals(string(resp.Header.Peek("Allow")), expectedAllowed))
+		}
 		fasthttp.ReleaseResponse(resp)
 	}
 
@@ -408,8 +408,8 @@ func TestRouterOPTIONS(t *testing.T) {
 	checkHandling("/path", "OPTIONS, POST", fasthttp.StatusNoContent)
 
 	resp, err := a.TestClient().Options("/doesnotexist")
-	require.NoError(t, err)
-	assert.Equal(t, fasthttp.StatusNotFound, resp.StatusCode(), "unexpected response status code")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNotFound))
 	fasthttp.ReleaseResponse(resp)
 
 	// add another method
@@ -432,7 +432,7 @@ func TestRouterOPTIONS(t *testing.T) {
 
 	// test again
 	checkHandling("/path", "", fasthttp.StatusOK)
-	assert.True(t, custom, "custom OPTIONS handler should be called")
+	qt.Check(t, qt.IsTrue(custom), qt.Commentf("custom OPTIONS handler should be called"))
 }
 
 func TestRouterNotAllowed(t *testing.T) {
@@ -446,9 +446,10 @@ func TestRouterNotAllowed(t *testing.T) {
 
 	checkHandling := func(path, expectedAllowed string, expectedStatusCode int) {
 		resp, err := a.TestClient().Get(path)
-		require.NoError(t, err)
-		assert.Equal(t, expectedStatusCode, resp.StatusCode(), "unexpected response status code")
-		assert.Equal(t, expectedAllowed, string(resp.Header.Peek("Allow")), "unexpected response header")
+		if qt.Check(t, qt.IsNil(err)) {
+			qt.Check(t, qt.Equals(resp.StatusCode(), expectedStatusCode))
+			qt.Check(t, qt.Equals(string(resp.Header.Peek("Allow")), expectedAllowed))
+		}
 	}
 
 	// test not allowed
@@ -464,15 +465,16 @@ func TestRouterNotAllowed(t *testing.T) {
 	// test custom handler
 	responseText := "custom method"
 	a.RouterOptions().MethodNotAllowed = func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusTeapot).Text(responseText)
+		ctx.StatusCode(fasthttp.StatusTeapot)
+		ctx.Text(responseText)
 	}
 
 	resp, err := a.TestClient().Get("/path")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.Equal(t, fasthttp.StatusTeapot, resp.StatusCode(), "unexpected response status code")
-	assert.Equal(t, responseText, string(resp.Body()), "unexpected response body")
-	assert.Equal(t, "DELETE, OPTIONS, POST", string(resp.Header.Peek("Allow")), "unexpected response header")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTeapot))
+	qt.Check(t, qt.Equals(string(resp.Body()), responseText))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek("Allow")), "DELETE, OPTIONS, POST"))
 }
 
 func TestRouterPanicHandler(t *testing.T) {
@@ -492,8 +494,8 @@ func TestRouterPanicHandler(t *testing.T) {
 
 	resp, err := a.TestClient().Put("/user/gopher", nil)
 	fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.True(t, panicHandled, "panic handler should be called")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(panicHandled))
 }
 
 func testRouterNotFoundByMethod(t *testing.T, method string) {
@@ -557,11 +559,11 @@ func testRouterNotFoundByMethod(t *testing.T, method string) {
 
 	for _, tr := range testRoutes {
 		resp, err := a.TestClient().Call(reqMethod, tr.route, nil)
-		require.NoError(t, err)
+		qt.Assert(t, qt.IsNil(err))
 
-		assert.Equal(t, tr.code, resp.StatusCode(), "%s %s: unexpected response status code", reqMethod, tr.route)
-		if resp.StatusCode() != fasthttp.StatusNotFound {
-			assert.Equal(t, tr.location, string(resp.Header.Peek("Location")), "%s %s: unexpected response header", reqMethod, tr.route)
+		qt.Check(t, qt.Equals(resp.StatusCode(), tr.code), qt.Commentf("%s %s: unexpected response status code", reqMethod, tr.route))
+		if tr.code != fasthttp.StatusNotFound {
+			qt.Check(t, qt.Equals(string(resp.Header.Peek("Location")), tr.location), qt.Commentf("%s %s: unexpected response header", reqMethod, tr.route))
 		}
 		fasthttp.ReleaseResponse(resp)
 	}
@@ -575,9 +577,9 @@ func testRouterNotFoundByMethod(t *testing.T, method string) {
 
 	resp, err := a.TestClient().Call(reqMethod, "/nope", nil)
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.Equal(t, fasthttp.StatusNotFound, resp.StatusCode(), "unexpected response status code")
-	assert.True(t, notFound, "not found handler should be called")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNotFound))
+	qt.Check(t, qt.IsTrue(notFound))
 }
 
 func TestRouterNotFound(t *testing.T) {
@@ -593,17 +595,17 @@ func TestRouterNotFound(t *testing.T) {
 	a.Patch("/path", func(*Context) {})
 
 	resp, err := a.TestClient().Call(fasthttp.MethodPatch, "/path/?key=val", nil)
-	require.NoError(t, err)
-	assert.Equal(t, fasthttp.StatusPermanentRedirect, resp.StatusCode(), "unexpected response status code")
-	assert.Equal(t, "http://test/path?key=val", string(resp.Header.Peek("Location")), "unexpected response header")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusPermanentRedirect))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek("Location")), "http://test/path?key=val"))
 
 	// Test special case where no node for the prefix "/" exists
 	a.Get("/a", func(*Context) {})
 
 	resp, err = a.TestClient().Call(fasthttp.MethodPatch, "/", nil)
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
-	assert.Equal(t, fasthttp.StatusNotFound, resp.StatusCode(), "unexpected response status code")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNotFound))
 }
 
 func TestRouterNotFound_MethodWild(t *testing.T) {
@@ -629,14 +631,14 @@ func TestRouterNotFound_MethodWild(t *testing.T) {
 
 	for _, method := range httpMethods {
 		resp, err := client.Call(method, "/specific", nil)
-		require.NoError(t, err)
+		qt.Assert(t, qt.IsNil(err))
 
 		if method == fasthttp.MethodPost {
-			assert.True(t, postFound, "post handler should be called")
+			qt.Check(t, qt.IsTrue(postFound), qt.Commentf("post handler should be called"))
 		} else {
-			assert.True(t, anyFound, "any handler should be called")
+			qt.Check(t, qt.IsTrue(anyFound), qt.Commentf("any handler should be called"))
 		}
-		assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "unexpected response status code")
+		qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 
 		fasthttp.ReleaseResponse(resp)
 		postFound, anyFound = false, false
@@ -663,19 +665,19 @@ func testRouterLookupByMethod(t *testing.T, method string) {
 
 	// try empty router first
 	handle, tsr := routerLookupRequest(a.defaultMux, reqMethod, "/nope", ctx)
-	assert.Nilf(t, handle, "got handle for unregistered pattern: %v", handle)
-	assert.False(t, tsr, "got wrong TSR recommendation")
+	qt.Check(t, qt.IsNil(handle), qt.Commentf("got handle for unregistered pattern: %v", handle))
+	qt.Check(t, qt.IsFalse(tsr), qt.Commentf("got wrong TSR recommendation"))
 
 	// insert route and try again
 	a.Handle(method, "/user/{name}", wantHandle)
 	handle, _ = routerLookupRequest(a.defaultMux, reqMethod, "/user/gopher", ctx)
-	require.NotNil(t, handle, "got no handle for registered pattern")
+	qt.Assert(t, qt.IsNotNil(handle))
 
 	handle(ctx)
-	assert.True(t, routed, "handle should be called")
+	qt.Check(t, qt.IsTrue(routed), qt.Commentf("handle should be called"))
 
 	for expectedKey, expectedVal := range wantParams {
-		assert.Equal(t, expectedVal, ctx.UserValue(expectedKey), "values not saved in context")
+		qt.Check(t, qt.Equals(ctx.UserValue(expectedKey).(string), expectedVal), qt.Commentf("values not saved in context"))
 	}
 
 	routed = false
@@ -683,18 +685,18 @@ func testRouterLookupByMethod(t *testing.T, method string) {
 	// route without param
 	a.Handle(method, "/user", wantHandle)
 	handle, _ = routerLookupRequest(a.defaultMux, reqMethod, "/user", ctx)
-	require.NotNil(t, handle, "got no handle for registered pattern")
+	qt.Assert(t, qt.IsNotNil(handle))
 
 	handle(ctx)
-	assert.True(t, routed, "handle should be called")
+	qt.Check(t, qt.IsTrue(routed), qt.Commentf("handle should be called"))
 
 	handle, tsr = routerLookupRequest(a.defaultMux, reqMethod, "/user/gopher/", ctx)
-	assert.Nilf(t, handle, "got handle for unregistered pattern: %v", handle)
-	assert.True(t, tsr, "got no TSR recommendation")
+	qt.Check(t, qt.IsNil(handle), qt.Commentf("got handle for unregistered pattern: %v", handle))
+	qt.Check(t, qt.IsTrue(tsr), qt.Commentf("got wrong TSR recommendation"))
 
 	handle, tsr = routerLookupRequest(a.defaultMux, reqMethod, "/nope", ctx)
-	assert.Nilf(t, handle, "got handle for unregistered pattern: %v", handle)
-	assert.False(t, tsr, "got wrong TSR recommendation")
+	qt.Check(t, qt.IsNil(handle), qt.Commentf("got handle for unregistered pattern: %v", handle))
+	qt.Check(t, qt.IsFalse(tsr), qt.Commentf("got wrong TSR recommendation"))
 }
 
 func TestRouterLookup(t *testing.T) {
@@ -707,21 +709,21 @@ func TestRouterMatchedRoutePath(t *testing.T) {
 	route1 := "/user/{name}"
 	routed1 := false
 	handle1 := func(ctx *Context) {
-		assert.Equal(t, route1, ctx.RouterPath())
+		qt.Check(t, qt.Equals(ctx.RouterPath(), route1))
 		routed1 = true
 	}
 
 	route2 := "/user/{name}/details"
 	routed2 := false
 	handle2 := func(ctx *Context) {
-		assert.Equal(t, route2, ctx.RouterPath())
+		qt.Check(t, qt.Equals(ctx.RouterPath(), route2))
 		routed2 = true
 	}
 
 	route3 := "/"
 	routed3 := false
 	handle3 := func(ctx *Context) {
-		assert.Equal(t, route3, ctx.RouterPath())
+		qt.Check(t, qt.Equals(ctx.RouterPath(), route3))
 		routed3 = true
 	}
 
@@ -735,25 +737,25 @@ func TestRouterMatchedRoutePath(t *testing.T) {
 	defer a.Stop()
 
 	resp, err := a.TestClient().Get("/user/gopher")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
-	assert.True(t, routed1)
-	assert.False(t, routed2)
-	assert.False(t, routed3)
+	qt.Check(t, qt.IsTrue(routed1))
+	qt.Check(t, qt.IsFalse(routed2))
+	qt.Check(t, qt.IsFalse(routed3))
 
 	resp, err = a.TestClient().Get("/user/gopher/details")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
-	assert.True(t, routed2)
-	assert.False(t, routed3)
+	qt.Check(t, qt.IsTrue(routed2))
+	qt.Check(t, qt.IsFalse(routed3))
 
 	resp, err = a.TestClient().Get("/")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
-	assert.True(t, routed3)
+	qt.Check(t, qt.IsTrue(routed3))
 }
 
 func TestRoutesList(t *testing.T) {
@@ -772,7 +774,7 @@ func TestRoutesList(t *testing.T) {
 	v1.Post("/users/{name}/{surname?}", func(ctx *Context) {})
 	v1.Delete("/users/{id?}", func(ctx *Context) {})
 
-	assert.Equal(t, expected, a.Routes())
+	qt.Check(t, qt.ContentEquals(a.Routes(), expected))
 }
 
 func TestRouterSamePrefixParamRoute(t *testing.T) {
@@ -801,26 +803,26 @@ func TestRouterSamePrefixParamRoute(t *testing.T) {
 	defer a.Stop()
 
 	resp, err := a.TestClient().Get("/v1/foo/1/20/4")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/v1/foo/2/3")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/v1/foo/v3")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
-	assert.True(t, routed1, "/foo/{id}/{pageSize}/{page} not routed")
-	assert.True(t, routed2, "/foo/{id}/{iid} not routed")
-	assert.True(t, routed3, "/foo/{id} not routed")
-	assert.Equal(t, "1", id1, "/foo/{id}/{pageSize}/{page} invalid id value received")
-	assert.Equal(t, "20", pageSize, "/foo/{id}/{pageSize}/{page} invalid pageSize value received")
-	assert.Equal(t, "4", page, "/foo/{id}/{pageSize}/{page} invalid page value received")
-	assert.Equal(t, "2", id2, "/foo/{id}/{iid} invalid id value received")
-	assert.Equal(t, "3", iid, "/foo/{id}/{iid} invalid iid value received")
-	assert.Equal(t, "v3", id3, "/foo/{id} invalid id value received")
+	qt.Check(t, qt.IsTrue(routed1), qt.Commentf("/foo/{id}/{pageSize}/{page} not routed"))
+	qt.Check(t, qt.IsTrue(routed2), qt.Commentf("/foo/{id}/{iid} not routed"))
+	qt.Check(t, qt.IsTrue(routed3), qt.Commentf("/foo/{id} not routed"))
+	qt.Check(t, qt.Equals(id1, "1"), qt.Commentf("/foo/{id}/{pageSize}/{page} invalid id value received"))
+	qt.Check(t, qt.Equals(pageSize, "20"), qt.Commentf("/foo/{id}/{pageSize}/{page} invalid pageSize value received"))
+	qt.Check(t, qt.Equals(page, "4"), qt.Commentf("/foo/{id}/{pageSize}/{page} invalid page value received"))
+	qt.Check(t, qt.Equals(id2, "2"), qt.Commentf("/foo/{id}/{iid} invalid id value received"))
+	qt.Check(t, qt.Equals(iid, "3"), qt.Commentf("/foo/{id}/{iid} invalid iid value received"))
+	qt.Check(t, qt.Equals(id3, "v3"), qt.Commentf("/foo/{id} invalid id value received"))
 }
 
 func TestRouterMiddlewares(t *testing.T) {
@@ -830,14 +832,14 @@ func TestRouterMiddlewares(t *testing.T) {
 	a.Use(func(next RequestHandler) RequestHandler {
 		return func(ctx *Context) {
 			middleware1 = true
-			assert.False(t, middleware2, "Second middleware should not yet be called")
+			qt.Check(t, qt.IsFalse(middleware2), qt.Commentf("Second middleware should not be called yet"))
 			next(ctx)
 		}
 	})
 	a.Use(func(next RequestHandler) RequestHandler {
 		return func(ctx *Context) {
 			middleware2 = true
-			assert.True(t, middleware1, "First middleware should already be called")
+			qt.Check(t, qt.IsTrue(middleware1), qt.Commentf("First middleware should already be called"))
 			next(ctx)
 		}
 	})
@@ -849,12 +851,12 @@ func TestRouterMiddlewares(t *testing.T) {
 	defer a.Stop()
 
 	resp, err := a.TestClient().Get("/")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
-	assert.True(t, middleware1, "First middleware not called")
-	assert.True(t, middleware2, "Second middleware not called")
-	assert.True(t, handled, "Handler not called")
+	qt.Check(t, qt.IsTrue(middleware1), qt.Commentf("First middleware not called"))
+	qt.Check(t, qt.IsTrue(middleware2), qt.Commentf("Second middleware not called"))
+	qt.Check(t, qt.IsTrue(handled), qt.Commentf("Handler not called"))
 }
 
 func TestRouterMiddlewareBlock(t *testing.T) {
@@ -880,12 +882,12 @@ func TestRouterMiddlewareBlock(t *testing.T) {
 	defer a.Stop()
 
 	resp, err := a.TestClient().Get("/")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
-	assert.True(t, middleware1, "First middleware not called")
-	assert.False(t, middleware2, "Second middleware not called")
-	assert.False(t, handled, "Handler not called")
+	qt.Check(t, qt.IsTrue(middleware1), qt.Commentf("First middleware not called"))
+	qt.Check(t, qt.IsFalse(middleware2), qt.Commentf("Second middleware should not be called"))
+	qt.Check(t, qt.IsFalse(handled), qt.Commentf("Handler should not be called"))
 }
 
 func TestRouterMiddlewareAfterRoute(t *testing.T) {
@@ -912,12 +914,12 @@ func TestRouterMiddlewareAfterRoute(t *testing.T) {
 	defer a.Stop()
 
 	resp, err := a.TestClient().Get("/")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
-	assert.True(t, middleware1, "First middleware not called")
-	assert.False(t, middleware2, "Second middleware should not be called")
-	assert.True(t, handled, "Handler not called")
+	qt.Check(t, qt.IsTrue(middleware1), qt.Commentf("First middleware not called"))
+	qt.Check(t, qt.IsFalse(middleware2), qt.Commentf("Second middleware should not be called"))
+	qt.Check(t, qt.IsTrue(handled), qt.Commentf("Handler should be called"))
 }
 
 type hostRouteSwitcher struct {
@@ -964,17 +966,17 @@ func TestPerHostRouteSwitcher(t *testing.T) {
 	tc := a.TestClient()
 
 	resp, err := tc.Get("/", tc.WithHost("host1"))
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
-	assert.True(t, host1, "host1 handler not called")
+	qt.Check(t, qt.IsTrue(host1), qt.Commentf("host1 handler not called"))
 
 	resp, err = tc.Get("/", tc.WithHost("host2"))
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
-	assert.True(t, host2, "host2 handler not called")
+	qt.Check(t, qt.IsTrue(host2), qt.Commentf("host2 handler not called"))
 
 	resp, err = tc.Get("/", tc.WithHost("host3"))
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
-	assert.True(t, hostother, "default handler not called")
+	qt.Check(t, qt.IsTrue(hostother), qt.Commentf("default handler not called"))
 }
