@@ -4,9 +4,9 @@ when:
   event:
     - push
 
-pipeline:
+steps:
   - name: test
-    image: golang:1.20
+    image: golang:1.22
     pull: true
     environment:
       - CGO_ENABLED=1
