@@ -22,7 +22,7 @@ type ServerHTTP struct {
 func (s *ServerHTTP) Bind(prefix string, v *viper.Viper) {
 	// Special functionality for SERVER_URLS defaults
 	addr := "0.0.0.0"
-	port := 80
+	port := 8080
 	enabled := true
 
 	for _, servu := range strings.Split(os.Getenv("SERVER_URLS"), ";") {
@@ -71,7 +71,7 @@ type ServerHTTPS struct {
 func (s *ServerHTTPS) Bind(prefix string, v *viper.Viper) {
 	// Special functionality for SERVER_URLS defaults
 	addr := "0.0.0.0"
-	port := 443
+	port := 4443
 	enabled := false
 
 	for _, servu := range strings.Split(os.Getenv("SERVER_URLS"), ";") {
