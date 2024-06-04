@@ -1,5 +1,5 @@
-azugo.io/core v0.14.1-0.20240604095042-cda8a26752e3 h1:gfNx2esZE+GK8REIgVF5pHlfnCxD+lcI2dI02j7FShw=
-azugo.io/core v0.14.1-0.20240604095042-cda8a26752e3/go.mod h1:97Mq5oma8GEoNCNfC6JuCu62TCj7Ry1aK14k3SYtpCU=
+azugo.io/core v0.14.1-0.20240604145806-87f59d515bd5 h1:zYRKLb84MjPRtXVoRiJ8W+zjXhgTK+EpIXBZm4PLHXo=
+azugo.io/core v0.14.1-0.20240604145806-87f59d515bd5/go.mod h1:EHa0tPwzoorsAE8MNQTz5D1OiHCAJr7DmkIdiQjgwc8=
 cloud.google.com/go v0.26.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMTw=
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=
