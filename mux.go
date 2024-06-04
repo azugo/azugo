@@ -578,7 +578,7 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 			ctx.Response.Header.Set("Allow", allow)
 
 			if m.RouterOptions.GlobalOPTIONS != nil {
-				m.WrapHandler(path, m.Chain(m.RouterOptions.GlobalOPTIONS))(ctx)
+				m.WrapHandler("", m.Chain(m.RouterOptions.GlobalOPTIONS))(ctx)
 			}
 
 			return
@@ -589,13 +589,13 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 			ctx.Response.Header.Set("Allow", allow)
 
 			if m.RouterOptions.MethodNotAllowed != nil {
-				m.WrapHandler(path, m.Chain(m.RouterOptions.MethodNotAllowed))(ctx)
+				m.WrapHandler("", m.Chain(m.RouterOptions.MethodNotAllowed))(ctx)
 
 				return
 			}
 
 			// TODO: move as default value?
-			m.WrapHandler(path, m.Chain(func(c *Context) {
+			m.WrapHandler("", m.Chain(func(c *Context) {
 				c.StatusCode(fasthttp.StatusMethodNotAllowed)
 				c.Text(fasthttp.StatusMessage(fasthttp.StatusMethodNotAllowed))
 			}))(ctx)
@@ -605,7 +605,7 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 	}
 
 	// Handle 404
-	m.WrapHandler(path, m.Chain(m.HandleNotFound))(ctx)
+	m.WrapHandler("", m.Chain(m.HandleNotFound))(ctx)
 }
 
 // InstrRequest returns path if the request is router handler request.
