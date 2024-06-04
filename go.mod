@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.22
 
 require (
-	azugo.io/core v0.14.1-0.20240604145806-87f59d515bd5
+	azugo.io/core v0.14.1-0.20240604231118-36401e4a184a
 	github.com/beevik/etree v1.4.0
 	github.com/go-playground/validator/v10 v10.21.0
 	github.com/go-quicktest/qt v1.101.0
@@ -17,7 +17,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.54.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc
+	golang.org/x/exp v0.0.0-20240604190554-fc45aab8b7f8
 )
 
 require (
@@ -55,7 +55,7 @@ require (
 	github.com/prometheus/procfs v0.7.3 // indirect
 	github.com/redis/go-redis/v9 v9.5.2 // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
-	github.com/sagikazarmark/locafero v0.5.0 // indirect
+	github.com/sagikazarmark/locafero v0.6.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.11.0 // indirect
@@ -65,10 +65,10 @@ require (
 	github.com/valyala/fastrand v1.1.0 // indirect
 	go.elastic.co/ecszap v1.0.2 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.23.0 // indirect
-	golang.org/x/net v0.25.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
-	golang.org/x/text v0.15.0 // indirect
+	golang.org/x/crypto v0.24.0 // indirect
+	golang.org/x/net v0.26.0 // indirect
+	golang.org/x/sys v0.21.0 // indirect
+	golang.org/x/text v0.16.0 // indirect
 	google.golang.org/protobuf v1.33.0 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
