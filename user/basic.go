@@ -10,7 +10,7 @@ import (
 
 // Option represents basic user behavior option.
 type Option interface {
-	apply(*Basic)
+	apply(u *Basic)
 }
 
 // ScopeGroupSeparator is group separator to use when parsing granted scopes.
@@ -53,15 +53,18 @@ func (u *Basic) parseScopes() {
 	if len(scopes) == 1 {
 		scopes = strings.Split(scopes[0], u.scopeSeparator)
 	}
+
 	u.scopes = make(map[string][]string, len(scopes))
 	for _, r := range scopes {
 		rr, l, _ := strings.Cut(r, u.scopeLevelSeparator)
+
 		lvls, ok := u.scopes[rr]
 		if !ok {
 			lvls = []string{l}
 		} else {
 			lvls = append(lvls, l)
 		}
+
 		u.scopes[rr] = lvls
 	}
 }
@@ -91,11 +94,13 @@ func (u *Basic) ClaimValue(name ...string) string {
 	if u == nil {
 		return ""
 	}
+
 	for _, n := range name {
 		if claims, ok := u.claims[n]; ok {
 			return claims.Value()
 		}
 	}
+
 	return ""
 }
 
@@ -105,11 +110,13 @@ func (u *Basic) Claim(name ...string) token.ClaimStrings {
 	if u == nil {
 		return nil
 	}
+
 	for _, n := range name {
 		if claims, ok := u.claims[n]; ok {
 			return claims
 		}
 	}
+
 	return nil
 }
 
@@ -135,10 +142,12 @@ func (u *Basic) DisplayName() string {
 	if gn := u.GivenName(); len(gn) > 0 {
 		_, _ = displayName.WriteString(gn)
 	}
+
 	if fn := u.FamilyName(); len(fn) > 0 {
 		if displayName.Len() > 0 {
 			_ = displayName.WriteByte(' ')
 		}
+
 		_, _ = displayName.WriteString(fn)
 	}
 
@@ -155,6 +164,7 @@ func (u *Basic) ID() string {
 	if u == nil {
 		return ""
 	}
+
 	return u.ClaimValue("sub", "http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")
 }
 
@@ -163,11 +173,13 @@ func (u *Basic) HasScopeGroup(name string) bool {
 	if u == nil {
 		return false
 	}
+
 	for scope := range u.scopes {
 		if scope == name || strings.HasPrefix(scope, name+u.scopeGroupSeparator) {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -176,7 +188,9 @@ func (u *Basic) HasScope(name string) bool {
 	if u == nil {
 		return false
 	}
+
 	_, ok := u.scopes[name]
+
 	return ok
 }
 
@@ -185,15 +199,18 @@ func (u *Basic) HasScopeLevel(name string, level string) bool {
 	if u == nil {
 		return false
 	}
+
 	levels, ok := u.scopes[name]
 	if !ok {
 		return false
 	}
+
 	for _, l := range levels {
 		if level == l {
 			return true
 		}
 	}
+
 	return false
 }
 
@@ -202,10 +219,12 @@ func (u *Basic) HasScopeAnyLevel(name string, levels ...string) bool {
 	if u == nil {
 		return false
 	}
+
 	for _, l := range levels {
 		if u.HasScopeLevel(name, l) {
 			return true
 		}
 	}
+
 	return false
 }

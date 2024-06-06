@@ -41,6 +41,7 @@ func (h *HeaderCtx) Get(key string) string {
 // Values returns all values associated with the given key in request.
 func (h *HeaderCtx) Values(key string) []string {
 	data := make([]string, 0, 1)
+
 	h.ctx.Request().Header.VisitAll(func(k, val []byte) {
 		if !strings.EqualFold(key, utils.B2S(k)) {
 			return
@@ -55,7 +56,19 @@ func (h *HeaderCtx) Values(key string) []string {
 			data = append(data, utils.B2S(val))
 		}
 	})
+
 	return data
+}
+
+// Keys returns all header keys in request.
+func (h *HeaderCtx) Keys() []string {
+	keys := make([]string, 0, h.ctx.Request().Header.Len())
+
+	h.ctx.Request().Header.VisitAll(func(k, _ []byte) {
+		keys = append(keys, utils.B2S(k))
+	})
+
+	return keys
 }
 
 // Set sets the response header entries associated with key to the single element value.

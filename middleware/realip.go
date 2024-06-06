@@ -23,6 +23,7 @@ func realIP(ctx *azugo.Context) net.IP {
 	if xrip := ctx.Header.Get(xRealIP); len(xrip) > 0 {
 		return net.ParseIP(xrip)
 	}
+
 	return nil
 }
 
@@ -35,6 +36,7 @@ func forwardedFor(ctx *azugo.Context) net.IP {
 			if buf.Len() > 0 {
 				_, _ = buf.Write(xForwardedForSep)
 			}
+
 			_, _ = buf.Write(value)
 		}
 	})
@@ -43,30 +45,38 @@ func forwardedFor(ctx *azugo.Context) net.IP {
 	if len(xff) > 0 {
 		p := 0
 		c := 0
+
 		for i := ctx.RouterOptions().Proxy.ForwardLimit; i > 0; i-- {
 			if p-c > 0 {
 				xff = xff[:p-c]
 			}
+
 			p = bytes.LastIndex(xff, []byte(","))
 			if p < 0 {
 				p = 0
+
 				break
-			} else {
-				p += 1
-				c = 1
 			}
+
+			p++
+			c = 1
+
 			for ; p < len(xff) && xff[p] == ' '; p++ {
 				// skip spaces
 				c++
 			}
 		}
-		for ; p < len(xff) && xff[p] == ' '; p++ {
+
+		for p < len(xff) && xff[p] == ' ' {
 			// skip spaces
+			p++
 		}
+
 		if ip := net.ParseIP(utils.B2S(xff[p:])); ip != nil {
 			return ip
 		}
 	}
+
 	return nil
 }
 
@@ -75,15 +85,19 @@ func realIPOrForwardedFor(ctx *azugo.Context) net.Addr {
 	if !ctx.IsTrustedProxy() {
 		return remoteAddr
 	}
+
 	if ip := realIP(ctx); ip != nil {
-		remoteAddr = &net.TCPAddr{
-			IP: ip,
-		}
-	} else if ip := forwardedFor(ctx); ip != nil {
-		remoteAddr = &net.TCPAddr{
+		return &net.TCPAddr{
 			IP: ip,
 		}
 	}
+
+	if ip := forwardedFor(ctx); ip != nil {
+		return &net.TCPAddr{
+			IP: ip,
+		}
+	}
+
 	return remoteAddr
 }
 

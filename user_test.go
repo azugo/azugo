@@ -6,8 +6,7 @@ import (
 	"azugo.io/azugo/token"
 	"azugo.io/azugo/user"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -30,18 +29,18 @@ func TestUser(t *testing.T) {
 
 	app.Get("/test", func(ctx *Context) {
 		user := ctx.User()
-		assert.NotNil(t, user)
-		assert.Equal(t, "John Doe", user.DisplayName())
-		assert.True(t, user.Authorized())
-		assert.Equal(t, "123", user.ID())
+		qt.Check(t, qt.IsNotNil(user))
+		qt.Check(t, qt.Equals(user.DisplayName(), "John Doe"))
+		qt.Check(t, qt.IsTrue(user.Authorized()))
+		qt.Check(t, qt.Equals(user.ID(), "123"))
 	})
 
 	app.Start(t)
 	defer app.Stop()
 
 	resp, err := app.TestClient().Get("/test")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	defer fasthttp.ReleaseResponse(resp)
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode())
+	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }

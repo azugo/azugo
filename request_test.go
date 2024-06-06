@@ -7,8 +7,7 @@ import (
 
 	"azugo.io/core"
 	"azugo.io/core/paginator"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -18,12 +17,12 @@ func TestRequestBasic(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		assert.NotNil(t, ctx.App(), "App should not be nil")
-		assert.Equal(t, core.EnvironmentProduction, ctx.Env(), "Environment should be production")
-		assert.Equal(t, fasthttp.MethodGet, ctx.Method(), "Request method should be GET")
-		assert.Equal(t, "/user", ctx.Path(), "Request path should be /user")
-		assert.Equal(t, "test/1.0", ctx.UserAgent(), "User agent should be test/1.0")
-		assert.Nil(t, ctx.IP(), "Client IP address should be nil")
+		qt.Check(t, qt.IsNotNil(ctx.App()))
+		qt.Check(t, qt.Equals(ctx.Env(), core.EnvironmentProduction))
+		qt.Check(t, qt.Equals(ctx.Method(), fasthttp.MethodGet))
+		qt.Check(t, qt.Equals(ctx.Path(), "/user"))
+		qt.Check(t, qt.Equals(ctx.UserAgent(), "test/1.0"))
+		qt.Check(t, qt.IsNil(ctx.IP()))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -31,7 +30,7 @@ func TestRequestBasic(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/user", c.WithHeader("User-Agent", "test/1.0"))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestBaseURLRoot(t *testing.T) {
@@ -40,14 +39,14 @@ func TestRequestBaseURLRoot(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		assert.Equal(t, "http://test", ctx.BaseURL(), "BaseURL should be equal to http://test")
+		qt.Check(t, qt.Equals(ctx.BaseURL(), "http://test"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestBaseURLWithBasePath(t *testing.T) {
@@ -57,14 +56,14 @@ func TestRequestBaseURLWithBasePath(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		assert.Equal(t, "http://test/test", ctx.BaseURL(), "BaseURL should be equal to http://test/test")
+		qt.Check(t, qt.Equals(ctx.BaseURL(), "http://test/test"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/test/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestTLSBaseURL(t *testing.T) {
@@ -73,7 +72,7 @@ func TestRequestTLSBaseURL(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		assert.Equal(t, "https://test.local", ctx.BaseURL(), "BaseURL should be equal to https://local")
+		qt.Check(t, qt.Equals(ctx.BaseURL(), "https://test.local"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -83,7 +82,7 @@ func TestRequestTLSBaseURL(t *testing.T) {
 		c.WithHeader("X-Forwarded-Proto", "https"),
 		c.WithHeader("X-Forwarded-Host", "test.local"))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestCustomHost(t *testing.T) {
@@ -93,14 +92,15 @@ func TestRequestCustomHost(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		assert.Equal(t, "http://test.local", ctx.BaseURL(), "BaseURL should be equal to http://test.local")
+		qt.Check(t, qt.Equals(ctx.BaseURL(), "http://test.local"))
+
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
 
 	c := a.TestClient()
 	resp, err := c.Get("/user", c.WithHeader("X-Forwarded-Proto", "http"))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestIP(t *testing.T) {
@@ -115,9 +115,8 @@ func TestRequestIP(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		assert.NotNil(t, ctx.IP(), "Client IP address should not be nil")
-		if ctx.IP() != nil {
-			assert.Equal(t, "1.1.1.1", ctx.IP().String(), "Client IP should be equal to 1.1.1.1")
+		if qt.Check(t, qt.IsNotNil(ctx.IP())) {
+			qt.Check(t, qt.Equals(ctx.IP().String(), "1.1.1.1"))
 		}
 
 		ctx.StatusCode(fasthttp.StatusOK)
@@ -126,7 +125,7 @@ func TestRequestIP(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestPaging(t *testing.T) {
@@ -136,8 +135,8 @@ func TestRequestPaging(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		p := ctx.Paging()
-		assert.Equal(t, 2, p.Current(), "Page should be 2")
-		assert.Equal(t, 10, p.PageSize(), "Page size should be 10")
+		qt.Check(t, qt.Equals(p.Current(), 2))
+		qt.Check(t, qt.Equals(p.PageSize(), 10))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -148,7 +147,7 @@ func TestRequestPaging(t *testing.T) {
 		paginator.QueryParameterPerPage: 10,
 	}))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestDefaultPaging(t *testing.T) {
@@ -158,8 +157,8 @@ func TestRequestDefaultPaging(t *testing.T) {
 
 	a.Get("/user", func(ctx *Context) {
 		p := ctx.Paging()
-		assert.Equal(t, 1, p.Current(), "Page should be 1")
-		assert.Equal(t, 20, p.PageSize(), "Page size should be 20")
+		qt.Check(t, qt.Equals(p.Current(), 1))
+		qt.Check(t, qt.Equals(p.PageSize(), 20))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -167,7 +166,7 @@ func TestRequestDefaultPaging(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestAccepts(t *testing.T) {
@@ -176,9 +175,9 @@ func TestRequestAccepts(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/test", func(ctx *Context) {
-		assert.True(t, ctx.Accepts("application/json"), "Should accept json")
-		assert.True(t, ctx.Accepts("text/html"), "Should accept html")
-		assert.True(t, ctx.Accepts("application/xml"), "Should accept xml")
+		qt.Check(t, qt.IsTrue(ctx.Accepts("application/json")))
+		qt.Check(t, qt.IsTrue(ctx.Accepts("text/html")))
+		qt.Check(t, qt.IsTrue(ctx.Accepts("application/xml")))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -186,7 +185,7 @@ func TestRequestAccepts(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/test", c.WithHeader("Accept", "application/json, text/*; q=0.5, */*; q=0.1"))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }
 
 func TestRequestAcceptsExplicit(t *testing.T) {
@@ -195,9 +194,9 @@ func TestRequestAcceptsExplicit(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/test", func(ctx *Context) {
-		assert.True(t, ctx.AcceptsExplicit("application/json"), "Should accept json")
-		assert.True(t, ctx.AcceptsExplicit("text/html"), "Should accept html")
-		assert.False(t, ctx.AcceptsExplicit("application/xml"), "Should not accept xml")
+		qt.Check(t, qt.IsTrue(ctx.AcceptsExplicit("application/json")))
+		qt.Check(t, qt.IsTrue(ctx.AcceptsExplicit("text/html")))
+		qt.Check(t, qt.IsFalse(ctx.AcceptsExplicit("application/xml")))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -205,5 +204,5 @@ func TestRequestAcceptsExplicit(t *testing.T) {
 	c := a.TestClient()
 	resp, err := c.Get("/test", c.WithHeader("Accept", "application/json, text/*; q=0.5, */*; q=0.1"))
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 }

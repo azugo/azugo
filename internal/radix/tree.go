@@ -8,7 +8,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// New returns an empty routes storage
+// New returns an empty routes storage.
 func New() *Tree {
 	return &Tree{
 		root: &node{
@@ -46,9 +46,11 @@ func (t *Tree) Add(path string, handler fasthttp.RequestHandler) {
 			switch radixErr.msg {
 			case errSetHandler:
 				n.handler = handler
+
 				return
 			case errSetWildcardHandler:
 				n.wildcard.handler = handler
+
 				return
 			}
 		}
@@ -79,7 +81,6 @@ func (t *Tree) Get(path string, ctx *fasthttp.RequestCtx) (fasthttp.RequestHandl
 		path = path[len(t.root.path):]
 
 		return t.root.getFromChild(path, ctx)
-
 	} else if path == t.root.path {
 		switch {
 		case t.root.tsr:

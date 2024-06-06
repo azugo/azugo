@@ -4,9 +4,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/go-quicktest/qt"
 )
 
 func TestImplementsContextInterface(t *testing.T) {
-	assert.Implements(t, (*context.Context)(nil), &Context{})
+	qt.Check(t, qt.Implements[context.Context](&Context{}))
 }

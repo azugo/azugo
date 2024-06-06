@@ -3,7 +3,7 @@ package azugo
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -38,8 +38,8 @@ func TestMuxGroup(t *testing.T) {
 	ctx.Request.SetRequestURI("/group/path")
 
 	m.Handler(ctx)
-	assert.Equal(t, 1, muxUseCalled)
-	assert.Equal(t, 1, groupUseCalled)
+	qt.Check(t, qt.Equals(muxUseCalled, 1))
+	qt.Check(t, qt.Equals(groupUseCalled, 1))
 }
 
 func BenchmarkAllowed(b *testing.B) {
@@ -117,10 +117,12 @@ func BenchmarkRouterGet_ANY(b *testing.B) {
 
 	m := newMux(NewTestApp().App)
 	m.Get("/", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusOK).Text(resp)
+		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.Text(resp)
 	})
 	m.Any("/", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusOK).Text(respANY)
+		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.Text(respANY)
 	})
 
 	ctx := new(fasthttp.RequestCtx)

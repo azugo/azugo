@@ -62,6 +62,7 @@ func (r *BodyRewriter) AddReplace(from, to []byte) {
 	if r.replaceRules == nil {
 		r.replaceRules = make([]*replacePair, 0, 1)
 	}
+
 	r.replaceRules = append(r.replaceRules, &replacePair{from, to})
 }
 
@@ -72,20 +73,25 @@ func getDecodedBody(resp *fasthttp.Response) []byte {
 		if err != nil {
 			return nil
 		}
+
 		return b
 	}
+
 	if bytes.Equal(enc, contentEncodingDeflate) {
 		b, err := resp.BodyInflate()
 		if err != nil {
 			return nil
 		}
+
 		return b
 	}
+
 	if bytes.Equal(enc, contentEncodingBr) {
 		b, err := resp.BodyUnbrotli()
 		if err != nil {
 			return nil
 		}
+
 		return b
 	}
 
@@ -95,30 +101,38 @@ func getDecodedBody(resp *fasthttp.Response) []byte {
 func setEncodedBody(resp *fasthttp.Response, body []byte) {
 	if len(body) == 0 {
 		resp.ResetBody()
+
 		return
 	}
+
 	enc := resp.Header.Peek("Content-Encoding")
 	if bytes.Equal(enc, contentEncodingGzip) {
 		w := responseBodyPool.Get()
 		body = fasthttp.AppendGzipBytes(w.B, body)
 		resp.SetBody(body)
 		responseBodyPool.Put(w)
+
 		return
 	}
+
 	if bytes.Equal(enc, contentEncodingDeflate) {
 		w := responseBodyPool.Get()
 		body = fasthttp.AppendDeflateBytes(w.B, body)
 		resp.SetBody(body)
 		responseBodyPool.Put(w)
+
 		return
 	}
+
 	if bytes.Equal(enc, contentEncodingBr) {
 		w := responseBodyPool.Get()
 		body = fasthttp.AppendBrotliBytes(w.B, body)
 		resp.SetBody(body)
 		responseBodyPool.Put(w)
+
 		return
 	}
+
 	resp.SetBody(body)
 }
 
@@ -127,6 +141,7 @@ func trimScheme(url []byte) []byte {
 	if i == -1 {
 		return url
 	}
+
 	return url[i+1:]
 }
 
@@ -143,12 +158,15 @@ func (r *BodyRewriter) RewriteResponse(baseURL, upstream []byte, resp *fasthttp.
 
 	ct := resp.Header.ContentType()
 	isRewritable := false
+
 	for _, ctb := range r.contentTypes {
 		if bytes.HasPrefix(ct, ctb) {
 			isRewritable = true
+
 			break
 		}
 	}
+
 	if !isRewritable {
 		return
 	}
@@ -157,14 +175,17 @@ func (r *BodyRewriter) RewriteResponse(baseURL, upstream []byte, resp *fasthttp.
 	if len(body) == 0 {
 		return
 	}
+
 	for _, v := range r.replaceRules {
 		body = bytes.ReplaceAll(body, v.from, v.to)
 	}
+
 	if r.RewriteBaseURL {
 		baseURL = bytes.TrimRight(baseURL, "/")
 		upstream = bytes.TrimRight(upstream, "/")
 		body = bytes.ReplaceAll(body, upstream, baseURL)
 		body = bytes.ReplaceAll(body, trimScheme(upstream), trimScheme(baseURL))
 	}
+
 	setEncodedBody(resp, body)
 }

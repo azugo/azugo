@@ -23,7 +23,7 @@ func (u *Basic) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (u Basic) MarshalJSON() (b []byte, err error) {
+func (u Basic) MarshalJSON() ([]byte, error) {
 	return json.Marshal(basicClaims{
 		Claims: u.claims,
 	})

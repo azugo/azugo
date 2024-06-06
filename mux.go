@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -12,6 +11,7 @@ import (
 	"azugo.io/azugo/internal/router"
 	"azugo.io/azugo/internal/utils"
 
+	"azugo.io/core/http"
 	"github.com/go-playground/validator/v10"
 	"github.com/goccy/go-json"
 	"github.com/valyala/bytebufferpool"
@@ -73,7 +73,7 @@ func (m *mux) Host() string {
 	return m.RouterOptions.Host
 }
 
-// BasePath returns base path of the application
+// BasePath returns base path of the application.
 func (m *mux) BasePath() string {
 	m.pathLock.RLock()
 	defer m.pathLock.RUnlock()
@@ -96,13 +96,14 @@ func (m *mux) BasePath() string {
 		m.pathLock.Unlock()
 		m.pathLock.RLock()
 	}
+
 	return m.fixedBasePath
 }
 
 // Mutable allows updating the route handler
 //
 // Disabled by default.
-// WARNING: Use with care. It could generate unexpected behaviors
+// WARNING: Use with care. It could generate unexpected behaviors.
 func (m *mux) Mutable(v bool) {
 	m.treeMutable = v
 
@@ -115,7 +116,7 @@ func (m *mux) Mutable(v bool) {
 	}
 }
 
-// Routes returns all registered routes grouped by method
+// Routes returns all registered routes grouped by method.
 func (m *mux) Routes() map[string][]string {
 	return m.registeredPaths
 }
@@ -132,6 +133,7 @@ func (m *mux) Chain(handler RequestHandler) RequestHandler {
 	for i := len(m.middlewares) - 1; i >= 0; i-- {
 		handler = m.middlewares[i](handler)
 	}
+
 	return handler
 }
 
@@ -139,8 +141,10 @@ func (m *mux) WrapHandler(path string, handler RequestHandler) fasthttp.RequestH
 	return func(ctx *fasthttp.RequestCtx) {
 		c := m.app.acquireCtx(m, path, ctx)
 		defer m.app.releaseCtx(c)
-		finish := m.app.Instrumenter().Observe(c, InstrumentationRequest)
+
+		finish := m.app.Instrumenter().Observe(c, InstrumentationRequest, path)
 		defer finish(nil)
+
 		handler(c)
 	}
 }
@@ -198,7 +202,7 @@ func (m *mux) Handle(method, path string, handler RequestHandler) {
 	}
 }
 
-func (m *mux) Allowed(path, reqMethod string) (allow string) {
+func (m *mux) Allowed(path, reqMethod string) string {
 	allowed := make([]string, 0, 9)
 
 	if path == "*" || path == "/*" { // server-wide{ // server-wide
@@ -245,7 +249,8 @@ func (m *mux) Allowed(path, reqMethod string) (allow string) {
 		// return as comma separated list
 		return strings.Join(allowed, ", ")
 	}
-	return
+
+	return ""
 }
 
 func (m *mux) MethodIndexOf(method string) int {
@@ -290,19 +295,22 @@ func (m *mux) Recv(path string, ctx *fasthttp.RequestCtx) {
 func (m *mux) HandleNotFound(ctx *Context) {
 	if m.RouterOptions.NotFound != nil {
 		m.RouterOptions.NotFound(ctx)
+
 		return
 	}
 
 	ctx.Response().Reset()
-	ctx.StatusCode(fasthttp.StatusNotFound).Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
+	ctx.StatusCode(fasthttp.StatusNotFound)
+	ctx.Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
 }
 
 func (m *mux) HandleError(ctx *Context, err error) {
 	if m.RouterOptions.ErrorHandler != nil {
 		// Log debug information about error
-		m.app.Log().Debug(fmt.Sprintf("calling custom handler for error: %s", err.Error()), zap.Error(err))
+		m.app.Log().Debug("calling custom handler for error: "+err.Error(), zap.Error(err))
 
 		m.RouterOptions.ErrorHandler(ctx, err)
+
 		return
 	}
 
@@ -312,18 +320,18 @@ func (m *mux) HandleError(ctx *Context, err error) {
 	}
 
 	// Check that the error implements method to customize the status code
-	rerr, ok := err.(ResponseStatusCode)
-	if ok {
+	switch rerr, ok := err.(http.ResponseStatusCode); {
+	case ok:
 		ctx.StatusCode(rerr.StatusCode())
-	} else if errors.As(err, &validator.ValidationErrors{}) {
+	case errors.As(err, &validator.ValidationErrors{}):
 		// Validation errors return a 422 (unprocessable entity) status code
 		ctx.StatusCode(fasthttp.StatusUnprocessableEntity)
-	} else {
+	default:
 		ctx.StatusCode(fasthttp.StatusInternalServerError)
 	}
 
 	// Log debug information about error
-	m.app.Log().Debug(fmt.Sprintf("handling error: %s", err.Error()), zap.Error(err))
+	m.app.Log().Debug("handling error: "+err.Error(), zap.Error(err))
 
 	// Log the error only if it's server error
 	if ctx.Response().StatusCode()/100 == 5 {
@@ -341,21 +349,27 @@ func (m *mux) HandleError(ctx *Context, err error) {
 		data, ierr := json.Marshal(resp)
 		if ierr != nil {
 			m.app.Log().Error("error marshalling error response", zap.Error(ierr))
+
 			return
 		}
+
 		if !hasCT {
 			ctx.ContentType(ContentTypeJSON)
 		}
+
 		ctx.Response().SetBodyRaw(data)
 	} else if hasCT := bytes.HasPrefix(ct, []byte(ContentTypeXML)); hasCT || ctx.AcceptsExplicit(ContentTypeXML) {
 		data, ierr := xml.Marshal(resp)
 		if ierr != nil {
 			m.app.Log().Error("error marshalling error response", zap.Error(ierr))
+
 			return
 		}
+
 		if !hasCT {
 			ctx.ContentType(ContentTypeXML)
 		}
+
 		ctx.Response().SetBodyRaw(data)
 	} else {
 		ctx.Response().SetBodyString(resp.Errors[0].Message)
@@ -438,64 +452,66 @@ func (m *mux) Group(path string) Router {
 	}
 }
 
-// Get is a shortcut for HTTP GET method handler
+// Get is a shortcut for HTTP GET method handler.
 func (m *mux) Get(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodGet, path, handler)
 }
 
-// Head is a shortcut for HTTP HEAD method handler
+// Head is a shortcut for HTTP HEAD method handler.
 func (m *mux) Head(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodHead, path, handler)
 }
 
-// Post is a shortcut for HTTP POST method handler
+// Post is a shortcut for HTTP POST method handler.
 func (m *mux) Post(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodPost, path, handler)
 }
 
-// Put is a shortcut for HTTP PUT method handler
+// Put is a shortcut for HTTP PUT method handler.
 func (m *mux) Put(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodPut, path, handler)
 }
 
-// Patch is a shortcut for HTTP PATCH method handler
+// Patch is a shortcut for HTTP PATCH method handler.
 func (m *mux) Patch(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodPatch, path, handler)
 }
 
-// Delete is a shortcut for HTTP DELETE method handler
+// Delete is a shortcut for HTTP DELETE method handler.
 func (m *mux) Delete(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodDelete, path, handler)
 }
 
-// Connect is a shortcut for HTTP CONNECT method handler
+// Connect is a shortcut for HTTP CONNECT method handler.
 func (m *mux) Connect(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodConnect, path, handler)
 }
 
-// Options is a shortcut for HTTP OPTIONS method handler
+// Options is a shortcut for HTTP OPTIONS method handler.
 func (m *mux) Options(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodOptions, path, handler)
 }
 
-// Trace is a shortcut for HTTP TRACE method handler
+// Trace is a shortcut for HTTP TRACE method handler.
 func (m *mux) Trace(path string, handler RequestHandler) {
 	m.Handle(fasthttp.MethodTrace, path, handler)
 }
 
-// Proxy is helper to proxy requests to another host
+// Proxy is helper to proxy requests to another host.
 func (m *mux) Proxy(path string, options ...ProxyOption) {
 	p := m.newUpstreamProxy(path, options...)
 	m.Any(path, Handle(p))
+
 	if len(path) > 0 && path[len(path)-1] != '/' {
 		path += "/"
 	}
+
 	m.Any(path+"{path:*}", Handle(p))
 }
 
 // Any is a shortcut for all HTTP methods handler
 //
-// WARNING: Use only for routes where the request method is not important
+// WARNING: Use only for routes where the request method is not important.
 func (m *mux) Any(path string, handler RequestHandler) {
 	m.Handle(MethodWild, path, handler)
 }
@@ -509,10 +525,12 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 
 	// Remove base path from request path
 	basePath := m.BasePath()
+
 	l := len(basePath)
 	if l > len(path) {
 		l = len(path)
 	}
+
 	if l > 0 && strings.EqualFold(basePath, path[:l]) {
 		path = path[l:]
 		if len(path) == 0 || path[0] != '/' {
@@ -531,6 +549,7 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 		if tree := m.trees[methodIndex]; tree != nil {
 			if handler, tsr := tree.Get(path, ctx); handler != nil {
 				handler(ctx)
+
 				return
 			} else if method != fasthttp.MethodConnect && path != "/" {
 				if ok := m.TryRedirect(ctx, tree, tsr, method, path); ok {
@@ -544,6 +563,7 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 	if tree := m.trees[m.MethodIndexOf(MethodWild)]; tree != nil {
 		if handler, tsr := tree.Get(path, ctx); handler != nil {
 			handler(ctx)
+
 			return
 		} else if method != fasthttp.MethodConnect && path != "/" {
 			if ok := m.TryRedirect(ctx, tree, tsr, method, path); ok {
@@ -554,31 +574,47 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 
 	if m.RouterOptions.HandleOPTIONS && method == fasthttp.MethodOptions {
 		// Handle OPTIONS requests
-
 		if allow := m.Allowed(path, fasthttp.MethodOptions); allow != "" {
 			ctx.Response.Header.Set("Allow", allow)
+
 			if m.RouterOptions.GlobalOPTIONS != nil {
-				m.WrapHandler(path, m.Chain(m.RouterOptions.GlobalOPTIONS))(ctx)
+				m.WrapHandler("", m.Chain(m.RouterOptions.GlobalOPTIONS))(ctx)
 			}
+
 			return
 		}
 	} else if m.RouterOptions.HandleMethodNotAllowed {
 		// Handle 405
-
 		if allow := m.Allowed(path, method); allow != "" {
 			ctx.Response.Header.Set("Allow", allow)
+
 			if m.RouterOptions.MethodNotAllowed != nil {
-				m.WrapHandler(path, m.Chain(m.RouterOptions.MethodNotAllowed))(ctx)
-			} else {
-				// TODO: move as default value?
-				m.WrapHandler(path, m.Chain(func(c *Context) {
-					c.StatusCode(fasthttp.StatusMethodNotAllowed).Text(fasthttp.StatusMessage(fasthttp.StatusMethodNotAllowed))
-				}))(ctx)
+				m.WrapHandler("", m.Chain(m.RouterOptions.MethodNotAllowed))(ctx)
+
+				return
 			}
+
+			// TODO: move as default value?
+			m.WrapHandler("", m.Chain(func(c *Context) {
+				c.StatusCode(fasthttp.StatusMethodNotAllowed)
+				c.Text(fasthttp.StatusMessage(fasthttp.StatusMethodNotAllowed))
+			}))(ctx)
+
 			return
 		}
 	}
 
 	// Handle 404
-	m.WrapHandler(path, m.Chain(m.HandleNotFound))(ctx)
+	m.WrapHandler("", m.Chain(m.HandleNotFound))(ctx)
+}
+
+// InstrRequest returns path if the request is router handler request.
+func InstrRequest(op string, args ...any) (string, bool) {
+	if op != InstrumentationRequest || len(args) != 1 {
+		return "", false
+	}
+
+	path, ok := args[0].(string)
+
+	return path, ok
 }

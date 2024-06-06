@@ -2,7 +2,6 @@ package radix
 
 import (
 	"fmt"
-	"reflect"
 	"regexp"
 	"strings"
 	"unicode/utf8"
@@ -19,6 +18,7 @@ func min(a, b int) int {
 	if a <= b {
 		return a
 	}
+
 	return b
 }
 
@@ -57,7 +57,7 @@ func longestCommonPrefix(a, b string) int {
 	return i
 }
 
-// segmentEndIndex returns the index where the segment ends from the given path
+// segmentEndIndex returns the index where the segment ends from the given path.
 func segmentEndIndex(path string, includeTSR bool) int {
 	end := 0
 	for end < len(path) && path[end] != '/' {
@@ -90,6 +90,7 @@ func findWildPath(path string, fullPath string) *wildPath {
 			case '}':
 				if keys > 0 {
 					keys--
+
 					continue
 				}
 
@@ -173,16 +174,6 @@ func findWildPath(path string, fullPath string) *wildPath {
 }
 
 // copyString copies string to new pointer without memory allocation.
-//
-// Note it may break if string and/or slice header will change
-// in the future go versions.
 func copyString(s string) string {
-	var b []byte
-	sh := (*reflect.StringHeader)(unsafe.Pointer(&s))
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
-	bh.Data = sh.Data
-	bh.Cap = sh.Len
-	bh.Len = sh.Len
-
-	return string(b)
+	return string(unsafe.Slice(unsafe.StringData(s), len(s)))
 }

@@ -1,6 +1,7 @@
 package azugo
 
 import (
+	"io"
 	"net/url"
 	"strconv"
 	"strings"
@@ -14,91 +15,105 @@ import (
 // Response return the *fasthttp.Response object
 // This allows you to use all fasthttp response methods
 // https://godoc.org/github.com/valyala/fasthttp#Response
-func (ctx *Context) Response() *fasthttp.Response {
-	return &ctx.context.Response
+func (c *Context) Response() *fasthttp.Response {
+	return &c.context.Response
 }
 
 // StatusCode sets the HTTP status code for the response.
 // This method is chainable.
-func (ctx *Context) StatusCode(status int) *Context {
-	ctx.context.Response.SetStatusCode(status)
-	return ctx
+func (c *Context) StatusCode(status int) {
+	c.context.Response.SetStatusCode(status)
 }
 
 // ContentType sets the Content-Type header for the response with optionally setting charset if provided.
 // This method is chainable.
-func (ctx *Context) ContentType(contentType string, charset ...string) *Context {
+func (c *Context) ContentType(contentType string, charset ...string) {
 	if len(charset) > 0 {
-		ctx.Response().Header.SetContentType(contentType + "; charset=" + charset[0])
+		c.Response().Header.SetContentType(contentType + "; charset=" + charset[0])
 	} else {
-		ctx.Response().Header.SetContentType(contentType)
+		c.Response().Header.SetContentType(contentType)
 	}
-	return ctx
 }
 
 // Redirect redirects the request to a given URL with status code 302 (Found) if other redirect status code
 // not set already.
-func (ctx *Context) Redirect(url string) {
-	if !fasthttp.StatusCodeIsRedirect(ctx.Response().StatusCode()) {
-		ctx.StatusCode(fasthttp.StatusFound)
+func (c *Context) Redirect(url string) {
+	if !fasthttp.StatusCodeIsRedirect(c.Response().StatusCode()) {
+		c.StatusCode(fasthttp.StatusFound)
 	}
 	// TODO: Check if it's safe to redirect to provided URL
-	ctx.Header.Set("Location", url)
+	c.Header.Set("Location", url)
 }
 
 // JSON serializes the given struct as JSON and sets it as the response body.
-func (ctx *Context) JSON(obj any) {
-	ctx.Response().Header.SetContentTypeBytes(contentTypeJSON)
+func (c *Context) JSON(obj any) {
+	c.Response().Header.SetContentTypeBytes(contentTypeJSON)
+
 	buf, err := json.Marshal(obj)
 	if err != nil {
-		ctx.Error(err)
+		c.Error(err)
+
 		return
 	}
-	ctx.Response().SetBodyRaw(buf)
+
+	c.Response().SetBodyRaw(buf)
 }
 
 // Text sets the response body to the given text.
-func (ctx *Context) Text(text string) {
-	ctx.Response().Header.SetContentTypeBytes(contentTypeText)
-	ctx.Response().SetBodyString(text)
+func (c *Context) Text(text string) {
+	c.Response().Header.SetContentTypeBytes(contentTypeText)
+	c.Response().SetBodyString(text)
+}
+
+// Stream sets the response body to the given stream.
+//
+// Close() is called after finishing reading all body data if it implements io.Closer.
+func (c *Context) Stream(r io.Reader) {
+	c.Response().SetBodyStream(r, -1)
 }
 
 // Raw sets response body, but without copying it.
 //
 // WARNING: From this point onward the body argument must not be changed.
-func (ctx *Context) Raw(data []byte) {
-	ctx.Response().SetBodyRaw(data)
+func (c *Context) Raw(data []byte) {
+	c.Response().SetBodyRaw(data)
 }
 
 // Error return the error response. Calls either custom ErrorHandler or default if not specified.
-func (ctx *Context) Error(err error) {
-	ctx.mux.HandleError(ctx, err)
+func (c *Context) Error(err error) {
+	c.mux.HandleError(c, err)
 }
 
 // NotFound returns an not found response. Calls either custom NotFound or default if not specified.
-func (ctx *Context) NotFound() {
-	ctx.mux.HandleNotFound(ctx)
+func (c *Context) NotFound() {
+	c.mux.HandleNotFound(c)
 }
 
-func (ctx *Context) SetPaging(values map[string]string, paginator *paginator.Paginator) {
-	ctx.Header.Set(HeaderTotalCount, strconv.Itoa(paginator.Total()))
-	ctx.Header.AppendAccessControlExposeHeaders(HeaderTotalCount)
-	route := ctx.RouterPath()
+func (c *Context) SetPaging(values map[string]string, paginator *paginator.Paginator) {
+	c.Header.Set(HeaderTotalCount, strconv.Itoa(paginator.Total()))
+	c.Header.AppendAccessControlExposeHeaders(HeaderTotalCount)
+
+	route := c.RouterPath()
 	if len(route) == 0 {
 		return
 	}
+
 	for k, v := range values {
 		route = strings.Replace(route, "{"+k+"}", url.PathEscape(v), 1)
 	}
-	curl, err := url.Parse(ctx.BaseURL() + route)
+
+	curl, err := url.Parse(c.BaseURL() + route)
 	if err != nil {
-		ctx.Log().Error("Failed to prepare paging header", zap.Error((err)))
+		c.Log().Error("Failed to prepare paging header", zap.Error((err)))
+
 		return
 	}
+
 	paginator.SetURL(curl)
+
 	links := paginator.Links()
 	if len(links) > 0 {
-		ctx.Header.Set(HeaderLink, strings.Join(links, ","))
-		ctx.Header.AppendAccessControlExposeHeaders(HeaderLink)
+		c.Header.Set(HeaderLink, strings.Join(links, ","))
+		c.Header.AppendAccessControlExposeHeaders(HeaderLink)
 	}
 }

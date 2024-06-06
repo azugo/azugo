@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"azugo.io/azugo"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -63,7 +63,7 @@ func TestRealIPMiddleware(t *testing.T) {
 			a.Use(RealIP)
 
 			a.Get("/", func(ctx *azugo.Context) {
-				assert.Equal(t, test.expectedIP, ctx.IP().String())
+				qt.Check(t, qt.Equals(ctx.IP().String(), test.expectedIP))
 			})
 
 			a.Start(t)
@@ -71,7 +71,7 @@ func TestRealIPMiddleware(t *testing.T) {
 
 			c := a.TestClient()
 			resp, err := c.Get("/", c.WithHeader(test.headerName, test.headerValue))
-			require.NoError(t, err)
+			qt.Assert(t, qt.IsNil(err))
 			defer fasthttp.ReleaseResponse(resp)
 		})
 	}

@@ -2,6 +2,7 @@ package azugo
 
 import (
 	"azugo.io/azugo/token"
+
 	"go.uber.org/zap"
 )
 
@@ -53,17 +54,17 @@ type User interface {
 }
 
 // SetUser sets authorized user.
-func (ctx *Context) SetUser(u User) {
-	ctx.user = u
+func (c *Context) SetUser(u User) {
+	c.user = u
 	if u != nil && u.Authorized() {
-		_ = ctx.AddLogFields(
+		_ = c.AddLogFields(
 			zap.String("user.id", u.ID()),
 			zap.String("user.full_name", u.DisplayName()),
 		)
 	}
 }
 
-// User returns authorized user or
-func (ctx *Context) User() User {
-	return ctx.user
+// User returns authorized user or.
+func (c *Context) User() User {
+	return c.user
 }

@@ -5,11 +5,12 @@ import (
 	"golang.org/x/exp/maps"
 )
 
-func (ctx *Context) initLoggerFields() {
-	method := ctx.Method()
-	path := ctx.Path()
+func (c *Context) initLoggerFields() {
+	method := c.Method()
+	path := c.Path()
 	cleanedPath := path
-	basePath := ctx.BasePath()
+
+	basePath := c.BasePath()
 	if len(basePath) > 0 && len(basePath) < len(path) && basePath == path[:len(basePath)] {
 		cleanedPath = path[len(basePath):]
 	}
@@ -18,43 +19,47 @@ func (ctx *Context) initLoggerFields() {
 
 	fields = append(fields,
 		// Basic request fields
-		zap.String("http.request.id", ctx.ID()),
+		zap.String("http.request.id", c.ID()),
 		zap.String("http.request.method", method),
 		zap.String("url.path", cleanedPath),
 		// Source
-		zap.String("source.ip", ctx.IP().String()),
+		zap.String("source.ip", c.IP().String()),
 	)
 
-	_ = ctx.AddLogFields(fields...)
+	_ = c.AddLogFields(fields...)
 }
 
 // AddLogFields add fields to context logger.
-func (ctx *Context) AddLogFields(fields ...zap.Field) error {
+func (c *Context) AddLogFields(fields ...zap.Field) error {
 	if len(fields) == 0 {
 		return nil
 	}
+
 	for _, field := range fields {
-		ctx.loggerFields[field.Key] = field
+		c.loggerFields[field.Key] = field
 	}
-	return ctx.ReplaceLogger(ctx.loggerCore)
+
+	return c.ReplaceLogger(c.loggerCore)
 }
 
 // ReplaceLogger replaces current context logger with custom.
-func (ctx *Context) ReplaceLogger(logger *zap.Logger) error {
+func (c *Context) ReplaceLogger(logger *zap.Logger) error {
 	if logger == nil {
 		return nil
 	}
-	ctx.loggerCore = logger
-	ctx.logger = logger.With(maps.Values(ctx.loggerFields)...)
+
+	c.loggerCore = logger
+	c.logger = logger.With(maps.Values(c.loggerFields)...)
+
 	return nil
 }
 
 // Log returns the logger.
-func (ctx *Context) Log() *zap.Logger {
-	return ctx.logger
+func (c *Context) Log() *zap.Logger {
+	return c.logger
 }
 
 // SkipRequestLog sets to skip request log entry for current request.
-func (ctx *Context) SkipRequestLog() {
-	ctx.SetUserValue("log_request", false)
+func (c *Context) SkipRequestLog() {
+	c.SetUserValue("log_request", false)
 }

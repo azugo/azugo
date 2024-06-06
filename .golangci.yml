@@ -1,3 +1,46 @@
-run:
-  skip-files:
+issues:
+  exclude-files:
     - ".*_test\\.go$"
+
+linters-settings:
+  gci:
+    custom-order: true
+    sections:
+      - standard
+      - prefix(azugo.io/azugo)
+      - default
+
+linters:
+  presets:
+    - comment
+    - format
+    - bugs
+    - performance
+    - unused
+    - test
+    - sql
+    - style
+
+  enable:
+    - wsl
+
+  disable:
+    - godox
+    - tagalign
+    - exhaustruct
+    - depguard
+    - wrapcheck
+    - gochecknoinits
+    - varnamelen
+    - funlen
+    - ireturn
+    - gomnd
+    - interfacebloat
+    - gochecknoglobals
+    - goerr113
+    - lll
+    - nilnil
+    - containedctx
+    - gomoddirectives
+    - nolintlint
+    - goconst

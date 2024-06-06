@@ -6,7 +6,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// MethodWild wild HTTP method
+// MethodWild wild HTTP method.
 const MethodWild = "*"
 
 const InstrumentationRequest = "http-request"
@@ -17,7 +17,7 @@ var (
 	questionMark    = byte('?')
 )
 
-// RequestHandlerFunc is an adapter to allow to use it as wrapper for RequestHandler
+// RequestHandlerFunc is an adapter to allow to use it as wrapper for RequestHandler.
 type RequestHandlerFunc func(h RequestHandler) RequestHandler
 
 // Router to handle multiple methods.
@@ -95,7 +95,7 @@ func NewRouter(app *App) RouterHandler {
 	return newMux(app)
 }
 
-// RouterOptions allow to configure the router behavior
+// RouterOptions allow to configure the router behavior.
 type RouterOptions struct {
 	// Proxy is the options to describe the trusted proxies.
 	Proxy ProxyOptions
@@ -184,6 +184,7 @@ func (r *RouterOptions) ApplyConfig(conf *config.Configuration) {
 	}
 	// Apply Proxy configuration.
 	r.Proxy.Clear().ForwardLimit = conf.Proxy.Limit
+
 	for _, p := range conf.Proxy.Address {
 		r.Proxy.Add(p)
 	}
@@ -192,7 +193,7 @@ func (r *RouterOptions) ApplyConfig(conf *config.Configuration) {
 // Mutable allows updating the route handler
 //
 // Disabled by default.
-// WARNING: Use with care. It could generate unexpected behaviors
+// WARNING: Use with care. It could generate unexpected behaviors.
 func (a *App) Mutable(v bool) {
 	a.defaultMux.Mutable(v)
 }
@@ -224,7 +225,7 @@ func (a *App) Handler(ctx *fasthttp.RequestCtx) {
 	a.router.SelectRouter(ctx).Handler(ctx)
 }
 
-// Routes returns all registered routes grouped by method
+// Routes returns all registered routes grouped by method.
 func (a *App) Routes() map[string][]string {
 	return a.defaultMux.Routes()
 }
@@ -237,64 +238,66 @@ func (a *App) Use(middlewares ...RequestHandlerFunc) {
 	a.defaultMux.Use(middlewares...)
 }
 
-// Get is a shortcut for HTTP GET method handler
+// Get is a shortcut for HTTP GET method handler.
 func (a *App) Get(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodGet, path, handler)
 }
 
-// Head is a shortcut for HTTP HEAD method handler
+// Head is a shortcut for HTTP HEAD method handler.
 func (a *App) Head(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodHead, path, handler)
 }
 
-// Post is a shortcut for HTTP POST method handler
+// Post is a shortcut for HTTP POST method handler.
 func (a *App) Post(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodPost, path, handler)
 }
 
-// Put is a shortcut for HTTP PUT method handler
+// Put is a shortcut for HTTP PUT method handler.
 func (a *App) Put(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodPut, path, handler)
 }
 
-// Patch is a shortcut for HTTP PATCH method handler
+// Patch is a shortcut for HTTP PATCH method handler.
 func (a *App) Patch(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodPatch, path, handler)
 }
 
-// Delete is a shortcut for HTTP DELETE method handler
+// Delete is a shortcut for HTTP DELETE method handler.
 func (a *App) Delete(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodDelete, path, handler)
 }
 
-// Connect is a shortcut for HTTP CONNECT method handler
+// Connect is a shortcut for HTTP CONNECT method handler.
 func (a *App) Connect(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodConnect, path, handler)
 }
 
-// Options is a shortcut for HTTP OPTIONS method handler
+// Options is a shortcut for HTTP OPTIONS method handler.
 func (a *App) Options(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodOptions, path, handler)
 }
 
-// Trace is a shortcut for HTTP TRACE method handler
+// Trace is a shortcut for HTTP TRACE method handler.
 func (a *App) Trace(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodTrace, path, handler)
 }
 
-// Proxy is helper to proxy requests to another host
+// Proxy is helper to proxy requests to another host.
 func (a *App) Proxy(path string, options ...ProxyOption) {
 	p := a.defaultMux.newUpstreamProxy(path, options...)
 	a.Any(path, Handle(p))
+
 	if len(path) > 0 && path[len(path)-1] != '/' {
 		path += "/"
 	}
+
 	a.Any(path+"{path:*}", Handle(p))
 }
 
 // Any is a shortcut for all HTTP methods handler
 //
-// WARNING: Use only for routes where the request method is not important
+// WARNING: Use only for routes where the request method is not important.
 func (a *App) Any(path string, handler RequestHandler) {
 	a.Handle(MethodWild, path, handler)
 }
@@ -324,5 +327,6 @@ func (r customRouter) SelectRouter(ctx *fasthttp.RequestCtx) RouterHandler {
 	if s := r.custom.SelectRouter(ctx); s != nil {
 		return s
 	}
+
 	return r.defaultMux
 }

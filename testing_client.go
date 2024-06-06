@@ -32,28 +32,28 @@ func (c *TestClient) applyOptions(request *fasthttp.Request, options []TestClien
 
 // WithHost sets host for the request.
 func (c *TestClient) WithHost(host string) TestClientOption {
-	return func(tc *TestClient, r *fasthttp.Request) {
+	return func(_ *TestClient, r *fasthttp.Request) {
 		r.SetHost(host)
 	}
 }
 
 // WithHeader adds header to request.
 func (c *TestClient) WithHeader(key, value string) TestClientOption {
-	return func(tc *TestClient, r *fasthttp.Request) {
+	return func(_ *TestClient, r *fasthttp.Request) {
 		r.Header.Add(key, value)
 	}
 }
 
 // WithMultiPartFormBoundary sets multipart form data boundary.
 func (c *TestClient) WithMultiPartFormBoundary(boundary string) TestClientOption {
-	return func(tc *TestClient, r *fasthttp.Request) {
+	return func(_ *TestClient, r *fasthttp.Request) {
 		r.Header.SetMultipartFormBoundary(boundary)
 	}
 }
 
 // WithQuery adds query parameters from map to query arguments.
 func (c *TestClient) WithQuery(params map[string]any) TestClientOption {
-	return func(tc *TestClient, r *fasthttp.Request) {
+	return func(_ *TestClient, r *fasthttp.Request) {
 		for key, value := range params {
 			var val string
 			switch v := value.(type) {
@@ -91,12 +91,13 @@ func (c *TestClient) CallRaw(method, endpoint, body []byte, options ...TestClien
 	if err := c.client.Do(req, resp); err != nil {
 		return nil, err
 	}
+
 	return resp, nil
 }
 
 // Call calls the given method and endpoint with the given body and options.
 func (c *TestClient) Call(method, endpoint string, body []byte, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.CallRaw([]byte(method), []byte(fmt.Sprintf("http://test%s", endpoint)), body, options...)
+	return c.CallRaw([]byte(method), []byte("http://test"+endpoint), body, options...)
 }
 
 // Get calls GET method with given options.
@@ -125,13 +126,16 @@ func (c *TestClient) PatchJSON(endpoint string, body any, options ...TestClientO
 	if err != nil {
 		return nil, err
 	}
+
 	options = append(options, c.WithHeader("Content-Type", "application/json"))
+
 	return c.Patch(endpoint, b, options...)
 }
 
 // PatchForm calls PATCH method with given map marshaled as URL encoded form and options.
 func (c *TestClient) PatchForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
 	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+
 	return c.Patch(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
 
@@ -141,6 +145,7 @@ func (c *TestClient) PatchMultiPartForm(endpoint string, form *multipart.Form, o
 	if err != nil {
 		return nil, err
 	}
+
 	options = append(options, c.WithMultiPartFormBoundary(boundary.String()))
 
 	var body bytes.Buffer
@@ -162,13 +167,16 @@ func (c *TestClient) PutJSON(endpoint string, body any, options ...TestClientOpt
 	if err != nil {
 		return nil, err
 	}
+
 	options = append(options, c.WithHeader("Content-Type", "application/json"))
+
 	return c.Put(endpoint, b, options...)
 }
 
 // PutForm calls PUT method with given map marshaled as URL encoded form and options.
 func (c *TestClient) PutForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
 	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+
 	return c.Put(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
 
@@ -178,6 +186,7 @@ func (c *TestClient) PutMultiPartForm(endpoint string, form *multipart.Form, opt
 	if err != nil {
 		return nil, err
 	}
+
 	options = append(options, c.WithMultiPartFormBoundary(boundary.String()))
 
 	var body bytes.Buffer
@@ -199,13 +208,16 @@ func (c *TestClient) PostJSON(endpoint string, body any, options ...TestClientOp
 	if err != nil {
 		return nil, err
 	}
+
 	options = append(options, c.WithHeader("Content-Type", "application/json"))
+
 	return c.Post(endpoint, b, options...)
 }
 
 // PostForm calls POST method with given map marshaled as URL encoded form and options.
 func (c *TestClient) PostForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
 	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+
 	return c.Post(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
 
@@ -215,6 +227,7 @@ func (c *TestClient) PostMultiPartForm(endpoint string, form *multipart.Form, op
 	if err != nil {
 		return nil, err
 	}
+
 	options = append(options, c.WithMultiPartFormBoundary(boundary.String()))
 
 	var body bytes.Buffer

@@ -4,8 +4,7 @@ import (
 	"mime/multipart"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -16,27 +15,27 @@ func TestFormValidParams(t *testing.T) {
 
 	a.Post("/user", func(ctx *Context) {
 		v := ctx.Form.Values("multi")
-		assert.ElementsMatch(t, []string{"a", "b", "c"}, v, "Form parameter multi values should match")
+		qt.Check(t, qt.ContentEquals(v, []string{"a", "b", "c"}), qt.Commentf("Form parameter multi values should match"))
 
 		s, err := ctx.Form.String("s")
-		assert.NoError(t, err, "Form parameter s should be present")
-		assert.Equal(t, "test", s, "Form parameter s should be equal to test")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter s should be present"))
+		qt.Check(t, qt.Equals(s, "test"), qt.Commentf("Form parameter s should be equal to test"))
 
 		i, err := ctx.Form.Int("i")
-		assert.NoError(t, err, "Form parameter i should be present")
-		assert.Equal(t, 1, i, "Form parameter i should be equal to 1")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter i should be present"))
+		qt.Check(t, qt.Equals(i, 1), qt.Commentf("Form parameter i should be equal to 1"))
 
 		l, err := ctx.Form.Int64("l")
-		assert.NoError(t, err, "Form parameter l should be present")
-		assert.Equal(t, int64(500), l, "Form parameter l should be equal to 500")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter l should be present"))
+		qt.Check(t, qt.Equals(l, int64(500)), qt.Commentf("Form parameter l should be equal to 500"))
 
 		b, err := ctx.Form.Bool("b")
-		assert.NoError(t, err, "Form parameter b should be present")
-		assert.True(t, b, "Form parameter b should be true")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter b should be present"))
+		qt.Check(t, qt.IsTrue(b), qt.Commentf("Form parameter b should be true"))
 
 		b, err = ctx.Form.Bool("bb")
-		assert.NoError(t, err, "Form parameter bb should be present")
-		assert.False(t, b, "Form parameter bb should be false")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter bb should be present"))
+		qt.Check(t, qt.IsFalse(b), qt.Commentf("Form parameter bb should be false"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -50,9 +49,9 @@ func TestFormValidParams(t *testing.T) {
 		"bb":    0,
 	})
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK), qt.Commentf("wrong response status code"))
 }
 
 func TestMultiPartFormValidParams(t *testing.T) {
@@ -62,27 +61,27 @@ func TestMultiPartFormValidParams(t *testing.T) {
 
 	a.Post("/user", func(ctx *Context) {
 		v := ctx.Form.Values("multi")
-		assert.ElementsMatch(t, []string{"a", "b", "c"}, v, "Form parameter multi values should match")
+		qt.Check(t, qt.ContentEquals(v, []string{"a", "b", "c"}), qt.Commentf("Form parameter multi values should match"))
 
 		s, err := ctx.Form.String("s")
-		assert.NoError(t, err, "Form parameter s should be present")
-		assert.Equal(t, "test", s, "Form parameter s should be equal to test")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter s should be present"))
+		qt.Check(t, qt.Equals(s, "test"), qt.Commentf("Form parameter s should be equal to test"))
 
 		i, err := ctx.Form.Int("i")
-		assert.NoError(t, err, "Form parameter i should be present")
-		assert.Equal(t, 1, i, "Form parameter i should be equal to 1")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter i should be present"))
+		qt.Check(t, qt.Equals(i, 1), qt.Commentf("Form parameter i should be equal to 1"))
 
 		l, err := ctx.Form.Int64("l")
-		assert.NoError(t, err, "Form parameter l should be present")
-		assert.Equal(t, int64(500), l, "Form parameter l should be equal to 500")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter l should be present"))
+		qt.Check(t, qt.Equals(l, int64(500)), qt.Commentf("Form parameter l should be equal to 500"))
 
 		b, err := ctx.Form.Bool("b")
-		assert.NoError(t, err, "Form parameter b should be present")
-		assert.True(t, b, "Form parameter b should be true")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter b should be present"))
+		qt.Check(t, qt.IsTrue(b), qt.Commentf("Form parameter b should be true"))
 
 		b, err = ctx.Form.Bool("bb")
-		assert.NoError(t, err, "Form parameter bb should be present")
-		assert.False(t, b, "Form parameter bb should be false")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter bb should be present"))
+		qt.Check(t, qt.IsFalse(b), qt.Commentf("Form parameter bb should be false"))
 
 		ctx.StatusCode(fasthttp.StatusOK)
 	})
@@ -101,7 +100,7 @@ func TestMultiPartFormValidParams(t *testing.T) {
 
 	resp, err := a.TestClient().PostMultiPartForm("/user", form)
 	defer fasthttp.ReleaseResponse(resp)
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 
-	assert.Equal(t, fasthttp.StatusOK, resp.StatusCode(), "wrong status code")
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK), qt.Commentf("wrong response status code"))
 }

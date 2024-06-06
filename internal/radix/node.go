@@ -15,14 +15,14 @@ func newNode(path string) *node {
 	}
 }
 
-// conflict raises a panic with some details
+// conflict raises a panic with some details.
 func (n *nodeWildcard) conflict(path, fullPath string) error {
 	prefix := fullPath[:strings.LastIndex(fullPath, path)] + n.path
 
 	return newRadixError(errWildcardConflict, path, fullPath, n.path, prefix)
 }
 
-// wildPathConflict raises a panic with some details
+// wildPathConflict raises a panic with some details.
 func (n *node) wildPathConflict(path, fullPath string) error {
 	pathSeg := strings.SplitN(path, "/", 2)[0]
 	prefix := fullPath[:strings.LastIndex(fullPath, path)] + n.path
@@ -30,7 +30,7 @@ func (n *node) wildPathConflict(path, fullPath string) error {
 	return newRadixError(errWildPathConflict, pathSeg, fullPath, n.path, prefix)
 }
 
-// clone clones the current node in a new pointer
+// clone clones the current node in a new pointer.
 func (n node) clone() *node {
 	cloneNode := new(node)
 	cloneNode.nType = n.nType
@@ -90,6 +90,7 @@ func (n *node) findEndIndexAndValues(path string) (int, []string) {
 	values := make([]string, len(index)/2)
 
 	i := 0
+
 	for j := range index {
 		if (j+1)%2 != 0 {
 			continue
@@ -189,6 +190,7 @@ func (n *node) insert(path, fullPath string, handler fasthttp.RequestHandler) (*
 			}
 
 			return n, nil
+		case root, static:
 		}
 
 		path = path[wp.end:]
@@ -203,13 +205,14 @@ func (n *node) insert(path, fullPath string, handler fasthttp.RequestHandler) (*
 	child.handler = handler
 	n.children = append(n.children, child)
 
-	if child.path == "/" {
+	switch {
+	case child.path == "/":
 		// Add TSR when split a edge and the remain path to insert is "/"
 		n.tsr = true
-	} else if strings.HasSuffix(child.path, "/") {
+	case strings.HasSuffix(child.path, "/"):
 		child.split(len(child.path) - 1)
 		child.tsr = true
-	} else {
+	default:
 		childTSR := newNode("/")
 		childTSR.tsr = true
 		child.children = append(child.children, childTSR)
@@ -218,7 +221,7 @@ func (n *node) insert(path, fullPath string, handler fasthttp.RequestHandler) (*
 	return child, nil
 }
 
-// add adds the handler to node for the given path
+// add adds the handler to node for the given path.
 func (n *node) add(path, fullPath string, handler fasthttp.RequestHandler) (*node, error) {
 	if len(path) == 0 {
 		return n.setHandler(handler, fullPath)
@@ -261,6 +264,7 @@ func (n *node) add(path, fullPath string, handler fasthttp.RequestHandler) (*nod
 
 				return n.insert(path, fullPath, handler)
 			}
+		case root, wildcard:
 		}
 
 		if path == "/" {
@@ -277,7 +281,6 @@ func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.Req
 	for _, child := range n.children {
 		switch child.nType {
 		case static:
-
 			// Checks if the first byte is equal
 			// It's faster than compare strings
 			if path[0] != child.path[0] {
@@ -334,7 +337,6 @@ func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.Req
 
 					return h, false
 				}
-
 			} else if len(path) == end {
 				switch {
 				case child.tsr:
@@ -351,6 +353,8 @@ func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.Req
 				return child.handler, false
 			}
 
+		case root, wildcard:
+			fallthrough
 		default:
 			panic("invalid node type")
 		}
@@ -382,7 +386,6 @@ func (n *node) find(path string, buf *bytebufferpool.ByteBuffer) (bool, bool) {
 		}
 
 		bufferRemoveString(buf, n.path)
-
 	} else if strings.EqualFold(path, n.path) {
 		_, _ = buf.WriteString(n.path)
 
@@ -398,9 +401,9 @@ func (n *node) find(path string, buf *bytebufferpool.ByteBuffer) (bool, bool) {
 
 		if n.handler != nil {
 			return true, false
-		} else {
-			bufferRemoveString(buf, n.path)
 		}
+
+		bufferRemoveString(buf, n.path)
 	}
 
 	return false, false
@@ -432,7 +435,6 @@ func (n *node) findFromChild(path string, buf *bytebufferpool.ByteBuffer) (bool,
 				if found {
 					return found, tsr
 				}
-
 			} else if len(path) == end {
 				if child.tsr {
 					_ = buf.WriteByte('/')
@@ -447,6 +449,8 @@ func (n *node) findFromChild(path string, buf *bytebufferpool.ByteBuffer) (bool,
 
 			bufferRemoveString(buf, path[:end])
 
+		case root, wildcard:
+			fallthrough
 		default:
 			panic("invalid node type")
 		}
@@ -461,7 +465,7 @@ func (n *node) findFromChild(path string, buf *bytebufferpool.ByteBuffer) (bool,
 	return false, false
 }
 
-// sort sorts the current node and their children
+// sort sorts the current node and their children.
 func (n *node) sort() {
 	for _, child := range n.children {
 		child.sort()
@@ -470,17 +474,17 @@ func (n *node) sort() {
 	sort.Sort(n)
 }
 
-// Len returns the total number of children the node has
+// Len returns the total number of children the node has.
 func (n *node) Len() int {
 	return len(n.children)
 }
 
-// Swap swaps the order of children nodes
+// Swap swaps the order of children nodes.
 func (n *node) Swap(i, j int) {
 	n.children[i], n.children[j] = n.children[j], n.children[i]
 }
 
-// Less checks if the node 'i' has less priority than the node 'j'
+// Less checks if the node 'i' has less priority than the node 'j'.
 func (n *node) Less(i, j int) bool {
 	if n.children[i].nType < n.children[j].nType {
 		return true

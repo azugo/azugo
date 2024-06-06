@@ -4,8 +4,7 @@ import (
 	"testing"
 
 	"azugo.io/azugo"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
@@ -20,7 +19,8 @@ func TestCORSHandlerOptions(t *testing.T) {
 
 	a.Get("/test", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
-		ctx.StatusCode(fasthttp.StatusOK).Text("Hello, world!")
+		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.Text("Hello, world!")
 	})
 
 	a.Start(t)
@@ -28,17 +28,17 @@ func TestCORSHandlerOptions(t *testing.T) {
 
 	c := a.TestClient()
 	resp, err := c.Get("/test", c.WithHeader("Origin", "http://1.0.1.0"))
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	defer fasthttp.ReleaseResponse(resp)
 
 	methodsHeader := string(resp.Header.Peek("Access-Control-Allow-Methods"))
-	assert.Equal(t, "GET, POST", methodsHeader)
+	qt.Check(t, qt.Equals(methodsHeader, "GET, POST"))
 
 	originHeader := string(resp.Header.Peek("Access-Control-Allow-Origin"))
-	assert.Equal(t, "http://1.0.1.0", originHeader)
+	qt.Check(t, qt.Equals(originHeader, "http://1.0.1.0"))
 
 	headersHeader := string(resp.Header.Peek("Access-Control-Allow-Headers"))
-	assert.Equal(t, "X-Test-Header", headersHeader)
+	qt.Check(t, qt.Equals(headersHeader, "X-Test-Header"))
 }
 
 func TestCORSHandlerNotAllowed(t *testing.T) {
@@ -48,7 +48,8 @@ func TestCORSHandlerNotAllowed(t *testing.T) {
 
 	a.Get("/test", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
-		ctx.StatusCode(fasthttp.StatusOK).Text("Hello, world!")
+		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.Text("Hello, world!")
 	})
 
 	a.Start(t)
@@ -56,17 +57,17 @@ func TestCORSHandlerNotAllowed(t *testing.T) {
 
 	c := a.TestClient()
 	resp, err := c.Get("/test", c.WithHeader("Origin", "http://1.0.1.0"))
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	defer fasthttp.ReleaseResponse(resp)
 
 	methodsHeader := string(resp.Header.Peek("Access-Control-Allow-Methods"))
-	assert.Equal(t, "", methodsHeader)
+	qt.Check(t, qt.Equals(methodsHeader, ""))
 
 	originHeader := string(resp.Header.Peek("Access-Control-Allow-Origin"))
-	assert.Equal(t, "", originHeader)
+	qt.Check(t, qt.Equals(originHeader, ""))
 
 	headersHeader := string(resp.Header.Peek("Access-Control-Allow-Headers"))
-	assert.Equal(t, "", headersHeader)
+	qt.Check(t, qt.Equals(headersHeader, ""))
 }
 
 func TestCORSHandlerAllowedOriginsAll(t *testing.T) {
@@ -76,7 +77,8 @@ func TestCORSHandlerAllowedOriginsAll(t *testing.T) {
 
 	a.Get("/test", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
-		ctx.StatusCode(fasthttp.StatusOK).Text("Hello, world!")
+		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.Text("Hello, world!")
 	})
 
 	a.Start(t)
@@ -84,11 +86,11 @@ func TestCORSHandlerAllowedOriginsAll(t *testing.T) {
 
 	c := a.TestClient()
 	resp, err := c.Get("/test", c.WithHeader("Origin", "http://1.0.1.0"))
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	defer fasthttp.ReleaseResponse(resp)
 
 	originHeader := string(resp.Header.Peek("Access-Control-Allow-Origin"))
-	assert.Equal(t, "http://1.0.1.0", originHeader)
+	qt.Check(t, qt.Equals(originHeader, "http://1.0.1.0"))
 }
 
 func TestCORSHandlerOriginDisallowed(t *testing.T) {
@@ -98,7 +100,8 @@ func TestCORSHandlerOriginDisallowed(t *testing.T) {
 
 	a.Get("/test", func(ctx *azugo.Context) {
 		ctx.ContentType("application/json")
-		ctx.StatusCode(fasthttp.StatusOK).Text("Hello, world!")
+		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.Text("Hello, world!")
 	})
 
 	a.Start(t)
@@ -106,9 +109,9 @@ func TestCORSHandlerOriginDisallowed(t *testing.T) {
 
 	c := a.TestClient()
 	resp, err := c.Get("/test")
-	require.NoError(t, err)
+	qt.Assert(t, qt.IsNil(err))
 	defer fasthttp.ReleaseResponse(resp)
 
 	originHeader := string(resp.Header.Peek("Access-Control-Allow-Origin"))
-	assert.Equal(t, "", originHeader)
+	qt.Check(t, qt.Equals(originHeader, ""))
 }

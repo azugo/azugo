@@ -21,15 +21,18 @@ func CORS(opts *azugo.CORSOptions) func(azugo.RequestHandler) azugo.RequestHandl
 				if h != nil {
 					h(ctx)
 				}
+
 				return
 			}
 
 			ctx.Header.Set(headerAllowOrigin, origin)
 			ctx.Header.Set(headerAllowMethods, opts.Methods())
 			ctx.Header.Set(headerAllowHeaders, opts.Headers())
+
 			if opts.AllowCredentials() {
 				ctx.Header.Set(headerAllowCredentials, "true")
 			}
+
 			if h != nil {
 				h(ctx)
 			}

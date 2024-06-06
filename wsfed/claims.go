@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-// Subject holds the unique identifier for the authenticated requestor
+// Subject holds the unique identifier for the authenticated requestor.
 type Subject struct {
 	ID     string
 	Format string
 }
 
-// RegisteredClaims are a structured version of the Security Token
+// RegisteredClaims are a structured version of the Security Token.
 type RegisteredClaims struct {
 	// Security token issuer
 	Issuer string
@@ -46,11 +46,13 @@ func verifyAud(aud []string, cmp string, required bool) bool {
 	result := false
 
 	var stringClaims string
+
 	for _, a := range aud {
 		if subtle.ConstantTimeCompare([]byte(a), []byte(cmp)) != 0 {
 			result = true
 		}
-		stringClaims = stringClaims + a
+
+		stringClaims += a
 	}
 
 	// case where "" is sent in one or many aud claims
@@ -65,7 +67,9 @@ func verifyExp(exp *time.Time, now time.Time, skew time.Duration, required bool)
 	if exp == nil {
 		return !required
 	}
+
 	now = now.Add(-skew)
+
 	return now.Before(*exp)
 }
 
@@ -73,7 +77,9 @@ func verifyIat(iat *time.Time, now time.Time, skew time.Duration, required bool)
 	if iat == nil {
 		return !required
 	}
+
 	now = now.Add(skew)
+
 	return now.After(*iat) || now.Equal(*iat)
 }
 
@@ -81,7 +87,9 @@ func verifyNbf(nbf *time.Time, now time.Time, skew time.Duration, required bool)
 	if nbf == nil {
 		return !required
 	}
+
 	now = now.Add(skew)
+
 	return now.After(*nbf) || now.Equal(*nbf)
 }
 
@@ -89,9 +97,6 @@ func verifyIss(iss string, cmp string, required bool) bool {
 	if iss == "" {
 		return !required
 	}
-	if subtle.ConstantTimeCompare([]byte(iss), []byte(cmp)) != 0 {
-		return true
-	} else {
-		return false
-	}
+
+	return subtle.ConstantTimeCompare([]byte(iss), []byte(cmp)) != 0
 }

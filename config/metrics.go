@@ -20,6 +20,7 @@ func (c *Metrics) Validate(valid *validation.Validate) error {
 	if !c.Enabled {
 		return nil
 	}
+
 	return valid.Struct(c)
 }
 
@@ -28,11 +29,13 @@ func (c *Metrics) Bind(prefix string, v *viper.Viper) {
 	addrs := []string{"127.0.0.1"}
 	if env := os.Getenv("METRICS_TRUSTED_IPS"); len(env) > 0 {
 		addrs = make([]string, 0, 3)
+
 		for _, addr := range strings.Split(env, ";") {
 			addr = strings.TrimSpace(addr)
 			if len(addr) == 0 {
 				continue
 			}
+
 			addrs = append(addrs, addr)
 		}
 	}

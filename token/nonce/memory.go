@@ -12,12 +12,12 @@ import (
 
 // CacheNonceStore is a nonce store that stores nonces in cache.
 type CacheNonceStore struct {
-	cache   cache.CacheInstance[bool]
+	cache   cache.Instance[bool]
 	entropy *ulid.MonotonicEntropy
 }
 
 // NewCacheNonceStore creates a new nonce store that stores nonces in cache.
-func NewCacheNonceStore(c cache.CacheInstance[bool]) *CacheNonceStore {
+func NewCacheNonceStore(c cache.Instance[bool]) *CacheNonceStore {
 	return &CacheNonceStore{
 		entropy: ulid.Monotonic(rand.Reader, 0),
 		cache:   c,
@@ -43,9 +43,11 @@ func (s *CacheNonceStore) Verify(ctx context.Context, nonce string) (bool, error
 	if err != nil {
 		return false, err
 	}
+
 	if i {
 		// Ignore error if nonce can not be deleted from cache
 		_ = s.cache.Delete(ctx, nonce)
 	}
+
 	return i, nil
 }

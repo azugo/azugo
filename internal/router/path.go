@@ -4,7 +4,7 @@ import (
 	"strings"
 )
 
-// cleanPath removes the '.' if it is the last character of the route
+// cleanPath removes the '.' if it is the last character of the route.
 func CleanPath(path string) string {
 	return strings.TrimSuffix(path, ".")
 }
@@ -15,11 +15,12 @@ func includesPath(paths []string, path string) bool {
 			return true
 		}
 	}
+
 	return false
 }
 
 // getOptionalPaths returns all possible paths when the original path
-// has optional arguments
+// has optional arguments.
 func GetOptionalPaths(path string) []string {
 	paths := make([]string, 0)
 
@@ -51,6 +52,7 @@ walk:
 			case '}':
 				if brackets > 0 {
 					brackets--
+
 					continue
 				} else if questionMarkIndex == -1 {
 					continue walk

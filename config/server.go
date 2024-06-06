@@ -22,7 +22,7 @@ type ServerHTTP struct {
 func (s *ServerHTTP) Bind(prefix string, v *viper.Viper) {
 	// Special functionality for SERVER_URLS defaults
 	addr := "0.0.0.0"
-	port := 80
+	port := 8080
 	enabled := true
 
 	for _, servu := range strings.Split(os.Getenv("SERVER_URLS"), ";") {
@@ -30,16 +30,21 @@ func (s *ServerHTTP) Bind(prefix string, v *viper.Viper) {
 		if len(servu) == 0 {
 			continue
 		}
+
 		if u, err := url.Parse(servu); err == nil {
 			if strings.ToLower(u.Scheme) != "http" {
 				enabled = false
+
 				continue
 			}
+
 			enabled = true
 			addr = u.Hostname()
+
 			if p, err := strconv.Atoi(u.Port()); err == nil {
 				port = p
 			}
+
 			break
 		}
 	}
@@ -66,7 +71,7 @@ type ServerHTTPS struct {
 func (s *ServerHTTPS) Bind(prefix string, v *viper.Viper) {
 	// Special functionality for SERVER_URLS defaults
 	addr := "0.0.0.0"
-	port := 443
+	port := 4443
 	enabled := false
 
 	for _, servu := range strings.Split(os.Getenv("SERVER_URLS"), ";") {
@@ -74,15 +79,19 @@ func (s *ServerHTTPS) Bind(prefix string, v *viper.Viper) {
 		if len(servu) == 0 {
 			continue
 		}
+
 		if u, err := url.Parse(servu); err == nil {
 			if strings.ToLower(u.Scheme) != "https" {
 				continue
 			}
+
 			enabled = true
 			addr = u.Hostname()
+
 			if p, err := strconv.Atoi(u.Port()); err == nil {
 				port = p
 			}
+
 			break
 		}
 	}
@@ -132,10 +141,12 @@ func (s *Server) Validate(valid *validation.Validate) error {
 			return err
 		}
 	}
+
 	if s.HTTPS != nil {
 		if err := s.HTTPS.Validate(valid); err != nil {
 			return err
 		}
 	}
+
 	return valid.Struct(s)
 }

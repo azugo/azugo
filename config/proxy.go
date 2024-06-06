@@ -24,11 +24,13 @@ func (c *Proxy) Bind(prefix string, v *viper.Viper) {
 	addrs := []string{"127.0.0.1"}
 	if env := os.Getenv("REVERSE_PROXY_TRUSTED_IPS"); len(env) > 0 {
 		addrs = make([]string, 0, 3)
+
 		for _, addr := range strings.Split(env, ";") {
 			addr = strings.TrimSpace(addr)
 			if len(addr) == 0 {
 				continue
 			}
+
 			addrs = append(addrs, addr)
 		}
 	}

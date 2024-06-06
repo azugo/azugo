@@ -39,7 +39,7 @@ type wildPath struct {
 	regex   *regexp.Regexp
 }
 
-// Tree is a routes storage
+// Tree is a routes storage.
 type Tree struct {
 	root *node
 

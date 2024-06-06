@@ -22,11 +22,13 @@ func (c *CORS) Validate(valid *validation.Validate) error {
 // Bind CORS configuration section.
 func (c *CORS) Bind(prefix string, v *viper.Viper) {
 	origins := make([]string, 0, 1)
+
 	if origin := strings.Split(os.Getenv("CORS_ORIGINS"), ";"); len(origin) > 0 {
 		for _, addr := range origin {
 			if len(addr) == 0 {
 				continue
 			}
+
 			if o, err := url.Parse(strings.TrimSpace(addr)); err == nil && len(o.Host) > 0 {
 				origins = append(origins, o.Scheme+"://"+o.Host)
 			}

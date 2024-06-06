@@ -23,7 +23,13 @@ func (p *ParamsCtx) String(key string) string {
 	if v == nil {
 		return ""
 	}
-	return v.(string)
+
+	s, ok := v.(string)
+	if !ok {
+		return ""
+	}
+
+	return s
 }
 
 // Int64 returns the value of the parameter as int64.
@@ -32,10 +38,12 @@ func (p *ParamsCtx) Int64(key string) (int64, error) {
 	if s == "" {
 		return 0, nil
 	}
+
 	v, err := strconv.ParseInt(s, 10, 64)
 	if err != nil {
 		return 0, ParamInvalidError{key, "numeric", err}
 	}
+
 	return v, nil
 }
 
@@ -45,5 +53,6 @@ func (p *ParamsCtx) Int(key string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+
 	return int(v), nil
 }
