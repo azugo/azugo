@@ -45,7 +45,7 @@ func TestBodyStream(t *testing.T) {
 
 	a.Post("/user", func(ctx *Context) {
 		var buf bytes.Buffer
-		err := ctx.Body.WriteTo(&buf)
+		_, err := ctx.Body.WriteTo(&buf)
 		if err != nil {
 			ctx.Error(err)
 			return

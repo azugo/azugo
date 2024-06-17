@@ -1,6 +1,7 @@
 package azugo
 
 import (
+	"context"
 	"time"
 )
 
@@ -118,4 +119,28 @@ func (c *Context) Value(key any) any {
 	}
 
 	return c.context.Value(key)
+}
+
+// Contexter is an interface that checks if type has a request context.
+type Contexter interface {
+	// RequestContext returns request context.
+	RequestContext() context.Context
+}
+
+// RequestContext returns request context from context.
+func RequestContext(ctx context.Context) *Context {
+	if ctx == nil {
+		return nil
+	}
+
+	if c, ok := ctx.(Contexter); ok {
+		ctx = c.RequestContext()
+	}
+
+	rctx, ok := ctx.(*Context)
+	if !ok {
+		return nil
+	}
+
+	return rctx
 }

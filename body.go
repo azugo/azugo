@@ -21,8 +21,11 @@ func (b *BodyCtx) Bytes() []byte {
 }
 
 // Copy copies the request raw body to the provided writer.
-func (b *BodyCtx) WriteTo(w io.Writer) error {
-	return b.ctx.context.Request.BodyWriteTo(w)
+//
+// Warning: Always returns 0 as not possible to determine
+// the number of bytes written.
+func (b *BodyCtx) WriteTo(w io.Writer) (int64, error) {
+	return 0, b.ctx.context.Request.BodyWriteTo(w)
 }
 
 // JSON unmarshals the request body into provided structure.
