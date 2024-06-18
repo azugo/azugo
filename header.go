@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"azugo.io/azugo/internal/utils"
+	"azugo.io/core/http"
+	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -96,4 +98,13 @@ func (h *HeaderCtx) AppendAccessControlExposeHeaders(names ...string) {
 	} else {
 		h.ctx.Response().Header.Set(HeaderAccessControlExposeHeaders, strings.Join(names, ", "))
 	}
+}
+
+// InheritAuthorization returns HTTP client request option with inherited authorization from request.
+func (h *HeaderCtx) InheritAuthorization() http.RequestOption {
+	if auth := h.Get(fasthttp.HeaderAuthorization); auth != "" {
+		return http.WithHeader(fasthttp.HeaderAuthorization, auth)
+	}
+
+	return nil
 }
