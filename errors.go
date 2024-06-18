@@ -85,7 +85,7 @@ func (e ParamRequiredError) SafeError() string {
 	return fmt.Sprintf(fieldErrMsg, e.Name, e.Name, "required")
 }
 
-func (e ParamRequiredError) StatusCode() int {
+func (ParamRequiredError) StatusCode() int {
 	return fasthttp.StatusBadRequest
 }
 
@@ -108,7 +108,7 @@ func (e ParamInvalidError) SafeError() string {
 	return fmt.Sprintf(fieldErrMsg, e.Name, e.Name, e.Tag)
 }
 
-func (e ParamInvalidError) StatusCode() int {
+func (ParamInvalidError) StatusCode() int {
 	return fasthttp.StatusBadRequest
 }
 
@@ -125,6 +125,6 @@ func (e BadRequestError) Error() string {
 	return "malformed request: " + e.Description
 }
 
-func (e BadRequestError) StatusCode() int {
+func (BadRequestError) StatusCode() int {
 	return fasthttp.StatusBadRequest
 }
