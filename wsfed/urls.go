@@ -42,7 +42,7 @@ func WithRequestParam(name, value string) RequestOption {
 
 // SigninURL returns the signin URL.
 func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...RequestOption) (string, error) {
-	if err := p.check(p.defaultHTTPClient(), false); err != nil {
+	if err := p.check(false); err != nil {
 		return "", err
 	}
 
@@ -82,7 +82,7 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 
 // SignoutURL returns the signout URL.
 func (p *WsFederation) SignoutURL(realm string, options ...RequestOption) (string, error) {
-	if err := p.check(p.defaultHTTPClient(), false); err != nil {
+	if err := p.check(false); err != nil {
 		return "", err
 	}
 

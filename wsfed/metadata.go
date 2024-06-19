@@ -1,7 +1,6 @@
 package wsfed
 
 import (
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/xml"
@@ -11,8 +10,7 @@ import (
 	"strings"
 
 	"azugo.io/azugo/internal/wsfed"
-
-	"github.com/valyala/fasthttp"
+	"azugo.io/core/http"
 )
 
 const (
@@ -32,17 +30,7 @@ const (
 	KeyDescriptorUseEncryption string = "encryption"
 )
 
-func (p *WsFederation) defaultHTTPClient() *fasthttp.Client {
-	return &fasthttp.Client{
-		NoDefaultUserAgentHeader: true,
-		TLSConfig: &tls.Config{
-			//nolint:gosec
-			InsecureSkipVerify: p.InsecureSkipVerify,
-		},
-	}
-}
-
-func (p *WsFederation) check(client *fasthttp.Client, force bool) error {
+func (p *WsFederation) check(force bool) error {
 	p.lock.RLock()
 	if p.ready && !force {
 		p.lock.RUnlock()
@@ -63,27 +51,20 @@ func (p *WsFederation) check(client *fasthttp.Client, force bool) error {
 		return nil
 	}
 
-	req := fasthttp.AcquireRequest()
-	req.Header.SetUserAgentBytes(p.ua)
-	req.Header.SetMethod(fasthttp.MethodGet)
-	req.SetRequestURI(p.MetadataURL.String())
+	client := p.app.HTTPClient().WithOptions(
+		http.BaseURL(p.MetadataURL.String()),
+		&http.TLSConfig{
+			InsecureSkipVerify: p.InsecureSkipVerify,
+		},
+	)
 
-	resp := fasthttp.AcquireResponse()
-	defer fasthttp.ReleaseResponse(resp)
-
-	err := client.Do(req, resp)
-	fasthttp.ReleaseRequest(req)
-
+	buf, err := client.Get("")
 	if err != nil {
-		return fmt.Errorf("failed to connect to the WS-Federation server: %w", err)
-	}
-
-	if resp.StatusCode() != fasthttp.StatusOK {
-		return fmt.Errorf("WS-Federation server returned unexpected status code (%d) for metadata URL", resp.StatusCode())
+		return fmt.Errorf("failed to get WS-Federation metadata: %w", err)
 	}
 
 	metadata := &wsfed.EntityDescriptor{}
-	if err := xml.Unmarshal(resp.Body(), metadata); err != nil {
+	if err := xml.Unmarshal(buf, metadata); err != nil {
 		return fmt.Errorf("failed to unmarshal WS-Federation server metadata: %w", err)
 	}
 
