@@ -95,3 +95,36 @@ func TestHTTPClient_SimpleTracing(t *testing.T) {
 
 	qt.Check(t, qt.Equals(forwardedTraceparent, expectedTraceparent))
 }
+
+func TestContext_ImplementsHTTPClientProvider(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	x := func(ctx context.Context) {
+		if !qt.Check(t, qt.Implements[http.ClientProvider](ctx)) {
+			return
+		}
+
+		provider, ok := ctx.(http.ClientProvider)
+		qt.Check(t, qt.IsTrue(ok), qt.Commentf("expected http.ClientProvider, got %T", ctx))
+
+		client := provider.HTTPClient()
+		qt.Check(t, qt.IsNotNil(client), qt.Commentf("expected non-nil *http.Client"))
+	}
+
+	a.Get("/test", func(ctx *Context) {
+		x(ctx)
+	})
+
+	_, err := a.TestClient().Get("/test")
+	qt.Assert(t, qt.IsNil(err))
+}
+
+func TestApp_ImplementsHTTPClientProvider(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	qt.Check(t, qt.Implements[http.ClientProvider](a))
+}

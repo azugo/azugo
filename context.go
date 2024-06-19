@@ -128,6 +128,8 @@ type Contexter interface {
 }
 
 // RequestContext returns request context from context.
+//
+//nolint:contextcheck
 func RequestContext(ctx context.Context) *Context {
 	if ctx == nil {
 		return nil
