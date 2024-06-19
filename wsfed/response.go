@@ -67,7 +67,7 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 			return nil, ErrTokenSignatureInvalid
 		}
 
-		return nil, ErrTokenSignatureInvalid
+		return nil, err
 	}
 
 	var raw, signature, validatedRaw string
