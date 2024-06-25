@@ -10,7 +10,9 @@ require (
 	github.com/goccy/go-json v0.10.3
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/lafriks/http2 v0.5.0
+	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/oklog/ulid/v2 v2.1.0
+	github.com/prometheus/client_golang v1.12.2
 	github.com/russellhaering/goxmldsig v1.4.0
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
@@ -42,14 +44,12 @@ require (
 	github.com/lafriks/pkcs8 v1.2.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
-	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/prometheus/client_golang v1.12.2
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.32.1 // indirect
 	github.com/prometheus/procfs v0.7.3 // indirect
