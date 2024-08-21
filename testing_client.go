@@ -62,6 +62,7 @@ func (c *TestClient) WithQuery(params map[string]any) TestClientOption {
 			default:
 				val = fmt.Sprintf("%v", v)
 			}
+
 			r.URI().QueryArgs().Add(key, val)
 		}
 	}

@@ -14,33 +14,18 @@ func panicf(s string, args ...any) {
 	panic(fmt.Sprintf(s, args...))
 }
 
-func min(a, b int) int {
-	if a <= b {
-		return a
-	}
-
-	return b
-}
-
 func bufferRemoveString(buf *bytebufferpool.ByteBuffer, s string) {
 	buf.B = buf.B[:len(buf.B)-len(s)]
 }
-
-// func isIndexEqual(a, b string) bool {
-// 	ra, _ := utf8.DecodeRuneInString(a)
-// 	rb, _ := utf8.DecodeRuneInString(b)
-
-// 	return unicode.ToLower(ra) == unicode.ToLower(rb)
-// }
 
 // longestCommonPrefix finds the longest common prefix.
 // This also implies that the common prefix contains no ':' or '*'
 // since the existing key can't contain those chars.
 func longestCommonPrefix(a, b string) int {
 	i := 0
-	max := min(utf8.RuneCountInString(a), utf8.RuneCountInString(b))
+	e := min(utf8.RuneCountInString(a), utf8.RuneCountInString(b))
 
-	for i < max {
+	for i < e {
 		ra, sizeA := utf8.DecodeRuneInString(a)
 		rb, sizeB := utf8.DecodeRuneInString(b)
 

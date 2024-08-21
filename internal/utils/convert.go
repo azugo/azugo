@@ -25,6 +25,7 @@ func MapToURLValues(m map[string]any) string {
 		default:
 			val = fmt.Sprintf("%v", v)
 		}
+
 		p.Add(key, val)
 	}
 
