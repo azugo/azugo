@@ -7,12 +7,13 @@ when:
 matrix:
   GO_VERSION:
     - 1.22
+    - 1.23
 
 steps:
   - name: test
-    image: golang:${GO_VERSION}
+    image: golang:${GO_VERSION}-alpine
     pull: true
     environment:
-      - CGO_ENABLED=1
+      CGO_ENABLED: 0
     commands:
-      - go test -race ./...
+      - go test ./...

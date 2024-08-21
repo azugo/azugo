@@ -3,12 +3,20 @@ when:
     - main
   event:
     - push
+    - pull_request
 
 steps:
   - name: test
-    image: golang:1.22
+    image: golang:1.23
     pull: true
     environment:
-      - CGO_ENABLED=1
+      CGO_ENABLED: 1
     commands:
       - go test -cover -race -coverprofile=coverage.out -covermode=atomic -json ./... > report.json
+
+  - name: results
+    image: golang:1.23-alpine
+    commands:
+      - apk --no-cache add git
+      - go install github.com/mfridman/tparse@latest
+      - tparse -all -file report.json

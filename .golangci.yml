@@ -34,10 +34,10 @@ linters:
     - varnamelen
     - funlen
     - ireturn
-    - gomnd
+    - mnd
     - interfacebloat
     - gochecknoglobals
-    - goerr113
+    - err113
     - lll
     - nilnil
     - containedctx
