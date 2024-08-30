@@ -16,6 +16,8 @@ type ProxyOptions struct {
 	TrustedIPs []net.IP
 	// TrustedNetworks represents addresses of trusted networks.
 	TrustedNetworks []*net.IPNet
+	// TrustedHeaders represents headers that contain the client's real IP address and their preference.
+	TrustedHeaders []string
 }
 
 var defaultProxyOptions = ProxyOptions{
@@ -26,43 +28,40 @@ var defaultProxyOptions = ProxyOptions{
 }
 
 // Clear clears trusted proxy list.
-func (opts *ProxyOptions) Clear() *ProxyOptions {
+func (opts *ProxyOptions) Clear() {
 	opts.TrustAll = false
 	opts.TrustedIPs = make([]net.IP, 0)
 	opts.TrustedNetworks = make([]*net.IPNet, 0)
-
-	return opts
 }
 
 // Add proxy IP or network in CIDR format to trusted proxy list.
 // Specify "*" to trust all proxies.
-func (opts *ProxyOptions) Add(ipnet string) *ProxyOptions {
+func (opts *ProxyOptions) Add(ipnet string) {
 	// Special option to trust all proxies if IP address is set as wildcard
 	if ipnet == "*" {
 		opts.TrustAll = true
 
-		return opts
+		return
 	}
 	// CIDR format
 	if strings.ContainsRune(ipnet, '/') {
 		_, netmask, err := net.ParseCIDR(ipnet)
 		if err != nil || netmask == nil {
-			return opts
+			return
 		}
 
 		opts.TrustedNetworks = append(opts.TrustedNetworks, netmask)
 
-		return opts
+		return
 	}
+
 	// Single IP address
 	ipaddr := net.ParseIP(ipnet)
 	if ipaddr == nil {
-		return opts
+		return
 	}
 
 	opts.TrustedIPs = append(opts.TrustedIPs, ipaddr)
-
-	return opts
 }
 
 // IsTrustedProxy checks whether the proxy that request is coming from can be trusted.

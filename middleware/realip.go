@@ -14,13 +14,12 @@ import (
 
 const (
 	xForwardedFor = "X-Forwarded-For"
-	xRealIP       = "X-Real-IP"
 )
 
 var xForwardedForSep = []byte(", ")
 
-func realIP(ctx *azugo.Context) net.IP {
-	if xrip := ctx.Header.Get(xRealIP); len(xrip) > 0 {
+func realIP(ctx *azugo.Context, header string) net.IP {
+	if xrip := ctx.Header.Get(header); len(xrip) > 0 {
 		return net.ParseIP(xrip)
 	}
 
@@ -86,15 +85,19 @@ func realIPOrForwardedFor(ctx *azugo.Context) net.Addr {
 		return remoteAddr
 	}
 
-	if ip := realIP(ctx); ip != nil {
-		return &net.TCPAddr{
-			IP: ip,
+	for _, header := range ctx.RouterOptions().Proxy.TrustedHeaders {
+		if strings.EqualFold(header, xForwardedFor) {
+			if ip := forwardedFor(ctx); ip != nil {
+				return &net.TCPAddr{
+					IP: ip,
+				}
+			}
 		}
-	}
 
-	if ip := forwardedFor(ctx); ip != nil {
-		return &net.TCPAddr{
-			IP: ip,
+		if ip := realIP(ctx, header); ip != nil {
+			return &net.TCPAddr{
+				IP: ip,
+			}
 		}
 	}
 

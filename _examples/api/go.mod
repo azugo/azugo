@@ -3,7 +3,7 @@ module example/api
 go 1.22
 
 require (
-	azugo.io/azugo v0.17.6
+	azugo.io/azugo v0.18.0
 	github.com/spf13/viper v1.19.0
 	github.com/valyala/fasthttp v1.55.0
 	go.uber.org/zap v1.27.0

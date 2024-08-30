@@ -183,7 +183,9 @@ func (r *RouterOptions) ApplyConfig(conf *config.Configuration) {
 		r.CORS.SetOrigins(conf.CORS.Origins...)
 	}
 	// Apply Proxy configuration.
-	r.Proxy.Clear().ForwardLimit = conf.Proxy.Limit
+	r.Proxy.Clear()
+	r.Proxy.TrustedHeaders = conf.Proxy.TrustedHeaders
+	r.Proxy.ForwardLimit = conf.Proxy.Limit
 
 	for _, p := range conf.Proxy.Address {
 		r.Proxy.Add(p)
