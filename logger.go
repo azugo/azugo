@@ -59,7 +59,7 @@ func (c *Context) Log() *zap.Logger {
 	return c.logger
 }
 
-// SkipRequestLog sets to skip request log entry for current request.
+// SkipRequestLog sets to skip request log entry and tracing for current request.
 func (c *Context) SkipRequestLog() {
 	c.SetUserValue("__log_request", false)
 }
