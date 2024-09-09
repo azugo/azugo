@@ -317,6 +317,25 @@ func (c *Context) UserValue(name string) any {
 	return c.context.UserValue(name)
 }
 
+// MaxPageSize returns the maximum page size.
+func (c *Context) MaxPageSize() int {
+	if maxPageSize, ok := c.UserValue("__max_page_size").(int); ok {
+		return maxPageSize
+	}
+
+	return c.App().Config().Paging.MaxPageSize
+}
+
+// SetMaxPageSize sets the maximum page size for current context.
+// Set to 0 to use the default value from the configuration.
+func (c *Context) SetMaxPageSize(maxPageSize int) {
+	if maxPageSize <= 0 {
+		maxPageSize = c.App().Config().Paging.MaxPageSize
+	}
+
+	c.SetUserValue("__max_page_size", maxPageSize)
+}
+
 // Returns Paginator with page size from query parameters.
 func (c *Context) Paging() *paginator.Paginator {
 	page, err := c.Query.Int(paginator.QueryParameterPage)
@@ -326,7 +345,11 @@ func (c *Context) Paging() *paginator.Paginator {
 
 	pageSize, err := c.Query.Int(paginator.QueryParameterPerPage)
 	if err != nil || pageSize <= 0 {
-		pageSize = paginator.DefaultPageSize
+		pageSize = c.App().Config().Paging.DefaultPageSize
+	}
+
+	if pageSize > c.MaxPageSize() {
+		pageSize = c.MaxPageSize()
 	}
 
 	return paginator.New(page*pageSize, pageSize, page)

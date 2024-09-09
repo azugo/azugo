@@ -169,6 +169,57 @@ func TestRequestDefaultPaging(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 }
 
+func TestRequestPagingDefaultMaxPageSize(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		p := ctx.Paging()
+		qt.Check(t, qt.Equals(p.Current(), 2))
+		qt.Check(t, qt.Equals(p.PageSize(), 100))
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user", c.WithQuery(map[string]any{
+		paginator.QueryParameterPage:    2,
+		paginator.QueryParameterPerPage: 10000,
+	}))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+}
+
+func TestRequestPagingCustomMaxPageSize(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Use(func(next RequestHandler) RequestHandler {
+		return func(ctx *Context) {
+			ctx.SetMaxPageSize(1000)
+			next(ctx)
+		}
+	})
+
+	a.Get("/user", func(ctx *Context) {
+		p := ctx.Paging()
+		qt.Check(t, qt.Equals(p.Current(), 2))
+		qt.Check(t, qt.Equals(p.PageSize(), 1000))
+
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user", c.WithQuery(map[string]any{
+		paginator.QueryParameterPage:    2,
+		paginator.QueryParameterPerPage: 10000,
+	}))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+}
+
 func TestRequestAccepts(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)

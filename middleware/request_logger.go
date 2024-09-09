@@ -32,7 +32,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 		init.Do(func() {
 			logger = ctx.App().Log().Named("http")
 		})
-		ctx.SetUserValue("log_request", enabled)
+		ctx.SetUserValue("__log_request", enabled)
 
 		t1 := time.Now()
 
@@ -40,7 +40,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		ns := time.Since(t1).Nanoseconds()
 
-		if val, ok := ctx.UserValue("log_request").(bool); !ok || !val {
+		if val, ok := ctx.UserValue("__log_request").(bool); !ok || !val {
 			return
 		}
 

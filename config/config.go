@@ -16,6 +16,8 @@ type Configuration struct {
 	Server *Server `mapstructure:"server"`
 	// CORS configuration section.
 	CORS *CORS `mapstructure:"cors"`
+	// Paging configuration section.
+	Paging *Paging `mapstructure:"paging"`
 	// Proxy configuration section.
 	Proxy *Proxy `mapstructure:"proxy"`
 	// Metrics configuration section.
@@ -46,6 +48,7 @@ func Bind[T any](c *T, prefix string, v *viper.Viper) *T {
 func (c *Configuration) Bind(_ string, v *viper.Viper) {
 	c.Server = config.Bind(c.Server, "server", v)
 	c.CORS = config.Bind(c.CORS, "cors", v)
+	c.Paging = config.Bind(c.Paging, "paging", v)
 	c.Proxy = config.Bind(c.Proxy, "proxy", v)
 	c.Metrics = config.Bind(c.Metrics, "metrics", v)
 	c.HTTPClient = config.Bind(c.HTTPClient, "http_client", v)
