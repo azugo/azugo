@@ -109,20 +109,29 @@ func (e ParamInvalidError) SafeError() string {
 }
 
 func (ParamInvalidError) StatusCode() int {
-	return fasthttp.StatusBadRequest
+	return fasthttp.StatusUnprocessableEntity
 }
 
 // BadRequestError is an error that occurs when request is malformed.
 type BadRequestError struct {
 	Description string
+	Err         error
 }
 
-func (e BadRequestError) Error() string {
+func (e BadRequestError) SafeError() string {
 	if e.Description == "" {
 		return "malformed request"
 	}
 
-	return "malformed request: " + e.Description
+	return e.Description
+}
+
+func (e BadRequestError) Error() string {
+	if e.Err != nil {
+		return e.Err.Error()
+	}
+
+	return e.SafeError()
 }
 
 func (BadRequestError) StatusCode() int {
