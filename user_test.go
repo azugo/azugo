@@ -44,3 +44,12 @@ func TestUser(t *testing.T) {
 
 	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
+
+func TestDefaultAnonymous(t *testing.T) {
+	app := NewTestApp()
+
+	app.MockContext(func(ctx *Context) {
+		qt.Check(t, qt.IsFalse(ctx.User().Authorized()))
+		qt.Check(t, qt.Equals(ctx.User().ID(), ""))
+	})
+}

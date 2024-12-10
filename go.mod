@@ -5,7 +5,7 @@ go 1.22.0
 require (
 	azugo.io/core v0.18.1
 	github.com/beevik/etree v1.4.1
-	github.com/go-playground/validator/v10 v10.22.1
+	github.com/go-playground/validator/v10 v10.23.0
 	github.com/go-quicktest/qt v1.101.0
 	github.com/goccy/go-json v0.10.3
 	github.com/jonboulle/clockwork v0.4.0
@@ -17,9 +17,9 @@ require (
 	github.com/spf13/cobra v1.8.1
 	github.com/spf13/viper v1.19.0
 	github.com/valyala/bytebufferpool v1.0.0
-	github.com/valyala/fasthttp v1.57.0
+	github.com/valyala/fasthttp v1.58.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20241009180824-f66d83c29e7c
+	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
 )
 
 require (
@@ -63,10 +63,10 @@ require (
 	github.com/valyala/fastrand v1.1.0 // indirect
 	go.elastic.co/ecszap v1.0.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.28.0 // indirect
-	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.26.0 // indirect
-	golang.org/x/text v0.19.0 // indirect
+	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/net v0.31.0 // indirect
+	golang.org/x/sys v0.27.0 // indirect
+	golang.org/x/text v0.20.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect

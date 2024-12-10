@@ -133,3 +133,11 @@ func (a *TestApp) TestClient() *TestClient {
 		client: client,
 	}
 }
+
+// MockContext creates new mock context for testing.
+func (a *TestApp) MockContext(fn RequestHandler) {
+	ctx := a.App.acquireCtx(a.defaultMux, "/", nil)
+	defer a.App.releaseCtx(ctx)
+
+	fn(ctx)
+}
