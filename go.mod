@@ -3,11 +3,11 @@ module azugo.io/azugo
 go 1.22.0
 
 require (
-	azugo.io/core v0.18.1
+	azugo.io/core v0.18.2
 	github.com/beevik/etree v1.4.1
 	github.com/go-playground/validator/v10 v10.23.0
 	github.com/go-quicktest/qt v1.101.0
-	github.com/goccy/go-json v0.10.3
+	github.com/goccy/go-json v0.10.4
 	github.com/jonboulle/clockwork v0.4.0
 	github.com/lafriks/http2 v0.5.0
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
@@ -19,7 +19,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.58.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20241204233417-43b7b7cde48d
+	golang.org/x/exp v0.0.0-20241210194714-1829a127f884
 )
 
 require (
@@ -39,7 +39,7 @@ require (
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/lafriks/pkcs8 v1.2.1 // indirect
+	github.com/lafriks/pkcs8 v1.2.2 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/magiconair/properties v1.8.7 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
@@ -63,10 +63,10 @@ require (
 	github.com/valyala/fastrand v1.1.0 // indirect
 	go.elastic.co/ecszap v1.0.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	golang.org/x/crypto v0.29.0 // indirect
+	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/net v0.31.0 // indirect
-	golang.org/x/sys v0.27.0 // indirect
-	golang.org/x/text v0.20.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
+	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/protobuf v1.34.2 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
