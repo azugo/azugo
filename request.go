@@ -106,7 +106,7 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 	ctx.routerPath = path
 
 	if ctx.method == fasthttp.MethodPost || ctx.method == fasthttp.MethodPut || ctx.method == fasthttp.MethodPatch {
-		if bytes.Equal(c.Request.Header.ContentType(), contentTypeFormURLEncoded) {
+		if bytes.HasPrefix(c.Request.Header.ContentType(), contentTypeFormURLEncoded) {
 			ctx.Form.form = &postArgs{
 				args: c.Request.PostArgs(),
 			}
