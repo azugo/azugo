@@ -132,7 +132,7 @@ func (p *Proxy) Handler(ctx *Context) {
 
 	resp := &ctx.Context().Response
 
-	req.SetRequestURIBytes(append(upstream.Path, req.RequestURI()[len(p.options.BasePath):]...))
+	req.SetRequestURIBytes(upstream.Path)
 	req.URI().SetSchemeBytes(upstream.Scheme)
 	req.SetHostBytes(upstream.Host)
 	// Downgrade HTTP/2 to HTTP/1.1
