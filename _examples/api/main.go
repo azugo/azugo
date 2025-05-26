@@ -52,6 +52,8 @@ func main() {
 	}
 
 	a.Get("/hello", func(ctx *azugo.Context) {
+		ctx.Log().Debug("Hello endpoint called")
+
 		ctx.ContentType("application/json")
 		ctx.StatusCode(fasthttp.StatusOK)
 		ctx.Text("Hello, world!")
