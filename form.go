@@ -72,7 +72,7 @@ func (a *postArgs) Values(key string) []string {
 
 		if bytes.Contains(val, []byte{','}) {
 			values := bytes.Split(val, []byte{','})
-			for i := range len(values) {
+			for i := range values {
 				data = append(data, utils.B2S(values[i]))
 			}
 		} else {
