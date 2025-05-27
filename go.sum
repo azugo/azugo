@@ -1,5 +1,5 @@
-azugo.io/core v0.21.0 h1:WRCLXdOvPQDwSBVALdubZZbrOJ8qvxYP4jSPPQRyHfE=
-azugo.io/core v0.21.0/go.mod h1:FKbUdx+7TN9F11oIgiHie1JEQqGqM4FfuSCuBqmspNc=
+azugo.io/core v0.21.1 h1:IINYm1cMwRvrY9IGYsJTs8fZ89TtOBogCCwZ17tl1O8=
+azugo.io/core v0.21.1/go.mod h1:FKbUdx+7TN9F11oIgiHie1JEQqGqM4FfuSCuBqmspNc=
 github.com/andybalholm/brotli v1.1.1 h1:PR2pgnyFznKEugtsUo0xLdDop5SKXd5Qf5ysW+7XdTA=
 github.com/andybalholm/brotli v1.1.1/go.mod h1:05ib4cKhjx3OQYUY22hTVd34Bc8upXjOLL2rKwwZBoA=
 github.com/beevik/etree v1.5.1 h1:TC3zyxYp+81wAmbsi8SWUpZCurbxa6S8RITYRSkNRwo=

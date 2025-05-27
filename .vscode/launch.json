@@ -12,7 +12,7 @@
       "cwd": "${workspaceFolder}",
       "env": {
         "SERVER_URLS": "http://localhost:3000;https://localhost:5000",
-        "ENVIRONMENT": "Development",
+        "ENVIRONMENT": "Development"
       }
     }
   ]
