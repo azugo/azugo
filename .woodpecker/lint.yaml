@@ -7,12 +7,12 @@ when:
 
 steps:
   - name: vendor
-    image: golang:1.23-alpine
+    image: golang:1.24-alpine
     commands:
       - go mod vendor
 
   - name: golangci-lint
-    image: golangci/golangci-lint:v1.60-alpine
+    image: golangci/golangci-lint:v1.61-alpine
     pull: true
     depends_on:
       - vendor
@@ -23,7 +23,7 @@ steps:
       event: push
 
   - name: review-go
-    image: woodpeckerci/plugin-reviewdog-golangci-lint:1.60
+    image: woodpeckerci/plugin-reviewdog-golangci-lint:1.61
     pull: true
     depends_on:
       - vendor
