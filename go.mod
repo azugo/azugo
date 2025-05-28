@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.23.9
 
 require (
-	azugo.io/core v0.21.1
+	azugo.io/core v0.22.1
 	github.com/beevik/etree v1.5.1
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/go-quicktest/qt v1.101.0

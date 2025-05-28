@@ -3,14 +3,14 @@ module example/api
 go 1.23.9
 
 require (
-	azugo.io/azugo v0.21.0
+	azugo.io/azugo v0.22.0
 	github.com/spf13/viper v1.20.1
 	github.com/valyala/fasthttp v1.62.0
 	go.uber.org/zap v1.27.0
 )
 
 require (
-	azugo.io/core v0.21.1 // indirect
+	azugo.io/core v0.22.1 // indirect
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
