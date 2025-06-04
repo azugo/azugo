@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.23.9
 
 require (
-	azugo.io/core v0.22.1
+	azugo.io/core v0.23.0
 	github.com/beevik/etree v1.5.1
 	github.com/go-playground/validator/v10 v10.26.0
 	github.com/go-quicktest/qt v1.101.0
@@ -19,7 +19,7 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0
 	github.com/valyala/fasthttp v1.62.0
 	go.uber.org/zap v1.27.0
-	golang.org/x/exp v0.0.0-20250506013437-ce4c2cf36ca6
+	golang.org/x/exp v0.0.0-20250531010427-b6e5de432a8b
 )
 
 require (

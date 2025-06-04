@@ -8,6 +8,7 @@ import (
 
 	"azugo.io/azugo/internal/proxy"
 
+	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
@@ -132,11 +133,23 @@ func (p *Proxy) Handler(ctx *Context) {
 
 	resp := &ctx.Context().Response
 
-	path := strings.TrimPrefix(strings.TrimPrefix(ctx.Path(), ctx.BasePath()), p.options.BasePath)
+	uri := bytebufferpool.Get()
+	defer bytebufferpool.Put(uri)
 
-	req.SetRequestURIBytes(append(upstream.Path, path...))
+	_, _ = uri.Write(upstream.Path)
+	_, _ = uri.WriteString(strings.TrimPrefix(strings.TrimPrefix(ctx.Path(), ctx.BasePath()), p.options.BasePath))
+
+	// Forward also query string to upstream
+	q := req.URI().QueryString()
+	if len(q) > 0 {
+		_ = uri.WriteByte('?')
+		_, _ = uri.Write(q)
+	}
+
+	req.SetRequestURIBytes(uri.Bytes())
 	req.URI().SetSchemeBytes(upstream.Scheme)
 	req.SetHostBytes(upstream.Host)
+
 	// Downgrade HTTP/2 to HTTP/1.1
 	if ctx.IsTLS() && bytes.Equal(req.Header.Protocol(), []byte("HTTP/2")) {
 		req.Header.SetProtocolBytes([]byte("HTTP/1.1"))
