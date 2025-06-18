@@ -1,6 +1,16 @@
 package azugo
 
-import "strings"
+import (
+	"strings"
+)
+
+const (
+	HeaderOrigin           string = "Origin"
+	HeaderAllowOrigin      string = "Access-Control-Allow-Origin"
+	HeaderAllowMethods     string = "Access-Control-Allow-Methods"
+	HeaderAllowHeaders     string = "Access-Control-Allow-Headers"
+	HeaderAllowCredentials string = "Access-Control-Allow-Credentials"
+)
 
 var (
 	defaultAllowedMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
@@ -75,4 +85,19 @@ func (c *CORSOptions) ValidOrigin(origin string) bool {
 	_, ok := c.allowedOrigins[origin]
 
 	return ok
+}
+
+// SetCORSHeaders applies the CORS headers to the response based on the provided options and origin.
+func SetCORSHeaders(ctx *Context, opts *CORSOptions, origin string) {
+	if len(origin) == 0 || !opts.ValidOrigin(origin) {
+		return
+	}
+
+	ctx.Header.Set(HeaderAllowOrigin, origin)
+	ctx.Header.Set(HeaderAllowMethods, opts.Methods())
+	ctx.Header.Set(HeaderAllowHeaders, opts.Headers())
+
+	if opts.AllowCredentials() {
+		ctx.Header.Set(HeaderAllowCredentials, "true")
+	}
 }

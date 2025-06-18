@@ -300,6 +300,8 @@ func (m *mux) HandleNotFound(ctx *Context) {
 	}
 
 	ctx.Response().Reset()
+	SetCORSHeaders(ctx, &m.RouterOptions.CORS, ctx.Header.Get("Origin"))
+
 	ctx.StatusCode(fasthttp.StatusNotFound)
 	ctx.Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
 }
