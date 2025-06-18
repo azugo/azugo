@@ -9,7 +9,10 @@ import (
 // MethodWild wild HTTP method.
 const MethodWild = "*"
 
-const InstrumentationRequest = "http-request"
+const (
+	InstrumentationRequest = "http-request"
+	InstrumentationPanic   = "http-panic"
+)
 
 var (
 	contentTypeText = []byte("text/plain; charset=utf-8")

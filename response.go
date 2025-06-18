@@ -86,6 +86,7 @@ func (c *Context) Error(err error) {
 
 // NotFound returns an not found response. Calls either custom NotFound or default if not specified.
 func (c *Context) NotFound() {
+	c.Response().Reset()
 	c.mux.HandleNotFound(c)
 }
 

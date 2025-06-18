@@ -59,6 +59,9 @@ func newMux(app *App) *mux {
 			HandleMethodNotAllowed: true,
 			HandleOPTIONS:          true,
 			PanicHandler: func(ctx *Context, err any) {
+				// This instrumantation will not call finish function
+				_ = app.Instrumenter().Observe(ctx, InstrumentationPanic, err)
+
 				ctx.Log().Error("Unhandled error", zap.Any("error", err))
 			},
 			GlobalOPTIONS: func(ctx *Context) {
@@ -299,7 +302,6 @@ func (m *mux) HandleNotFound(ctx *Context) {
 		return
 	}
 
-	ctx.Response().Reset()
 	ctx.StatusCode(fasthttp.StatusNotFound)
 	ctx.Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
 }
@@ -357,7 +359,7 @@ func (m *mux) HandleError(ctx *Context, err error) {
 			ctx.ContentType(ContentTypeJSON)
 		}
 
-		ctx.Response().SetBodyRaw(data)
+		ctx.Raw(data)
 	} else if hasCT := bytes.HasPrefix(ct, []byte(ContentTypeXML)); hasCT || ctx.AcceptsExplicit(ContentTypeXML) {
 		data, ierr := xml.Marshal(resp)
 		if ierr != nil {
@@ -370,9 +372,9 @@ func (m *mux) HandleError(ctx *Context, err error) {
 			ctx.ContentType(ContentTypeXML)
 		}
 
-		ctx.Response().SetBodyRaw(data)
+		ctx.Raw(data)
 	} else {
-		ctx.Response().SetBodyString(resp.Errors[0].Message)
+		ctx.Text(resp.Errors[0].Message)
 	}
 }
 
