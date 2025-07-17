@@ -3,7 +3,11 @@ package azugo
 import (
 	"context"
 	"time"
+
+	"go.opentelemetry.io/otel/trace"
 )
+
+const otelParentSpanContextKey = "__otelParentSpanContext"
 
 // Deadline returns the time when work done on behalf of this context
 // should be canceled. Deadline returns ok==false when no deadline is
@@ -12,8 +16,43 @@ func (c *Context) Deadline() (time.Time, bool) {
 	if c == nil || c.context == nil {
 		return time.Time{}, false
 	}
+	if p := c.OtelBridge(); p != nil {
+		return p.Deadline()
+	}
 
 	return c.context.Deadline()
+}
+
+func (c *Context) OtelBridge() context.Context {
+	if c == nil {
+		return nil
+	}
+
+	ctxVal := c.UserValue(otelParentSpanContextKey)
+	if ctxVal == nil {
+		return nil
+	}
+
+	if self, ok := ctxVal.(*Context); ok && self == c {
+		return nil
+	}
+
+	parentCtx, ok := ctxVal.(context.Context)
+	if !ok {
+		return nil
+	}
+
+	spanCtx := trace.SpanContextFromContext(parentCtx)
+	if !spanCtx.IsValid() {
+		return context.Background()
+	}
+
+	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
+	if span := trace.SpanFromContext(parentCtx); span != nil {
+		return trace.ContextWithSpan(ctx, span)
+	}
+
+	return ctx
 }
 
 // Done returns a channel that's closed when work done on behalf of this
@@ -52,6 +91,10 @@ func (c *Context) Done() <-chan struct{} {
 		return nil
 	}
 
+	if p := c.OtelBridge(); p != nil {
+		return p.Done()
+	}
+
 	return c.context.Done()
 }
 
@@ -63,6 +106,10 @@ func (c *Context) Done() <-chan struct{} {
 func (c *Context) Err() error {
 	if c == nil || c.context == nil {
 		return nil
+	}
+
+	if p := c.OtelBridge(); p != nil {
+		return p.Err()
 	}
 
 	return c.context.Err()
@@ -116,6 +163,12 @@ func (c *Context) Err() error {
 func (c *Context) Value(key any) any {
 	if c == nil || c.context == nil {
 		return nil
+	}
+
+	if p := c.OtelBridge(); p != nil {
+		if v := p.Value(key); v != nil {
+			return v
+		}
 	}
 
 	return c.context.Value(key)
