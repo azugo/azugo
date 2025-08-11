@@ -65,9 +65,9 @@ func (a *postArgs) Value(key string) string {
 func (a *postArgs) Values(key string) []string {
 	data := make([]string, 0, 1)
 
-	a.args.VisitAll(func(k, val []byte) {
+	for k, val := range a.args.All() {
 		if !strings.EqualFold(key, utils.B2S(k)) {
-			return
+			continue
 		}
 
 		if bytes.Contains(val, []byte{','}) {
@@ -78,7 +78,7 @@ func (a *postArgs) Values(key string) []string {
 		} else {
 			data = append(data, utils.B2S(val))
 		}
-	})
+	}
 
 	return data
 }

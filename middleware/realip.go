@@ -30,7 +30,7 @@ func forwardedFor(ctx *azugo.Context) net.IP {
 	buf := bytebufferpool.Get()
 	defer bytebufferpool.Put(buf)
 
-	ctx.Context().Request.Header.VisitAllInOrder(func(key, value []byte) {
+	for key, value := range ctx.Context().Request.Header.AllInOrder() {
 		if strings.EqualFold(utils.B2S(key), xForwardedFor) {
 			if buf.Len() > 0 {
 				_, _ = buf.Write(xForwardedForSep)
@@ -38,7 +38,7 @@ func forwardedFor(ctx *azugo.Context) net.IP {
 
 			_, _ = buf.Write(value)
 		}
-	})
+	}
 
 	xff := buf.Bytes()
 	if len(xff) > 0 {

@@ -61,11 +61,11 @@ func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
 
 	s += len(req.Header.Method())
 	s += len(req.Header.Protocol())
-	req.Header.VisitAll(func(key, value []byte) {
+	for key, value := range req.Header.All() {
 		if !bytes.Equal(key, []byte("Host")) {
 			s += len(key) + len(value)
 		}
-	})
+	}
 
 	if req.Header.ContentLength() != -1 {
 		s += req.Header.ContentLength()
