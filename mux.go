@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -58,12 +59,6 @@ func newMux(app *App) *mux {
 			RedirectFixedPath:      true,
 			HandleMethodNotAllowed: true,
 			HandleOPTIONS:          true,
-			PanicHandler: func(ctx *Context, err any) {
-				// This instrumantation will not call finish function
-				_ = app.Instrumenter().Observe(ctx, InstrumentationPanic, err)
-
-				ctx.Log().Error("Unhandled error", zap.Any("error", err))
-			},
 			GlobalOPTIONS: func(ctx *Context) {
 				ctx.StatusCode(fasthttp.StatusNoContent)
 			},
@@ -291,7 +286,23 @@ func (m *mux) Recv(path string, ctx *fasthttp.RequestCtx) {
 	if rcv := recover(); rcv != nil {
 		c := m.app.acquireCtx(m, path, ctx)
 		defer m.app.releaseCtx(c)
-		m.RouterOptions.PanicHandler(c, rcv)
+
+		var err error
+		switch rcv := rcv.(type) {
+		case error:
+			err = rcv
+		case string:
+			err = errors.New(rcv)
+		default:
+			err = fmt.Errorf("panic: %v", rcv)
+		}
+
+		finish := m.app.Instrumenter().Observe(c, InstrumentationPanic, path)
+		defer finish(err)
+
+		c.Log().Error("recovered from panic", zap.Error(err))
+
+		m.HandleError(c, err, true)
 	}
 }
 
@@ -306,14 +317,15 @@ func (m *mux) HandleNotFound(ctx *Context) {
 	ctx.Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
 }
 
-func (m *mux) HandleError(ctx *Context, err error) {
+func (m *mux) HandleError(ctx *Context, err error, panic bool) {
 	if m.RouterOptions.ErrorHandler != nil {
 		// Log debug information about error
 		m.app.Log().Debug("calling custom handler for error: "+err.Error(), zap.Error(err))
 
-		m.RouterOptions.ErrorHandler(ctx, err)
-
-		return
+		if m.RouterOptions.ErrorHandler(ctx, err) {
+			// If the error was handled, we don't need to do anything else
+			return
+		}
 	}
 
 	// If there is no error, we don't need to do anything
@@ -335,8 +347,8 @@ func (m *mux) HandleError(ctx *Context, err error) {
 	// Log debug information about error
 	m.app.Log().Debug("handling error: "+err.Error(), zap.Error(err))
 
-	// Log the error only if it's server error
-	if ctx.Response().StatusCode()/100 == 5 {
+	// Log the error only if it's server error and not a panic as panic is already logged
+	if !panic && ctx.Response().StatusCode()/100 == 5 {
 		m.app.Log().Error(err.Error(), zap.Error(err))
 	}
 
@@ -540,9 +552,7 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
-	if m.RouterOptions.PanicHandler != nil {
-		defer m.Recv(path, ctx)
-	}
+	defer m.Recv(path, ctx)
 
 	method := utils.B2S(ctx.Request.Header.Method())
 	methodIndex := m.MethodIndexOf(method)
