@@ -140,6 +140,8 @@ func (m *mux) WrapHandler(path string, handler RequestHandler) fasthttp.RequestH
 		c := m.app.acquireCtx(m, path, ctx)
 		defer m.app.releaseCtx(c)
 
+		defer m.Recv(path, c)
+
 		finish := m.app.Instrumenter().Observe(c, InstrumentationRequest, path)
 		defer finish(nil)
 
@@ -282,11 +284,8 @@ func (m *mux) MethodIndexOf(method string) int {
 	return -1
 }
 
-func (m *mux) Recv(path string, ctx *fasthttp.RequestCtx) {
+func (m *mux) Recv(path string, ctx *Context) {
 	if rcv := recover(); rcv != nil {
-		c := m.app.acquireCtx(m, path, ctx)
-		defer m.app.releaseCtx(c)
-
 		var err error
 		switch rcv := rcv.(type) {
 		case error:
@@ -297,12 +296,12 @@ func (m *mux) Recv(path string, ctx *fasthttp.RequestCtx) {
 			err = fmt.Errorf("panic: %v", rcv)
 		}
 
-		finish := m.app.Instrumenter().Observe(c, InstrumentationPanic, path)
+		finish := m.app.Instrumenter().Observe(ctx, InstrumentationPanic, path)
 		defer finish(err)
 
-		c.Log().Error("recovered from panic", zap.Error(err))
+		ctx.Log().Error("recovered from panic", zap.Error(err))
 
-		m.HandleError(c, err, true)
+		m.HandleError(ctx, err, true)
 	}
 }
 
@@ -318,6 +317,9 @@ func (m *mux) HandleNotFound(ctx *Context) {
 }
 
 func (m *mux) HandleError(ctx *Context, err error, p bool) {
+	// Reset response so that no partial data is sent
+	ctx.Response().Reset()
+
 	if m.RouterOptions.ErrorHandler != nil {
 		// Log debug information about error
 		m.app.Log().Debug("calling custom handler for error: "+err.Error(), zap.Error(err))
@@ -551,8 +553,6 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 			path = "/" + path
 		}
 	}
-
-	defer m.Recv(path, ctx)
 
 	method := utils.B2S(ctx.Request.Header.Method())
 	methodIndex := m.MethodIndexOf(method)
