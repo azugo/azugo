@@ -317,7 +317,7 @@ func (m *mux) HandleNotFound(ctx *Context) {
 	ctx.Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
 }
 
-func (m *mux) HandleError(ctx *Context, err error, panic bool) {
+func (m *mux) HandleError(ctx *Context, err error, p bool) {
 	if m.RouterOptions.ErrorHandler != nil {
 		// Log debug information about error
 		m.app.Log().Debug("calling custom handler for error: "+err.Error(), zap.Error(err))
@@ -348,7 +348,7 @@ func (m *mux) HandleError(ctx *Context, err error, panic bool) {
 	m.app.Log().Debug("handling error: "+err.Error(), zap.Error(err))
 
 	// Log the error only if it's server error and not a panic as panic is already logged
-	if !panic && ctx.Response().StatusCode()/100 == 5 {
+	if !p && ctx.Response().StatusCode()/100 == 5 {
 		m.app.Log().Error(err.Error(), zap.Error(err))
 	}
 
