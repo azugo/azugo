@@ -20,9 +20,9 @@ type QueryCtx struct {
 func (q *QueryCtx) Values(key string) []string {
 	data := make([]string, 0, 1)
 
-	q.ctx.Request().URI().QueryArgs().VisitAll(func(k, val []byte) {
+	for k, val := range q.ctx.Request().URI().QueryArgs().All() {
 		if !strings.EqualFold(key, utils.B2S(k)) {
-			return
+			continue
 		}
 
 		if bytes.Contains(val, []byte{','}) {
@@ -33,7 +33,7 @@ func (q *QueryCtx) Values(key string) []string {
 		} else {
 			data = append(data, utils.B2S(val))
 		}
-	})
+	}
 
 	return data
 }

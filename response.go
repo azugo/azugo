@@ -81,7 +81,7 @@ func (c *Context) Raw(data []byte) {
 
 // Error return the error response. Calls either custom ErrorHandler or default if not specified.
 func (c *Context) Error(err error) {
-	c.mux.HandleError(c, err)
+	c.mux.HandleError(c, err, false)
 }
 
 // NotFound returns an not found response. Calls either custom NotFound or default if not specified.

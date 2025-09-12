@@ -88,11 +88,11 @@ func TestHeaderAdd(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 
 	values := make([]string, 0)
-	resp.Header.VisitAll(func(key, value []byte) {
+	for key, value := range resp.Header.All() {
 		if string(key) == "X-User" {
 			values = append(values, string(value))
 		}
-	})
+	}
 
 	qt.Assert(t, qt.ContentEquals(values, []string{"gopher", "test"}), qt.Commentf("wrong response header values"))
 }

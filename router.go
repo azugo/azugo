@@ -166,14 +166,9 @@ type RouterOptions struct {
 	// If it is not set, error message will be returned for errors that implement
 	// SafeError interface, otherwise error will be logged and http error code
 	// 500 (Internal Server Error) will be returned.
-	ErrorHandler func(*Context, error)
-
-	// Function to handle panics recovered from http handlers.
-	// It should be used to generate a error page and return the http error code
-	// 500 (Internal Server Error).
-	// The handler can be used to keep your server from crashing because of
-	// unrecovered panics.
-	PanicHandler func(*Context, any)
+	// Should return true if the error was handled, false otherwise that default
+	// error handling should be applied.
+	ErrorHandler func(*Context, error) bool
 }
 
 func (r *RouterOptions) ApplyConfig(conf *config.Configuration) {

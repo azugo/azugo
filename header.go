@@ -45,9 +45,9 @@ func (h *HeaderCtx) Get(key string) string {
 func (h *HeaderCtx) Values(key string) []string {
 	data := make([]string, 0, 1)
 
-	h.ctx.Request().Header.VisitAll(func(k, val []byte) {
+	for k, val := range h.ctx.Request().Header.All() {
 		if !strings.EqualFold(key, utils.B2S(k)) {
-			return
+			continue
 		}
 
 		if bytes.Contains(val, []byte{','}) {
@@ -58,7 +58,7 @@ func (h *HeaderCtx) Values(key string) []string {
 		} else {
 			data = append(data, utils.B2S(val))
 		}
-	})
+	}
 
 	return data
 }
@@ -67,9 +67,9 @@ func (h *HeaderCtx) Values(key string) []string {
 func (h *HeaderCtx) Keys() []string {
 	keys := make([]string, 0, h.ctx.Request().Header.Len())
 
-	h.ctx.Request().Header.VisitAll(func(k, _ []byte) {
+	for k := range h.ctx.Request().Header.All() {
 		keys = append(keys, utils.B2S(k))
-	})
+	}
 
 	return keys
 }

@@ -481,8 +481,10 @@ func TestRouterPanicHandler(t *testing.T) {
 	a := NewTestApp()
 
 	panicHandled := false
-	a.RouterOptions().PanicHandler = func(ctx *Context, p any) {
-		panicHandled = true
+	a.RouterOptions().ErrorHandler = func(ctx *Context, err error) bool {
+		panicHandled = err.Error() == "oops!"
+
+		return false
 	}
 
 	a.Put("/user/{name}", func(ctx *Context) {
@@ -494,6 +496,7 @@ func TestRouterPanicHandler(t *testing.T) {
 
 	resp, err := a.TestClient().Put("/user/gopher", nil)
 	fasthttp.ReleaseResponse(resp)
+
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.IsTrue(panicHandled))
 }

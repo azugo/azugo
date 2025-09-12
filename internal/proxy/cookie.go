@@ -6,7 +6,7 @@ import (
 
 // RewriteCookies rewrites cookies in the response.
 func RewriteCookies(tls bool, host string, resp *fasthttp.Response) {
-	resp.Header.VisitAllCookie(func(k, v []byte) {
+	for k, v := range resp.Header.Cookies() {
 		cookie := fasthttp.AcquireCookie()
 		defer fasthttp.ReleaseCookie(cookie)
 
@@ -25,5 +25,5 @@ func RewriteCookies(tls bool, host string, resp *fasthttp.Response) {
 		}
 
 		resp.Header.SetCookie(cookie)
-	})
+	}
 }
