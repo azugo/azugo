@@ -158,6 +158,7 @@ func TestBodyJSONValidationError(t *testing.T) {
 		var user testBodyUser
 		if err := ctx.Body.JSON(&user); err != nil {
 			ctx.Error(err)
+
 			return
 		}
 

@@ -317,6 +317,7 @@ func (m *mux) HandleNotFound(ctx *Context) {
 }
 
 func (m *mux) HandleError(ctx *Context, err error, p bool) {
+	ct := ctx.Response().Header.ContentType()
 	// Reset response so that no partial data is sent
 	ctx.Response().Reset()
 
@@ -360,7 +361,6 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 		return
 	}
 
-	ct := ctx.Response().Header.ContentType()
 	if hasCT := bytes.HasPrefix(ct, []byte(ContentTypeJSON)); hasCT || ctx.AcceptsExplicit(ContentTypeJSON) {
 		data, ierr := json.Marshal(resp)
 		if ierr != nil {
