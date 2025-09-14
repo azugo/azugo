@@ -43,19 +43,23 @@ func (s *ClaimStrings) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (s ClaimStrings) MarshalJSON() ([]byte, error) {
-	if len(s) == 1 {
-		return json.Marshal(s[0])
+func (s *ClaimStrings) MarshalJSON() ([]byte, error) {
+	if s == nil {
+		return []byte("null"), nil
 	}
 
-	return json.Marshal([]string(s))
+	if len(*s) == 1 {
+		return json.Marshal((*s)[0])
+	}
+
+	return json.Marshal([]string(*s))
 }
 
 // Value of the claim as string.
-func (s ClaimStrings) Value() string {
-	if len(s) == 0 {
+func (s *ClaimStrings) Value() string {
+	if s == nil || len(*s) == 0 {
 		return ""
 	}
 
-	return s[0]
+	return (*s)[0]
 }

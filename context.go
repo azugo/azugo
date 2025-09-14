@@ -13,6 +13,12 @@ func (c *Context) Deadline() (time.Time, bool) {
 		return time.Time{}, false
 	}
 
+	if c.app.ctxExt != nil {
+		if ce := c.app.ctxExt.Context(c); ce != nil {
+			return ce.Deadline()
+		}
+	}
+
 	return c.context.Deadline()
 }
 
@@ -52,6 +58,12 @@ func (c *Context) Done() <-chan struct{} {
 		return nil
 	}
 
+	if c.app.ctxExt != nil {
+		if ce := c.app.ctxExt.Context(c); ce != nil {
+			return ce.Done()
+		}
+	}
+
 	return c.context.Done()
 }
 
@@ -63,6 +75,12 @@ func (c *Context) Done() <-chan struct{} {
 func (c *Context) Err() error {
 	if c == nil || c.context == nil {
 		return nil
+	}
+
+	if c.app.ctxExt != nil {
+		if ce := c.app.ctxExt.Context(c); ce != nil {
+			return ce.Err()
+		}
 	}
 
 	return c.context.Err()
@@ -118,6 +136,14 @@ func (c *Context) Value(key any) any {
 		return nil
 	}
 
+	if c.app.ctxExt != nil {
+		if ce := c.app.ctxExt.Context(c); ce != nil {
+			if v := ce.Value(key); v != nil {
+				return v
+			}
+		}
+	}
+
 	return c.context.Value(key)
 }
 
@@ -145,4 +171,9 @@ func RequestContext(ctx context.Context) *Context {
 	}
 
 	return rctx
+}
+
+// ExtendedContext is an interface that can be implemented to extend the context.
+type ExtendedContext interface {
+	Context(ctx context.Context) context.Context
 }

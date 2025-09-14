@@ -1,8 +1,10 @@
 package azugo
 
 import (
+	"maps"
+	"slices"
+
 	"go.uber.org/zap"
-	"golang.org/x/exp/maps"
 )
 
 func (c *Context) initLoggerFields() {
@@ -49,7 +51,7 @@ func (c *Context) ReplaceLogger(logger *zap.Logger) error {
 	}
 
 	c.loggerCore = logger
-	c.logger = logger.With(maps.Values(c.loggerFields)...)
+	c.logger = logger.With(slices.AppendSeq(make([]zap.Field, 0, len(c.loggerFields)), maps.Values(c.loggerFields))...)
 
 	return nil
 }

@@ -7,7 +7,7 @@ when:
 
 steps:
   - name: vendor
-    image: golang:1.24-alpine
+    image: golang:1.25-alpine
     commands:
       - go mod vendor
 

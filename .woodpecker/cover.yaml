@@ -7,7 +7,7 @@ when:
 
 steps:
   - name: test
-    image: golang:1.24
+    image: golang:1.25
     pull: true
     environment:
       CGO_ENABLED: 1
@@ -15,7 +15,7 @@ steps:
       - go test -cover -race -coverprofile=coverage.out -covermode=atomic -json ./... > report.json
 
   - name: results
-    image: golang:1.24-alpine
+    image: golang:1.25-alpine
     commands:
       - apk --no-cache add git
       - go install github.com/mfridman/tparse@latest

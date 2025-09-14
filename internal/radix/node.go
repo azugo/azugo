@@ -31,7 +31,11 @@ func (n *node) wildPathConflict(path, fullPath string) error {
 }
 
 // clone clones the current node in a new pointer.
-func (n node) clone() *node {
+func (n *node) clone() *node {
+	if n == nil {
+		return nil
+	}
+
 	cloneNode := new(node)
 	cloneNode.nType = n.nType
 	cloneNode.path = n.path

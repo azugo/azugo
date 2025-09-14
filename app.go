@@ -28,6 +28,7 @@ type App struct {
 
 	// Request context pool
 	ctxPool sync.Pool
+	ctxExt  ExtendedContext
 
 	// Configuration
 	config *config.Configuration
@@ -127,6 +128,11 @@ func (a *App) SetRouterSwitch(r RouteSwitcher) {
 	}
 
 	a.router = customRouter{App: a, custom: r}
+}
+
+// SetExtendedContext sets the context extension.
+func (a *App) SetExtendedContext(ext ExtendedContext) {
+	a.ctxExt = ext
 }
 
 // Config returns application configuration.
