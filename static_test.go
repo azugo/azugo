@@ -18,9 +18,10 @@ func TestRouterStatic(t *testing.T) {
 	defer a.Stop()
 
 	// Test other method than GET (want 308 instead of 301)
-	a.StaticEmbedded("/", testdata, StaticDirTrimPrefix("testdata/"), StaticContentReplacer(func(ctx *Context) (string, *strings.Replacer) {
+	err := a.StaticEmbedded("/", &testdata, StaticDirTrimPrefix("testdata/"), StaticContentReplacer(func(ctx *Context) (string, *strings.Replacer) {
 		return "cached-", strings.NewReplacer("{{BASE_URL}}", ctx.BaseURL(), "{{BASE_PATH}}", ctx.BasePath())
 	}))
+	qt.Assert(t, qt.IsNil(err))
 
 	resp, err := a.TestClient().Call(fasthttp.MethodGet, "/index.html", nil)
 	defer fasthttp.ReleaseResponse(resp)
@@ -29,4 +30,34 @@ func TestRouterStatic(t *testing.T) {
 	qt.Check(t, qt.Equals(string(resp.Header.ContentType()), "text/html; charset=utf-8"))
 	qt.Check(t, qt.StringContains(string(resp.Body()), `var baseURL = "http://test";`))
 	qt.Check(t, qt.StringContains(string(resp.Body()), `var basePath = "";`))
+}
+
+func TestRouterStaticSPARouter(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	// Test other method than GET (want 308 instead of 301)
+	err := a.StaticEmbedded("/", &testdata, StaticDirTrimPrefix("testdata/"), StaticSPARouterPath("index.html"), StaticContentReplacer(func(ctx *Context) (string, *strings.Replacer) {
+		return "cached-", strings.NewReplacer("{{BASE_URL}}", ctx.BaseURL(), "{{BASE_PATH}}", ctx.BasePath())
+	}))
+	qt.Assert(t, qt.IsNil(err))
+
+	resp, err := a.TestClient().Call(fasthttp.MethodGet, "/", nil)
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(string(resp.Header.ContentType()), "text/html; charset=utf-8"))
+	qt.Check(t, qt.StringContains(string(resp.Body()), `var baseURL = "http://test";`))
+	qt.Check(t, qt.StringContains(string(resp.Body()), `var basePath = "";`))
+}
+
+func TestRouterStaticSPARouterInvalidPath(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	// Test other method than GET (want 308 instead of 301)
+	err := a.StaticEmbedded("/", &testdata, StaticDirTrimPrefix("testdata/"), StaticSPARouterPath("index.htm"))
+	qt.Assert(t, qt.ErrorMatches(err, "static SPA route handler file not found: .*"))
 }
