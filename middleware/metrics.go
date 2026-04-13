@@ -21,6 +21,8 @@ type metricsHandler struct {
 	reqCnt            *prometheus.CounterVec
 	reqDur            *prometheus.HistogramVec
 	reqSize, respSize prometheus.Summary
+	// Cached fasthttp handler for serving Prometheus metrics
+	httpHandler fasthttp.RequestHandler
 	// Metrics path
 	MetricsPath string
 	// Subsystem
@@ -47,6 +49,7 @@ func Metrics(path string, options ...MetricsOption) azugo.RequestHandlerFunc {
 	}
 
 	p.registerMetrics()
+	p.httpHandler = fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
 
 	return p.Handler
 }
@@ -80,11 +83,13 @@ func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
 // Handles MetricsPath requests from trusted IPs and trusted networks
 // which returns application metrics results.
 func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
-	metricsHandler := fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
-
 	return func(ctx *azugo.Context) {
-		if strings.EqualFold(ctx.Path(), p.MetricsPath) && p.isTrusted(ctx) {
-			metricsHandler(ctx.Context())
+		if strings.EqualFold(ctx.Path(), p.MetricsPath) {
+			if p.isTrusted(ctx) {
+				p.httpHandler(ctx.Context())
+			} else {
+				h(ctx)
+			}
 
 			return
 		}
@@ -97,7 +102,7 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 			}
 		}
 
-		reqSize := make(chan int)
+		reqSize := make(chan int, 1)
 		frc := acquireRequestFromPool()
 		ctx.Request().CopyTo(frc)
 
