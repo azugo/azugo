@@ -7,23 +7,23 @@ when:
 
 steps:
   - name: vendor
-    image: golang:1.25-alpine
+    image: golang:1.26-alpine
     commands:
       - go mod vendor
 
   - name: golangci-lint
-    image: golangci/golangci-lint:v1.61-alpine
+    image: golangci/golangci-lint:v2.11-alpine
     pull: true
     depends_on:
       - vendor
     commands:
-      - golangci-lint run --timeout 3m --out-format=checkstyle:golangci-lint.out,colored-line-number
+      - golangci-lint run --timeout 3m --output.checkstyle.path=golangci-lint.out --output.text.path=stdout
     when:
       branch: main
       event: push
 
   - name: review-go
-    image: woodpeckerci/plugin-reviewdog-golangci-lint:1.61
+    image: woodpeckerci/plugin-reviewdog-golangci-lint:2.11
     pull: true
     depends_on:
       - vendor

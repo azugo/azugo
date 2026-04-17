@@ -1,46 +1,114 @@
-issues:
-  exclude-files:
-    - ".*_test\\.go$"
-
-linters-settings:
-  gci:
-    custom-order: true
-    sections:
-      - standard
-      - prefix(azugo.io/azugo)
-      - default
+version: "2"
 
 linters:
-  presets:
-    - comment
-    - format
-    - bugs
-    - performance
-    - unused
-    - test
-    - sql
-    - style
-
   enable:
-    - wsl
-
-  disable:
-    - godox
-    - tagalign
-    - exhaustruct
-    - depguard
-    - wrapcheck
-    - gochecknoinits
-    - varnamelen
-    - funlen
-    - ireturn
-    - mnd
-    - interfacebloat
-    - gochecknoglobals
-    - err113
-    - lll
-    - nilnil
-    - containedctx
-    - gomoddirectives
-    - nolintlint
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - canonicalheader
+    - contextcheck
+    - copyloopvar
+    - decorder
+    - dogsled
+    - dupl
+    - dupword
+    - durationcheck
+    - errcheck
+    - errchkjson
+    - errname
+    - errorlint
+    - exhaustive
+    - exptostd
+    - fatcontext
+    - forbidigo
+    - forcetypeassert
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gochecksumtype
     - goconst
+    - gocritic
+    - godot
+    - goheader
+    - gomoddirectives
+    - gomodguard
+    - goprintffuncname
+    - gosec
+    - gosmopolitan
+    - govet
+    - grouper
+    - iface
+    - importas
+    - inamedparam
+    - ineffassign
+    - intrange
+    - loggercheck
+    - makezero
+    - mirror
+    - misspell
+    - musttag
+    - nakedret
+    - nilerr
+    - nilnesserr
+    - nlreturn
+    - noctx
+    - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
+    - paralleltest
+    - perfsprint
+    - prealloc
+    - predeclared
+    - promlinter
+    - protogetter
+    - reassign
+    - recvcheck
+    - revive
+    - rowserrcheck
+    - sloglint
+    - spancheck
+    - sqlclosecheck
+    - staticcheck
+    - tagliatelle
+    - testableexamples
+    - testifylint
+    - testpackage
+    - thelper
+    - tparallel
+    - unconvert
+    - unparam
+    - unused
+    - usestdlibvars
+    - usetesting
+    - wastedassign
+    - whitespace
+    - wsl_v5
+    - zerologlint
+
+  settings:
+    wsl_v5:
+      allow-first-in-block: true
+      allow-whole-block: false
+      branch-max-lines: 2
+
+  exclusions:
+    paths:
+      - ".*_test\\.go$"
+    rules:
+      - linters: [errname]
+        text: "the error type name `ErrorResponse` should conform to the `XxxError` format"
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+    - gofumpt
+    - goimports
+
+  settings:
+    gci:
+      custom-order: true
+      sections:
+        - standard
+        - prefix(azugo.io/azugo)
+        - default
