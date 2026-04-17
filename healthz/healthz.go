@@ -5,9 +5,9 @@
 package healthz
 
 import (
-	"github.com/valyala/fasthttp"
-
 	"azugo.io/azugo"
+
+	"github.com/valyala/fasthttp"
 )
 
 // Status indicates the health status of the service.
@@ -31,9 +31,11 @@ func statusRank(s Status) int {
 		return 2
 	case Warn:
 		return 1
-	default:
+	case Pass:
 		return 0
 	}
+
+	return 0
 }
 
 // Response is the data returned by the health check endpoint.

@@ -81,10 +81,12 @@ func (e ParamRequiredError) Error() string {
 	return "parameter required"
 }
 
+// SafeError returns a safe error message for ParamRequiredError.
 func (e ParamRequiredError) SafeError() string {
 	return fmt.Sprintf(fieldErrMsg, e.Name, e.Name, "required")
 }
 
+// StatusCode returns the HTTP status code for ParamRequiredError.
 func (ParamRequiredError) StatusCode() int {
 	return fasthttp.StatusBadRequest
 }
@@ -104,10 +106,12 @@ func (e ParamInvalidError) Error() string {
 	return e.Err.Error()
 }
 
+// SafeError returns a safe error message for ParamInvalidError.
 func (e ParamInvalidError) SafeError() string {
 	return fmt.Sprintf(fieldErrMsg, e.Name, e.Name, e.Tag)
 }
 
+// StatusCode returns the HTTP status code for ParamInvalidError.
 func (ParamInvalidError) StatusCode() int {
 	return fasthttp.StatusUnprocessableEntity
 }
@@ -118,6 +122,7 @@ type BadRequestError struct {
 	Err         error
 }
 
+// SafeError returns a safe error message for BadRequestError.
 func (e BadRequestError) SafeError() string {
 	if e.Description == "" {
 		return "malformed request"
@@ -134,6 +139,7 @@ func (e BadRequestError) Error() string {
 	return e.SafeError()
 }
 
+// StatusCode returns the HTTP status code for BadRequestError.
 func (BadRequestError) StatusCode() int {
 	return fasthttp.StatusBadRequest
 }

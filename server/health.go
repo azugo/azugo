@@ -1,3 +1,4 @@
+// Package server provides server start and health check commands.
 package server
 
 import (
@@ -39,7 +40,7 @@ func HealthCommand(healthzPath string, opt Options) *cobra.Command {
 				scheme = "https"
 				addr = conf.HTTPS.Address
 				port = conf.HTTPS.Port
-				client = client.WithOptions(&http.TLSConfig{InsecureSkipVerify: true}) //nolint:gosec
+				client = client.WithOptions(&http.TLSConfig{InsecureSkipVerify: true})
 			}
 
 			if addr == "" || addr == "0.0.0.0" {

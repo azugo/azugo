@@ -9,6 +9,7 @@ import (
 // MethodWild wild HTTP method.
 const MethodWild = "*"
 
+// Instrumentation operation names.
 const (
 	InstrumentationRequest = "http-request"
 	InstrumentationPanic   = "http-panic"
@@ -87,6 +88,7 @@ type Router interface {
 	Any(path string, handler RequestHandler)
 }
 
+// RouterHandler is the interface for registering and serving routes.
 type RouterHandler interface {
 	Router
 
@@ -94,6 +96,7 @@ type RouterHandler interface {
 	Handler(ctx *fasthttp.RequestCtx)
 }
 
+// NewRouter creates a new RouterHandler for the given app.
 func NewRouter(app *App) RouterHandler {
 	return newMux(app)
 }
@@ -171,6 +174,7 @@ type RouterOptions struct {
 	ErrorHandler func(*Context, error) bool
 }
 
+// ApplyConfig applies router-related configuration options.
 func (r *RouterOptions) ApplyConfig(conf *config.Configuration) {
 	// Apply base path.
 	if len(conf.Server.Path) > 0 {

@@ -1,3 +1,4 @@
+// Package wsfed provides WS-Federation metadata parsing.
 package wsfed
 
 import (

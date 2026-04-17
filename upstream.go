@@ -129,6 +129,7 @@ func (p *Proxy) Handler(ctx *Context) {
 	// Copy request from original
 	req := fasthttp.AcquireRequest()
 	defer fasthttp.ReleaseRequest(req)
+
 	ctx.Request().CopyTo(req)
 
 	resp := &ctx.Context().Response

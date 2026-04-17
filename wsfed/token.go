@@ -67,6 +67,7 @@ type tokenParseOptions struct {
 	CheckIssuer bool
 }
 
+// TokenParseOption is an interface for WS-Federation token parsing options.
 type TokenParseOption interface {
 	apply(opts *tokenParseOptions)
 }

@@ -29,6 +29,7 @@ type replacePair struct {
 	from, to []byte
 }
 
+// BodyRewriter rewrites response bodies for proxied requests.
 type BodyRewriter struct {
 	contentTypes [][]byte
 	replaceRules []*replacePair
@@ -37,6 +38,7 @@ type BodyRewriter struct {
 	RewriteBaseURL bool
 }
 
+// NewBodyRewriter creates a new BodyRewriter.
 func NewBodyRewriter() *BodyRewriter {
 	return &BodyRewriter{
 		contentTypes: [][]byte{

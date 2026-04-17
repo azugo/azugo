@@ -2,6 +2,7 @@ package azugo
 
 import "net"
 
+// DefaultMetricPath is the default path for the Prometheus metrics endpoint.
 const DefaultMetricPath string = "/metrics"
 
 // MetricsOptions configures the metrics endpoint.

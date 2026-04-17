@@ -29,7 +29,7 @@ type metricsHandler struct {
 	Subsystem string
 }
 
-// Interface for metrics handler options.
+// MetricsOption is an interface for metrics handler options.
 type MetricsOption interface {
 	apply(h *metricsHandler)
 }
@@ -74,6 +74,7 @@ func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
 	if req.Header.ContentLength() != -1 {
 		s += req.Header.ContentLength()
 	}
+
 	out <- s
 }
 
@@ -108,6 +109,7 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 
 		go func() {
 			defer releaseRequestToPool(frc)
+
 			computeApproximateRequestSize(frc, reqSize)
 		}()
 

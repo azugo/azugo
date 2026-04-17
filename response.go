@@ -90,6 +90,7 @@ func (c *Context) NotFound() {
 	c.mux.HandleNotFound(c)
 }
 
+// SetPaging sets pagination headers and metadata on the response.
 func (c *Context) SetPaging(values map[string]string, paginator *paginator.Paginator) {
 	c.Header.Set(HeaderTotalCount, strconv.Itoa(paginator.Total()))
 	c.Header.AppendAccessControlExposeHeaders(HeaderTotalCount)

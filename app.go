@@ -1,3 +1,4 @@
+// Package azugo is a fast and simple web framework for building APIs.
 package azugo
 
 import (
@@ -17,8 +18,9 @@ import (
 	"go.uber.org/zap"
 )
 
+// App is the main application instance.
 type App struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	*core.App
 
@@ -48,6 +50,7 @@ type App struct {
 	ServerOptions ServerOptions
 }
 
+// ServerOptions configures the HTTP server buffer sizes.
 type ServerOptions struct {
 	// Per-connection buffer size for requests' reading.
 	// This also limits the maximum header size.
@@ -64,6 +67,7 @@ type ServerOptions struct {
 	ResponseWriteBufferSize int
 }
 
+// New creates a new Azugo application.
 func New(opts ...*core.App) *App {
 	var app *core.App
 	if len(opts) > 0 {
@@ -107,6 +111,7 @@ func (a *App) SetConfig(_ *cobra.Command, conf *config.Configuration) {
 	a.config = conf
 }
 
+// ApplyConfig applies the loaded configuration to the application.
 func (a *App) ApplyConfig() {
 	conf := a.Config()
 

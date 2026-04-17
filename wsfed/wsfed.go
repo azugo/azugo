@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	// Cache key to store nonce in cache.
+	// WsFederationNonceCacheKey is the cache key used to store the WS-Federation nonce.
 	WsFederationNonceCacheKey string = "wsfed-nonce"
 )
 

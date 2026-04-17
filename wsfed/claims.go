@@ -1,7 +1,9 @@
+// Package wsfed provides WS-Federation authentication support.
 package wsfed
 
 import (
 	"crypto/subtle"
+	"strings"
 	"time"
 )
 
@@ -45,18 +47,18 @@ func verifyAud(aud []string, cmp string, required bool) bool {
 	// use a var here to keep constant time compare when looping over a number of claims
 	result := false
 
-	var stringClaims string
+	var sb strings.Builder
 
 	for _, a := range aud {
 		if subtle.ConstantTimeCompare([]byte(a), []byte(cmp)) != 0 {
 			result = true
 		}
 
-		stringClaims += a
+		sb.WriteString(a)
 	}
 
 	// case where "" is sent in one or many aud claims
-	if len(stringClaims) == 0 {
+	if sb.Len() == 0 {
 		return !required
 	}
 

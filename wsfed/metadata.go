@@ -33,11 +33,13 @@ const (
 
 func (p *WsFederation) check(force bool) error {
 	p.lock.RLock()
+
 	if p.ready && !force {
 		p.lock.RUnlock()
 
 		return nil
 	}
+
 	p.lock.RUnlock()
 	p.lock.Lock()
 	defer p.lock.Unlock()

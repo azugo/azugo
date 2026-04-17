@@ -67,7 +67,7 @@ func (c *Context) Done() <-chan struct{} {
 	return c.context.Done()
 }
 
-// If Done is not yet closed, Err returns nil.
+// Err returns nil if Done is not yet closed.
 // If Done is closed, Err returns a non-nil error explaining why:
 // Canceled if the context was canceled
 // or DeadlineExceeded if the context's deadline passed.

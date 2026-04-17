@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Metrics is the Prometheus metrics endpoint configuration.
 type Metrics struct {
 	Enabled   bool     `mapstructure:"enabled"`
 	Path      string   `mapstructure:"path"`

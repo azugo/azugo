@@ -1,3 +1,4 @@
+// Package proxy provides internal HTTP proxy utilities.
 package proxy
 
 import (

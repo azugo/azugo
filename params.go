@@ -6,7 +6,7 @@ import (
 
 // ParamsCtx represents the parameters of route URL.
 type ParamsCtx struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	app *App
 	ctx *Context

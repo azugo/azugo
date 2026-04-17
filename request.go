@@ -32,8 +32,9 @@ var (
 	nilRequestID                = ulid.ULID{}
 )
 
+// Context holds the state and helpers for a single HTTP request.
 type Context struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	// Base fastHTTP request context
 	context *fasthttp.RequestCtx
@@ -336,7 +337,7 @@ func (c *Context) SetMaxPageSize(maxPageSize int) {
 	c.SetUserValue("__max_page_size", maxPageSize)
 }
 
-// Returns Paginator with page size from query parameters.
+// Paging returns a Paginator with page size from query parameters.
 func (c *Context) Paging() *paginator.Paginator {
 	page, err := c.Query.Int(paginator.QueryParameterPage)
 	if err != nil || page <= 0 {

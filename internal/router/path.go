@@ -1,3 +1,4 @@
+// Package router provides internal HTTP routing helpers.
 package router
 
 import (
@@ -25,6 +26,7 @@ func GetOptionalPaths(path string) []string {
 	paths := make([]string, 0)
 
 	start := 0
+
 walk:
 	for {
 		if start >= len(path) {
@@ -62,6 +64,7 @@ walk:
 				newPath += path[questionMarkIndex+1 : start+end]
 
 				path = path[:questionMarkIndex] + path[questionMarkIndex+1:] // remove '?'
+
 				paths = append(paths, newPath)
 				start += end - 1
 

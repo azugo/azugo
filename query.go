@@ -10,7 +10,7 @@ import (
 
 // QueryCtx represents the key-value pairs in an query string.
 type QueryCtx struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	app *App
 	ctx *Context
@@ -126,7 +126,7 @@ func (q *QueryCtx) Bool(key string) (bool, error) {
 		return false, err
 	}
 
-	return strings.ToLower(v) == "true" || v == "1", nil
+	return utils.ParseBoolValue(v), nil
 }
 
 // BoolOptional returns the value of the parameter as optional bool or null if value is empty.
@@ -138,7 +138,7 @@ func (q *QueryCtx) BoolOptional(key string) (*bool, error) {
 		return nil, nil
 	}
 
-	iv := strings.ToLower(*v) == "true" || *v == "1"
+	iv := utils.ParseBoolValue(*v)
 
 	return &iv, nil
 }

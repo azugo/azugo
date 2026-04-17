@@ -11,6 +11,7 @@ var copyBufPool = sync.Pool{
 	},
 }
 
+// CopyZeroAlloc copies from r to w using a pooled buffer to avoid allocations.
 func CopyZeroAlloc(w io.Writer, r io.Reader) (int64, error) {
 	vbuf := copyBufPool.Get()
 

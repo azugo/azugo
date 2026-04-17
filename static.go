@@ -27,6 +27,7 @@ type staticHandler struct {
 	extcache   map[string]string
 }
 
+// StaticOption is an interface for static file serving options.
 type StaticOption interface {
 	apply(opts *staticHandler)
 }
@@ -59,7 +60,7 @@ func (h *staticHandler) replaceContent(file string, replacer *strings.Replacer) 
 	if err != nil {
 		return nil, false, err
 	}
-	defer s.Close()
+	defer s.Close() //nolint:errcheck
 
 	buf := new(bytes.Buffer)
 	if _, err := io.Copy(buf, s); err != nil {
@@ -88,6 +89,7 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 
 					return
 				}
+
 				if content, ok := h.altcontent[hash+fpath]; len(hash) > 0 && ok {
 					ctx.Raw(content)
 
@@ -122,10 +124,12 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 
 			return
 		}
+
 		ctx.Stream(s)
 	}
 }
 
+// StaticEmbedded serves files from an embedded filesystem at the given path.
 func (a *App) StaticEmbedded(path string, f *embed.FS, opts ...StaticOption) error {
 	h := &staticHandler{
 		fs:         f,
@@ -182,7 +186,8 @@ func (a *App) StaticEmbedded(path string, f *embed.FS, opts ...StaticOption) err
 		if err != nil {
 			return fmt.Errorf("static SPA route handler file not found: %w", err)
 		}
-		f.Close()
+
+		f.Close() //nolint:errcheck,gosec
 
 		a.Get(base+"{path:*}", h.requestHandler(fpath, file))
 	}

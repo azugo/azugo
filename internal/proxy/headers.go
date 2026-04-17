@@ -12,6 +12,7 @@ var hopHeaders = []string{
 	"Upgrade",             // Upgrade
 }
 
+// HeaderDel is an interface for deleting HTTP headers.
 type HeaderDel interface {
 	Del(key string)
 }

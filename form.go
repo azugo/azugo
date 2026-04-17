@@ -21,7 +21,7 @@ type formKeyValuer interface {
 
 // FormCtx represents the post form key-value pairs.
 type FormCtx struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	form formKeyValuer
 
@@ -31,7 +31,7 @@ type FormCtx struct {
 
 // nilArgs represents noop form key-value pairs.
 type nilArgs struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 }
 
 func (a *nilArgs) Value(string) string {
@@ -53,7 +53,7 @@ func (a *nilArgs) Files(string) []*multipart.FileHeader {
 func (a *nilArgs) Reset(*Context) {}
 
 type postArgs struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	args *fasthttp.Args
 }
@@ -94,7 +94,7 @@ func (a *postArgs) Files(string) []*multipart.FileHeader {
 func (a *postArgs) Reset(*Context) {}
 
 type multiPartArgs struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	args *multipart.Form
 }
@@ -218,7 +218,7 @@ func (f *FormCtx) Bool(key string) (bool, error) {
 		return false, err
 	}
 
-	return strings.ToLower(v) == "true" || v == "1", nil
+	return utils.ParseBoolValue(v), nil
 }
 
 // BoolOptional returns the value of the parameter as optional bool or null if value is empty.
@@ -230,7 +230,7 @@ func (f *FormCtx) BoolOptional(key string) (*bool, error) {
 		return nil, nil
 	}
 
-	iv := strings.ToLower(*v) == "true" || *v == "1"
+	iv := utils.ParseBoolValue(*v)
 
 	return &iv, nil
 }

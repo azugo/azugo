@@ -160,5 +160,5 @@ func findWildPath(path string, fullPath string) *wildPath {
 
 // copyString copies string to new pointer without memory allocation.
 func copyString(s string) string {
-	return string(unsafe.Slice(unsafe.StringData(s), len(s)))
+	return string(unsafe.Slice(unsafe.StringData(s), len(s))) //nolint:gosec
 }

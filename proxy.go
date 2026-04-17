@@ -5,6 +5,7 @@ import (
 	"strings"
 )
 
+// ProxyOptions configures a reverse proxy upstream.
 type ProxyOptions struct {
 	// ForwardLimit limits the number of entries in the headers that will be processed.
 	// The default value is 1. Set to 0 to disable the limit.

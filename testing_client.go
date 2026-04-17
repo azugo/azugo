@@ -56,6 +56,7 @@ func (c *TestClient) WithQuery(params map[string]any) TestClientOption {
 	return func(_ *TestClient, r *fasthttp.Request) {
 		for key, value := range params {
 			var val string
+
 			switch v := value.(type) {
 			case []string:
 				val = strings.Join(v, ",")
@@ -86,7 +87,9 @@ func (c *TestClient) CallRaw(method, endpoint, body []byte, options ...TestClien
 	} else if len(body) > 0 {
 		req.SetBodyRaw(body)
 	}
+
 	defer fasthttp.ReleaseRequest(req)
+
 	resp := fasthttp.AcquireResponse()
 
 	if err := c.client.Do(req, resp); err != nil {

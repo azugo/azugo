@@ -1,3 +1,4 @@
+// Package nonce provides nonce store implementations for WS-Federation.
 package nonce
 
 import (
@@ -24,6 +25,7 @@ func NewCacheNonceStore(c cache.Instance[bool]) *CacheNonceStore {
 	}
 }
 
+// Create creates a new nonce and stores it in the cache.
 func (s *CacheNonceStore) Create(ctx context.Context) (string, error) {
 	id, err := ulid.New(ulid.Timestamp(time.Now().UTC()), s.entropy)
 	if err != nil {
@@ -38,6 +40,7 @@ func (s *CacheNonceStore) Create(ctx context.Context) (string, error) {
 	return key, nil
 }
 
+// Verify checks and consumes a nonce from the cache.
 func (s *CacheNonceStore) Verify(ctx context.Context, nonce string) (bool, error) {
 	i, err := s.cache.Get(ctx, nonce)
 	if err != nil {

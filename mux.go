@@ -287,6 +287,7 @@ func (m *mux) MethodIndexOf(method string) int {
 func (m *mux) Recv(path string, ctx *Context) {
 	if rcv := recover(); rcv != nil {
 		var err error
+
 		switch rcv := rcv.(type) {
 		case error:
 			err = rcv

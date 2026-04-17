@@ -1,3 +1,4 @@
+// Package token provides JWT claim types and helpers.
 package token
 
 import (
@@ -9,6 +10,7 @@ import (
 // ClaimStrings is basically just a slice of strings, but it can be either serialized from a string array or just a string.
 type ClaimStrings []string
 
+// UnmarshalJSON implements json.Unmarshaler for ClaimStrings.
 func (s *ClaimStrings) UnmarshalJSON(data []byte) error {
 	var value interface{}
 
@@ -43,6 +45,7 @@ func (s *ClaimStrings) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON implements json.Marshaler for ClaimStrings.
 func (s *ClaimStrings) MarshalJSON() ([]byte, error) {
 	if s == nil {
 		return []byte("null"), nil

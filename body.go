@@ -9,7 +9,7 @@ import (
 
 // BodyCtx represents the request body.
 type BodyCtx struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	app *App
 	ctx *Context
@@ -20,7 +20,7 @@ func (b *BodyCtx) Bytes() []byte {
 	return b.ctx.Request().Body()
 }
 
-// Copy copies the request raw body to the provided writer.
+// WriteTo copies the request raw body to the provided writer.
 //
 // Warning: Always returns 0 as not possible to determine
 // the number of bytes written.

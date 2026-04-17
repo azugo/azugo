@@ -69,7 +69,7 @@ func (a *TestApp) Start(t *testing.T) {
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
-		Handler:                      a.App.Handler,
+		Handler:                      a.Handler,
 		Logger:                       zap.NewStdLog(a.App.Log().Named("http")),
 		StreamRequestBody:            true,
 		DisablePreParseMultipartForm: true,
@@ -96,7 +96,7 @@ func (a *TestApp) StartBenchmark() {
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
-		Handler:                      a.App.Handler,
+		Handler:                      a.Handler,
 		Logger:                       zap.NewStdLog(a.App.Log().Named("http")),
 		StreamRequestBody:            true,
 		DisablePreParseMultipartForm: true,
@@ -115,7 +115,7 @@ func (a *TestApp) StartBenchmark() {
 // Stop web server instance.
 func (a *TestApp) Stop() {
 	if a.ln != nil {
-		a.ln.Close()
+		a.ln.Close() //nolint:errcheck,gosec
 	}
 
 	a.App.Stop()
@@ -136,8 +136,8 @@ func (a *TestApp) TestClient() *TestClient {
 
 // MockContext creates new mock context for testing.
 func (a *TestApp) MockContext(fn RequestHandler) {
-	ctx := a.App.acquireCtx(a.defaultMux, "/", nil)
-	defer a.App.releaseCtx(ctx)
+	ctx := a.acquireCtx(a.defaultMux, "/", nil)
+	defer a.releaseCtx(ctx)
 
 	fn(ctx)
 }

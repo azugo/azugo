@@ -20,6 +20,7 @@ var (
 	protocolHTTPS = []byte("https")
 )
 
+// RequestLogger is a middleware that logs HTTP requests.
 func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 	var (
 		init   sync.Once

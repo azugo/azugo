@@ -1,3 +1,4 @@
+// Package user provides user identity types and helpers.
 package user
 
 import (
@@ -54,7 +55,7 @@ func (u Anonymous) HasScopeLevel(_, _ string) bool {
 	return false
 }
 
-// HasScopeLevel checks if user has granted scope with at least one of levels.
+// HasScopeAnyLevel checks if user has granted scope with at least one of levels.
 func (u Anonymous) HasScopeAnyLevel(_ string, _ ...string) bool {
 	return false
 }

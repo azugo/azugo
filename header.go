@@ -11,6 +11,7 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+// HTTP header name constants.
 const (
 	HeaderAccept                     string = "Accept"
 	HeaderTotalCount                 string = "X-Total-Count"
@@ -21,6 +22,7 @@ const (
 	HeaderContentTransferEncoding    string = "Content-Transfer-Encoding"
 )
 
+// HTTP content type constants.
 const (
 	ContentTypeJSON        string = "application/json"
 	ContentTypeXML         string = "application/xml"
@@ -29,7 +31,7 @@ const (
 
 // HeaderCtx represents the key-value pairs in an HTTP header.
 type HeaderCtx struct {
-	noCopy noCopy //nolint:unused,structcheck
+	noCopy noCopy
 
 	app *App
 	ctx *Context

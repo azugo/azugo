@@ -10,6 +10,7 @@ type basicClaims struct {
 	Claims map[string]token.ClaimStrings `json:"claims"`
 }
 
+// UnmarshalJSON implements json.Unmarshaler for Basic.
 func (u *Basic) UnmarshalJSON(data []byte) error {
 	var value basicClaims
 
@@ -23,6 +24,7 @@ func (u *Basic) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+// MarshalJSON implements json.Marshaler for Basic.
 func (u Basic) MarshalJSON() ([]byte, error) {
 	return json.Marshal(basicClaims{
 		Claims: u.claims,

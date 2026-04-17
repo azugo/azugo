@@ -66,7 +66,7 @@ func (c *CORSOptions) SetOrigins(origins ...string) *CORSOptions {
 	return c
 }
 
-// ValidOrigins returns true if CORS origin is allowed.
+// ValidOrigin returns true if the CORS origin is allowed.
 func (c *CORSOptions) ValidOrigin(origin string) bool {
 	if c.allowAllOrigins {
 		return true

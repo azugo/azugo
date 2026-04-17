@@ -1,3 +1,4 @@
+// Package radix provides a radix tree implementation for HTTP routing.
 package radix
 
 const (

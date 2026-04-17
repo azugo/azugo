@@ -6,6 +6,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Paging is the pagination configuration.
 type Paging struct {
 	// DefaultPageSize represents the default number of items per page.
 	DefaultPageSize int `mapstructure:"default_page_size" validate:"required,min=1"`
