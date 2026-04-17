@@ -41,6 +41,9 @@ type App struct {
 	// Metrics options
 	MetricsOptions MetricsOptions
 
+	// Healthz options
+	HealthzOptions TrustedSource
+
 	// Server options
 	ServerOptions ServerOptions
 }
@@ -81,6 +84,7 @@ func New(opts ...*core.App) *App {
 		},
 
 		MetricsOptions: defaultMetricsOptions,
+		HealthzOptions: defaultHealthzTrustedSource,
 	}
 
 	a.defaultMux = newMux(a)
@@ -115,6 +119,15 @@ func (a *App) ApplyConfig() {
 
 		for _, p := range conf.Metrics.Address {
 			a.MetricsOptions.Add(p)
+		}
+	}
+
+	// Apply Healthz configuration.
+	if conf.Healthz.Enabled {
+		a.HealthzOptions.Clear()
+
+		for _, p := range conf.Healthz.Address {
+			a.HealthzOptions.Add(p)
 		}
 	}
 }
@@ -177,16 +190,13 @@ func (a *App) Start() error {
 			addr = ""
 		}
 
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.Log().Info(fmt.Sprintf("Listening on http://%s:%d%s...", conf.HTTP.Address, conf.HTTP.Port, conf.Path))
 
 			if err := server.ListenAndServe(fmt.Sprintf("%s:%d", addr, conf.HTTP.Port)); err != nil {
 				a.Log().Error("failed to start HTTP server", zap.Error(err))
 			}
-		}()
+		})
 	}
 
 	if conf.HTTPS != nil && conf.HTTPS.Enabled {
@@ -217,16 +227,13 @@ func (a *App) Start() error {
 			}
 		}
 
-		wg.Add(1)
-
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			a.Log().Info(fmt.Sprintf("Listening on https://%s:%d%s...", conf.HTTPS.Address, conf.HTTPS.Port, conf.Path))
 
 			if err := server.ListenAndServeTLSEmbed(fmt.Sprintf("%s:%d", addr, conf.HTTPS.Port), certData, keyData); err != nil {
 				a.Log().Error("failed to start HTTPS server", zap.Error(err))
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

@@ -22,6 +22,8 @@ type Configuration struct {
 	Proxy *Proxy `mapstructure:"proxy"`
 	// Metrics configuration section.
 	Metrics *Metrics `mapstructure:"metrics"`
+	// Healthz configuration section.
+	Healthz *Healthz `mapstructure:"healthz"`
 	// HTTPClient configuration section.
 	HTTPClient *http.Configuration `mapstructure:"http_client"`
 }
@@ -51,6 +53,7 @@ func (c *Configuration) Bind(_ string, v *viper.Viper) {
 	c.Paging = config.Bind(c.Paging, "paging", v)
 	c.Proxy = config.Bind(c.Proxy, "proxy", v)
 	c.Metrics = config.Bind(c.Metrics, "metrics", v)
+	c.Healthz = config.Bind(c.Healthz, "healthz", v)
 	c.HTTPClient = config.Bind(c.HTTPClient, "http_client", v)
 }
 
@@ -80,6 +83,10 @@ func (c *Configuration) Validate(validate *validation.Validate) error {
 	}
 
 	if err := c.Metrics.Validate(validate); err != nil {
+		return err
+	}
+
+	if err := c.Healthz.Validate(validate); err != nil {
 		return err
 	}
 

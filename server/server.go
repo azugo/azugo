@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 
 	"azugo.io/azugo"
@@ -14,9 +15,8 @@ import (
 // Options is a set of options for the server.
 type Options server.Options
 
-// New returns new Azugo pre-configured server with default set of middlewares and default router options.
-func New(cmd *cobra.Command, opt Options) (*azugo.App, error) {
-	// Support extended configuration.
+// newApp creates a new Azugo app with configuration loaded but without any middlewares.
+func newApp(cmd *cobra.Command, opt Options) (*azugo.App, error) {
 	var conf *config.Configuration
 
 	c := opt.Configuration
@@ -40,6 +40,16 @@ func New(cmd *cobra.Command, opt Options) (*azugo.App, error) {
 	a := azugo.New(ca)
 	a.SetConfig(cmd, conf)
 
+	return a, nil
+}
+
+// New returns new Azugo pre-configured server with default set of middlewares and default router options.
+func New(cmd *cobra.Command, opt Options) (*azugo.App, error) {
+	a, err := newApp(cmd, opt)
+	if err != nil {
+		return nil, err
+	}
+
 	// Apply configuration.
 	a.ApplyConfig()
 
@@ -57,7 +67,8 @@ func New(cmd *cobra.Command, opt Options) (*azugo.App, error) {
 	return a, nil
 }
 
-// Run starts an application and waits for it to finish.
-func Run(a server.Runnable) {
-	server.Run(a)
+// Run starts an application and waits for the context to be cancelled before
+// stopping it gracefully.
+func Run(ctx context.Context, a server.Runnable) {
+	server.Run(ctx, a)
 }

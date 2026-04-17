@@ -59,7 +59,6 @@ func (c *Context) SetUser(u User) {
 	if u != nil && u.Authorized() {
 		_ = c.AddLogFields(
 			zap.String("user.id", u.ID()),
-			zap.String("user.full_name", u.DisplayName()),
 		)
 	}
 }

@@ -65,3 +65,8 @@ func (c *Context) Log() *zap.Logger {
 func (c *Context) SkipRequestLog() {
 	c.SetUserValue("__log_request", false)
 }
+
+// SkipMetrics sets to skip metrics recording for current request.
+func (c *Context) SkipMetrics() {
+	c.SetUserValue("__skip_metrics", true)
+}

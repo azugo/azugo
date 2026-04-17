@@ -113,6 +113,10 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 
 		h(ctx)
 
+		if skip, ok := ctx.UserValue("__skip_metrics").(bool); ok && skip {
+			return
+		}
+
 		status := ctx.Response().StatusCode()
 		if status == fasthttp.StatusNotFound {
 			return
@@ -141,26 +145,7 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 }
 
 func (p *metricsHandler) isTrusted(ctx *azugo.Context) bool {
-	opts := ctx.App().MetricsOptions
-	if opts.TrustAll {
-		return true
-	}
-
-	ip := ctx.IP()
-
-	for _, tip := range opts.TrustedIPs {
-		if tip.Equal(ip) {
-			return true
-		}
-	}
-
-	for _, tnet := range opts.TrustedNetworks {
-		if tnet.Contains(ip) {
-			return true
-		}
-	}
-
-	return false
+	return ctx.App().MetricsOptions.IsTrusted(ctx.IP())
 }
 
 func (p *metricsHandler) registerMetrics() {

@@ -5,7 +5,10 @@ import (
 
 	"azugo.io/azugo"
 	"azugo.io/azugo/config"
+	"azugo.io/azugo/healthz"
 	"azugo.io/azugo/server"
+	"azugo.io/core/cli"
+	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -37,19 +40,20 @@ type TestRequest struct {
 	Name string `json:"name" validate:"required,max=50"`
 }
 
-func main() {
+func runWeb(cmd *cobra.Command, _ []string) error {
 	conf := &Configuration{
 		Configuration: config.New(),
 	}
 
-	a, err := server.New(nil, server.Options{
-		AppName: "REST API Example",
-
+	a, err := server.New(cmd, server.Options{
+		AppName:       "REST API Example",
 		Configuration: conf,
 	})
 	if err != nil {
-		panic(err)
+		return err
 	}
+
+	a.Get("/healthz", healthz.Handler())
 
 	a.Get("/hello", func(ctx *azugo.Context) {
 		ctx.Log().Debug("Hello endpoint called")
@@ -82,10 +86,31 @@ func main() {
 
 	u, err := url.Parse("https://example.com/")
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	a.Proxy("/example", azugo.ProxyUpstream(u))
 
-	server.Run(a)
+	server.Run(cmd.Context(), a)
+
+	return nil
+}
+
+func init() {
+	cli.Register(&cobra.Command{
+		Use:   "web",
+		Short: "Start web server",
+		RunE:  runWeb,
+	}, cli.AsDefault())
+
+	cli.Register(server.HealthCommand("/healthz", server.Options{
+		AppName: "REST API Example",
+	}))
+}
+
+func main() {
+	cli.Run(cli.Options{
+		Use:   "api",
+		Short: "REST API Example Server",
+	})
 }
