@@ -12,7 +12,7 @@ type ClaimStrings []string
 
 // UnmarshalJSON implements json.Unmarshaler for ClaimStrings.
 func (s *ClaimStrings) UnmarshalJSON(data []byte) error {
-	var value interface{}
+	var value any
 
 	if err := json.Unmarshal(data, &value); err != nil {
 		return err
@@ -25,7 +25,7 @@ func (s *ClaimStrings) UnmarshalJSON(data []byte) error {
 		val = append(val, v)
 	case []string:
 		val = ClaimStrings(v)
-	case []interface{}:
+	case []any:
 		for _, vv := range v {
 			vs, ok := vv.(string)
 			if !ok {

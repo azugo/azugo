@@ -6,8 +6,8 @@ when:
 
 matrix:
   GO_VERSION:
-    - 1.24
     - 1.25
+    - 1.26
 
 steps:
   - name: test
