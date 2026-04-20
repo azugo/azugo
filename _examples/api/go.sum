@@ -1,5 +1,5 @@
-azugo.io/core v0.30.0 h1:iFlsUk3nniC2+mdaBbvA5mS5JwKkyj8R1Cuf7l2qSLY=
-azugo.io/core v0.30.0/go.mod h1:0LldsHhHSGYGvLFhhb4aluzeARdZeqwsK1iOzIFwWgM=
+azugo.io/core v0.31.0 h1:cUQxW/SsBJmGbgrrH29eGSuSet2wSHoI30UZ5onwZZA=
+azugo.io/core v0.31.0/go.mod h1:0LldsHhHSGYGvLFhhb4aluzeARdZeqwsK1iOzIFwWgM=
 github.com/andybalholm/brotli v1.2.1 h1:R+f5xP285VArJDRgowrfb9DqL18yVK0gKAW/F+eTWro=
 github.com/andybalholm/brotli v1.2.1/go.mod h1:rzTDkvFWvIrjDXZHkuS16NPggd91W3kUSvPlQ1pLaKY=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=

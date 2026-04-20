@@ -67,8 +67,14 @@ func New(cmd *cobra.Command, opt Options) (*azugo.App, error) {
 	return a, nil
 }
 
-// Run starts an application and waits for the context to be cancelled before
-// stopping it gracefully.
-func Run(ctx context.Context, a server.Runnable) {
-	server.Run(ctx, a)
+// Run starts an application and waits for an interrupt or termination signal
+// before stopping it gracefully.
+func Run(a server.Runnable) {
+	server.Run(a)
+}
+
+// RunContext starts an application and waits for the context to be cancelled
+// before stopping it gracefully.
+func RunContext(ctx context.Context, a server.Runnable) {
+	server.RunContext(ctx, a)
 }

@@ -3,8 +3,8 @@ module example/api
 go 1.25.0
 
 require (
-	azugo.io/azugo v0.30.0
-	azugo.io/core v0.30.0
+	azugo.io/azugo v0.31.0
+	azugo.io/core v0.31.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/valyala/fasthttp v1.70.0

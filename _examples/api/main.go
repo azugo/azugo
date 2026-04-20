@@ -91,7 +91,7 @@ func runWeb(cmd *cobra.Command, _ []string) error {
 
 	a.Proxy("/example", azugo.ProxyUpstream(u))
 
-	server.Run(cmd.Context(), a)
+	server.RunContext(cmd.Context(), a)
 
 	return nil
 }

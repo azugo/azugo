@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.25.0
 
 require (
-	azugo.io/core v0.30.0
+	azugo.io/core v0.31.0
 	github.com/beevik/etree v1.6.0
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/go-quicktest/qt v1.102.0
@@ -13,7 +13,7 @@ require (
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/prometheus/client_golang v1.23.2
-	github.com/russellhaering/goxmldsig v1.5.0
+	github.com/russellhaering/goxmldsig v1.6.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/valyala/bytebufferpool v1.0.0
