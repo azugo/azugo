@@ -137,7 +137,15 @@ func (p *WsFederation) Parse(token []byte, opt ...TokenParseOption) (*Token, err
 
 	t, err := p.decodeResponse(token, opts)
 	if err != nil {
-		return nil, err
+	    if (errors.Is(err, ErrTokenSignatureInvalid) || errors.Is(err, ErrTokenUnverifiable)) && p.MetadataURL != nil {
+	        if refreshErr := p.RefreshMetadata(); refreshErr == nil {
+	            t, err = p.decodeResponse(token, opts)
+	        }
+	    }
+		
+	    if err != nil {
+	        return nil, err
+	    }
 	}
 
 	v := verifyIss(p.Issuer, t.Claims.Issuer, true)
