@@ -35,6 +35,7 @@ func NewTestApp(app ...*App) *TestApp {
 
 	// Trust all proxy headers for test app
 	a.defaultMux.RouterOptions.Proxy.TrustAll = true
+	a.HealthzOptions.TrustAll = true
 
 	conf := config.New()
 	a.SetConfig(nil, conf)
