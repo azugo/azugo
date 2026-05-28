@@ -137,10 +137,8 @@ func (p *WsFederation) Parse(token []byte, opt ...TokenParseOption) (*Token, err
 
 	t, err := p.decodeResponse(token, opts)
 	if err != nil {
-	    if p.MetadataURL != nil && errors.Is(err, ErrTokenSignatureInvalid) {
-	        if refreshErr := p.RefreshMetadata(); refreshErr == nil {
-	            t, err = p.decodeResponse(token, opts)
-	        }
+	    if p.MetadataURL != nil && errors.Is(err, ErrTokenSignatureInvalid) && p.RefreshMetadata() == nil {
+	        t, err = p.decodeResponse(token, opts)
 	    }
 		
 	    if err != nil {
