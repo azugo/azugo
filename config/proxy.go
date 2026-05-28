@@ -26,7 +26,7 @@ func (c *Proxy) Bind(prefix string, v *viper.Viper) {
 	if env := os.Getenv("REVERSE_PROXY_TRUSTED_IPS"); len(env) > 0 {
 		addrs = make([]string, 0, 3)
 
-		for _, addr := range strings.Split(env, ";") {
+		for addr := range strings.SplitSeq(env, ";") {
 			addr = strings.TrimSpace(addr)
 			if len(addr) == 0 {
 				continue
@@ -40,7 +40,7 @@ func (c *Proxy) Bind(prefix string, v *viper.Viper) {
 	if env := os.Getenv("REVERSE_PROXY_TRUSTED_HEADERS"); len(env) > 0 {
 		headers = make([]string, 0, 3)
 
-		for _, header := range strings.Split(env, ";") {
+		for header := range strings.SplitSeq(env, ";") {
 			header = strings.TrimSpace(header)
 			if len(header) == 0 {
 				continue

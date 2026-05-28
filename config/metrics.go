@@ -31,7 +31,7 @@ func (c *Metrics) Bind(prefix string, v *viper.Viper) {
 	if env := os.Getenv("METRICS_TRUSTED_IPS"); len(env) > 0 {
 		addrs = make([]string, 0, 3)
 
-		for _, addr := range strings.Split(env, ";") {
+		for addr := range strings.SplitSeq(env, ";") {
 			addr = strings.TrimSpace(addr)
 			if len(addr) == 0 {
 				continue
