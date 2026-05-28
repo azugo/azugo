@@ -123,7 +123,7 @@ func (p *metricsHandler) serveMetrics(ctx *azugo.Context) {
 	if negotiateOpenMetrics(accept) {
 		ctx.Response().Header.Set("Content-Type", "application/openmetrics-text; version=1.0.0; charset=utf-8")
 		metrics.WritePrometheus(w, true)
-		fmt.Fprint(w, "# EOF\n")
+		_, _ = w.Write([]byte("# EOF\n"))
 	} else {
 		ctx.Response().Header.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
 		metrics.WritePrometheus(w, true)
