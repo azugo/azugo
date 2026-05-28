@@ -25,7 +25,7 @@ func (s *ServerHTTP) Bind(prefix string, v *viper.Viper) {
 	port := 8080
 	enabled := true
 
-	for _, servu := range strings.Split(os.Getenv("SERVER_URLS"), ";") {
+	for servu := range strings.SplitSeq(os.Getenv("SERVER_URLS"), ";") {
 		servu = strings.TrimSpace(servu)
 		if len(servu) == 0 {
 			continue
@@ -74,7 +74,7 @@ func (s *ServerHTTPS) Bind(prefix string, v *viper.Viper) {
 	port := 4443
 	enabled := false
 
-	for _, servu := range strings.Split(os.Getenv("SERVER_URLS"), ";") {
+	for servu := range strings.SplitSeq(os.Getenv("SERVER_URLS"), ";") {
 		servu = strings.TrimSpace(servu)
 		if len(servu) == 0 {
 			continue

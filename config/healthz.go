@@ -37,7 +37,7 @@ func (c *Healthz) Bind(prefix string, v *viper.Viper) {
 	if env := os.Getenv("HEALTHZ_TRUSTED_IPS"); len(env) > 0 {
 		addrs = make([]string, 0, 6)
 
-		for _, addr := range strings.Split(env, ";") {
+		for addr := range strings.SplitSeq(env, ";") {
 			addr = strings.TrimSpace(addr)
 			if len(addr) == 0 {
 				continue
