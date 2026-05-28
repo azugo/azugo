@@ -40,6 +40,8 @@ func Metrics(path string, options ...MetricsOption) azugo.RequestHandlerFunc {
 		opt.apply(p)
 	}
 
+	metrics.ExposeMetadata(true)
+
 	p.reqSize = metrics.GetOrCreateSummary(p.metricName("request_size_bytes"))
 	p.respSize = metrics.GetOrCreateSummary(p.metricName("response_size_bytes"))
 
@@ -115,8 +117,39 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 }
 
 func (p *metricsHandler) serveMetrics(ctx *azugo.Context) {
-	ctx.Response().Header.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
-	metrics.WritePrometheus(ctx.Response().BodyWriter(), true)
+	accept := string(ctx.Request().Header.Peek("Accept"))
+	w := ctx.Response().BodyWriter()
+
+	if negotiateOpenMetrics(accept) {
+		ctx.Response().Header.Set("Content-Type", "application/openmetrics-text; version=1.0.0; charset=utf-8")
+		metrics.WritePrometheus(w, true)
+		fmt.Fprint(w, "# EOF\n")
+	} else {
+		ctx.Response().Header.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		metrics.WritePrometheus(w, true)
+	}
+}
+
+// negotiateOpenMetrics returns true if the Accept header prefers OpenMetrics format.
+func negotiateOpenMetrics(accept string) bool {
+	for part := range strings.SplitSeq(accept, ",") {
+		part = strings.TrimSpace(part)
+		mediaType, params, _ := strings.Cut(part, ";")
+
+		if strings.TrimSpace(mediaType) != "application/openmetrics-text" {
+			continue
+		}
+
+		for param := range strings.SplitSeq(params, ";") {
+			if strings.TrimSpace(param) == "q=0" {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	return false
 }
 
 func (p *metricsHandler) isTrusted(ctx *azugo.Context) bool {
