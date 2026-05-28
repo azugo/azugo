@@ -68,7 +68,7 @@ func (p *WsFederation) SigninURL(ctx context.Context, realm string, options ...R
 		params.Add("wreply", rp.Wreply)
 	}
 
-	params.Add("wct", p.clock.Now().UTC().Format(time.RFC3339))
+	params.Add("wct", p.clock().UTC().Format(time.RFC3339))
 	params.Add("wctx", wctx)
 
 	for _, param := range rp.Params {

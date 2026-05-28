@@ -156,15 +156,15 @@ func (p *WsFederation) Parse(token []byte, opt ...TokenParseOption) (*Token, err
 		err = ErrTokenInvalidAudience
 	}
 
-	if !verifyIat(t.Claims.IssuedAt, p.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckIat {
+	if !verifyIat(t.Claims.IssuedAt, p.clock().UTC(), opts.ClockSkew, true) && opts.CheckIat {
 		err = ErrTokenUsedBeforeIssued
 	}
 
-	if !verifyExp(t.Claims.ExpiresAt, p.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckExp {
+	if !verifyExp(t.Claims.ExpiresAt, p.clock().UTC(), opts.ClockSkew, true) && opts.CheckExp {
 		err = ErrTokenExpired
 	}
 
-	if !verifyNbf(t.Claims.NotBefore, p.clock.Now().UTC(), opts.ClockSkew, true) && opts.CheckNbf {
+	if !verifyNbf(t.Claims.NotBefore, p.clock().UTC(), opts.ClockSkew, true) && opts.CheckNbf {
 		err = ErrTokenNotValidYet
 	}
 

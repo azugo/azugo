@@ -9,7 +9,6 @@ import (
 	"azugo.io/azugo"
 
 	"github.com/go-quicktest/qt"
-	"github.com/jonboulle/clockwork"
 )
 
 func TestSigninURL(t *testing.T) {
@@ -19,7 +18,7 @@ func TestSigninURL(t *testing.T) {
 
 	ws, err := New(a.App, "")
 	ws.IDPEndpoint = &url.URL{Scheme: "https", Host: "idp.example.local", Path: "/wsfed"}
-	ws.clock = clockwork.NewFakeClockAt(time.Date(2022, time.January, 2, 14, 32, 15, 0, time.UTC))
+	ws.clock = func() time.Time { return time.Date(2022, time.January, 2, 14, 32, 15, 0, time.UTC) }
 	qt.Assert(t, qt.IsNil(err))
 
 	signinURL, err := ws.SigninURL(context.TODO(), "urn:test", WithRequestParam("lang", "en"))

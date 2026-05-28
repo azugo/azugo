@@ -9,11 +9,10 @@ require (
 	github.com/go-playground/validator/v10 v10.30.2
 	github.com/go-quicktest/qt v1.102.0
 	github.com/goccy/go-json v0.10.6
-	github.com/jonboulle/clockwork v0.5.0
+	github.com/lafriks/go-xmldsig/v2 v2.2.1
 	github.com/lafriks/http2 v0.5.0
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/oklog/ulid/v2 v2.1.1
-	github.com/russellhaering/goxmldsig v1.6.0
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/valyala/bytebufferpool v1.0.0

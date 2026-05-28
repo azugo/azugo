@@ -10,8 +10,7 @@ import (
 	"azugo.io/azugo/token/nonce"
 
 	"azugo.io/core/cache"
-	"github.com/jonboulle/clockwork"
-	dsig "github.com/russellhaering/goxmldsig"
+	"github.com/lafriks/go-xmldsig/v2"
 )
 
 const (
@@ -35,10 +34,10 @@ type WsFederation struct {
 	NonceStore nonce.Store
 
 	lock          sync.RWMutex
-	signCertStore dsig.X509CertificateStore
+	signCertStore xmldsig.X509CertificateStore
 	ready         bool
 	app           *azugo.App
-	clock         clockwork.Clock
+	clock         func() time.Time
 }
 
 // New creates a new WS-Federation service instance.
@@ -64,9 +63,9 @@ func New(app *azugo.App, metadataURL string) (*WsFederation, error) {
 		ClockSkew:   5 * time.Minute,
 		NonceStore:  nonce.NewCacheNonceStore(st),
 
-		clock: clockwork.NewRealClock(),
+		clock: time.Now,
 		app:   app,
-		signCertStore: &dsig.MemoryX509CertificateStore{
+		signCertStore: &xmldsig.MemoryX509CertificateStore{
 			Roots: []*x509.Certificate{},
 		},
 	}, nil
@@ -74,14 +73,14 @@ func New(app *azugo.App, metadataURL string) (*WsFederation, error) {
 
 // ClearCertificateStore clears the certificate store.
 func (p *WsFederation) ClearCertificateStore() {
-	p.signCertStore = &dsig.MemoryX509CertificateStore{
+	p.signCertStore = &xmldsig.MemoryX509CertificateStore{
 		Roots: []*x509.Certificate{},
 	}
 }
 
 // AddTrustedSigningCertificate adds a trusted certificate to the certificate store.
 func (p *WsFederation) AddTrustedSigningCertificate(cert *x509.Certificate) {
-	s, ok := p.signCertStore.(*dsig.MemoryX509CertificateStore)
+	s, ok := p.signCertStore.(*xmldsig.MemoryX509CertificateStore)
 	if ok {
 		s.Roots = append(s.Roots, cert)
 	}

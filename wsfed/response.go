@@ -9,8 +9,8 @@ import (
 	"azugo.io/azugo"
 
 	"github.com/beevik/etree"
+	"github.com/lafriks/go-xmldsig/v2"
 	xrv "github.com/mattermost/xml-roundtrip-validator"
-	dsig "github.com/russellhaering/goxmldsig"
 )
 
 const iso8601Layout = "2006-01-02T15:04:05Z"
@@ -50,25 +50,31 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 		return nil, ErrTokenMalformed
 	}
 
-	idAttr := dsig.DefaultIdAttr
+	idAttr := xmldsig.DefaultIDAttr
 	// Check if it has ID attribute, if not fallback to AssertionID
 	if el.SelectAttr(idAttr) == nil {
 		idAttr = "AssertionID"
 	}
 
-	ctx := dsig.NewDefaultValidationContext(p.signCertStore)
-	ctx.IdAttribute = idAttr
+	ctx := xmldsig.NewDefaultValidationContext(p.signCertStore)
+	ctx.IDAttribute = idAttr
 
-	validated, err := ctx.Validate(el)
+	validatedElements, err := ctx.Validate(el)
 	if err != nil {
-		if errors.Is(err, dsig.ErrMissingSignature) {
+		if errors.Is(err, xmldsig.ErrMissingSignature) {
 			return nil, ErrTokenUnverifiable
-		} else if errors.Is(err, dsig.ErrInvalidSignature) {
+		} else if errors.Is(err, xmldsig.ErrInvalidSignature) {
 			return nil, ErrTokenSignatureInvalid
 		}
 
 		return nil, err
 	}
+
+	if len(validatedElements) == 0 {
+		return nil, ErrTokenMalformed
+	}
+
+	validated := validatedElements[0]
 
 	var raw, signature, validatedRaw string
 
