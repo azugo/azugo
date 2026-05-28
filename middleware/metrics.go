@@ -1,32 +1,24 @@
 package middleware
 
 import (
-	"bytes"
+	"fmt"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"azugo.io/azugo"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/VictoriaMetrics/metrics"
 	"github.com/valyala/fasthttp"
-	"github.com/valyala/fasthttp/fasthttpadaptor"
 )
 
-var requestHandlerPool sync.Pool
+var requestDurationBuckets = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 15, 20, 30, 40, 50, 60}
 
 type metricsHandler struct {
-	reqCnt            *prometheus.CounterVec
-	reqDur            *prometheus.HistogramVec
-	reqSize, respSize prometheus.Summary
-	// Cached fasthttp handler for serving Prometheus metrics
-	httpHandler fasthttp.RequestHandler
-	// Metrics path
-	MetricsPath string
-	// Subsystem
-	Subsystem string
+	reqSize     *metrics.Summary
+	respSize    *metrics.Summary
+	metricsPath string
+	subsystem   string
 }
 
 // MetricsOption is an interface for metrics handler options.
@@ -34,60 +26,44 @@ type MetricsOption interface {
 	apply(h *metricsHandler)
 }
 
-// MetricsSubsystem represents subsystem name for Prometheus metric structuring.
+// MetricsSubsystem represents subsystem name for metric structuring.
 type MetricsSubsystem string
 
 func (m MetricsSubsystem) apply(p *metricsHandler) {
-	p.Subsystem = string(m)
+	p.subsystem = string(m)
 }
 
-// Metrics initializes and returns Prometheus metrics middleware.
+// Metrics initializes and returns metrics middleware.
 func Metrics(path string, options ...MetricsOption) azugo.RequestHandlerFunc {
-	p := &metricsHandler{MetricsPath: path}
+	p := &metricsHandler{metricsPath: path}
 	for _, opt := range options {
 		opt.apply(p)
 	}
 
-	p.registerMetrics()
-	p.httpHandler = fasthttpadaptor.NewFastHTTPHandler(promhttp.Handler())
+	p.reqSize = metrics.GetOrCreateSummary(p.metricName("request_size_bytes"))
+	p.respSize = metrics.GetOrCreateSummary(p.metricName("response_size_bytes"))
 
 	return p.Handler
 }
 
-// Idea is from https://github.com/DanielHeckrath/gin-prometheus/blob/master/gin_prometheus.go and https://github.com/zsais/go-gin-prometheus/blob/master/middleware.go
-func computeApproximateRequestSize(req *fasthttp.Request, out chan int) {
-	s := 0
-	if req.URI() != nil {
-		s += len(req.URI().Path())
-		s += len(req.URI().Host())
+func (p *metricsHandler) metricName(base string) string {
+	if p.subsystem != "" {
+		return p.subsystem + "_" + base
 	}
 
-	s += len(req.Header.Method())
-	s += len(req.Header.Protocol())
-
-	for key, value := range req.Header.All() {
-		if !bytes.Equal(key, []byte("Host")) {
-			s += len(key) + len(value)
-		}
-	}
-
-	if req.Header.ContentLength() != -1 {
-		s += req.Header.ContentLength()
-	}
-
-	out <- s
+	return base
 }
 
 // Handler returns metrics RequestHandler function which handles requests to gather metric data,
-// skipping paths from SkipPaths list
+// skipping paths from SkipPaths list.
 //
 // Handles MetricsPath requests from trusted IPs and trusted networks
 // which returns application metrics results.
 func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 	return func(ctx *azugo.Context) {
-		if strings.EqualFold(ctx.Path(), p.MetricsPath) {
+		if strings.EqualFold(ctx.Path(), p.metricsPath) {
 			if p.isTrusted(ctx) {
-				p.httpHandler(ctx.Context())
+				p.serveMetrics(ctx)
 			} else {
 				h(ctx)
 			}
@@ -95,23 +71,13 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 			return
 		}
 
-		for _, path := range ctx.App().MetricsOptions.SkipPaths {
-			if strings.HasPrefix(strings.ToLower(ctx.Path()), path) {
+		for _, skip := range ctx.App().MetricsOptions.SkipPaths {
+			if strings.HasPrefix(strings.ToLower(ctx.Path()), skip) {
 				h(ctx)
 
 				return
 			}
 		}
-
-		reqSize := make(chan int, 1)
-		frc := acquireRequestFromPool()
-		ctx.Request().CopyTo(frc)
-
-		go func() {
-			defer releaseRequestToPool(frc)
-
-			computeApproximateRequestSize(frc, reqSize)
-		}()
 
 		h(ctx)
 
@@ -139,68 +105,43 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 			path = ctx.Path()
 		}
 
-		p.reqDur.WithLabelValues(strconv.Itoa(status), ctx.Method(), path).Observe(elapsed)
-		p.reqCnt.WithLabelValues(strconv.Itoa(status), ctx.Method(), path).Inc()
-		p.reqSize.Observe(float64(<-reqSize))
-		p.respSize.Observe(respSize)
+		labels := fmt.Sprintf(`{code=%q,method=%q,path=%q}`, strconv.Itoa(status), ctx.Method(), path)
+		metrics.GetOrCreateCounter(p.metricName("requests_total") + labels).Inc()
+		metrics.GetOrCreatePrometheusHistogramExt(p.metricName("request_duration_seconds")+labels, requestDurationBuckets).Update(elapsed)
+
+		p.reqSize.Update(float64(computeApproximateRequestSize(ctx.Request())))
+		p.respSize.Update(respSize)
 	}
+}
+
+func (p *metricsHandler) serveMetrics(ctx *azugo.Context) {
+	ctx.Response().Header.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	metrics.WritePrometheus(ctx.Response().BodyWriter(), true)
 }
 
 func (p *metricsHandler) isTrusted(ctx *azugo.Context) bool {
 	return ctx.App().MetricsOptions.IsTrusted(ctx.IP())
 }
 
-func (p *metricsHandler) registerMetrics() {
-	RequestDurationBucket := []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 15, 20, 30, 40, 50, 60}
-	p.reqCnt = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Subsystem: p.Subsystem,
-			Name:      "requests_total",
-			Help:      "The HTTP request counts processed.",
-		},
-		[]string{"code", "method", "path"},
-	)
-	p.reqDur = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Subsystem: p.Subsystem,
-			Name:      "request_duration_seconds",
-			Help:      "The HTTP request duration in seconds.",
-			Buckets:   RequestDurationBucket,
-		},
-		[]string{"code", "method", "path"},
-	)
-	p.reqSize = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Subsystem: p.Subsystem,
-			Name:      "request_size_bytes",
-			Help:      "The HTTP request sizes in bytes.",
-		},
-	)
-	p.respSize = prometheus.NewSummary(
-		prometheus.SummaryOpts{
-			Subsystem: p.Subsystem,
-			Name:      "response_size_bytes",
-			Help:      "The HTTP response sizes in bytes.",
-		},
-	)
-	prometheus.MustRegister(p.reqCnt, p.reqDur, p.reqSize, p.respSize)
-}
-
-func acquireRequestFromPool() *fasthttp.Request {
-	v := requestHandlerPool.Get()
-	if v == nil {
-		return &fasthttp.Request{}
+func computeApproximateRequestSize(req *fasthttp.Request) int {
+	s := 0
+	if req.URI() != nil {
+		s += len(req.URI().Path())
+		s += len(req.URI().Host())
 	}
 
-	req, ok := v.(*fasthttp.Request)
-	if !ok {
-		return &fasthttp.Request{}
+	s += len(req.Header.Method())
+	s += len(req.Header.Protocol())
+
+	for key, value := range req.Header.All() {
+		if string(key) != "Host" {
+			s += len(key) + len(value)
+		}
 	}
 
-	return req
-}
+	if req.Header.ContentLength() != -1 {
+		s += req.Header.ContentLength()
+	}
 
-func releaseRequestToPool(req *fasthttp.Request) {
-	req.Reset()
-	requestHandlerPool.Put(req)
+	return s
 }
