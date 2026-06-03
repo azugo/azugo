@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+
+	"github.com/valyala/fasthttp"
 )
 
 type staticHandler struct {
@@ -23,6 +25,7 @@ type staticHandler struct {
 	NotFoundPath string
 
 	fs         *embed.FS
+	gzip       bool
 	altcontent map[string][]byte
 	extcache   map[string]string
 }
@@ -55,6 +58,17 @@ func (p StaticSPARouterPath) apply(h *staticHandler) {
 	h.NotFoundPath = string(p)
 }
 
+// StaticGzipContent enables pre-compressed gzip content that is served directly when the client accepts gzip encoding.
+func StaticGzipContent() StaticOption {
+	return staticGzipContent(true)
+}
+
+type staticGzipContent bool
+
+func (g staticGzipContent) apply(h *staticHandler) {
+	h.gzip = bool(g)
+}
+
 func (h *staticHandler) replaceContent(file string, replacer *strings.Replacer) ([]byte, bool, error) {
 	s, err := h.fs.Open(file)
 	if err != nil {
@@ -79,21 +93,40 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 	return func(ctx *Context) {
 		ctx.Header.Set("Content-Type", h.extcache[fpath])
 
+		useGzip := h.gzip && ctx.Request().Header.HasAcceptEncoding("gzip")
+		if h.gzip {
+			ctx.Header.Set("Vary", "Accept-Encoding")
+		}
+
 		// Modify content on the fly and replace values in content
 		if h.ReplacerFunc != nil {
 			hash, replacer := h.ReplacerFunc(ctx)
 			if replacer != nil {
-				// Check if already cached
-				if content, ok := h.altcontent[fpath]; len(hash) > 0 && ok {
-					ctx.Raw(content)
+				if len(hash) > 0 {
+					prefix := ""
+					if useGzip {
+						prefix = "gz:"
+					}
+					// Check non-hash-specific cache (content didn't change)
+					if content, ok := h.altcontent[prefix+fpath]; ok {
+						if useGzip {
+							ctx.Header.Set("Content-Encoding", "gzip")
+						}
 
-					return
-				}
+						ctx.Raw(content)
 
-				if content, ok := h.altcontent[hash+fpath]; len(hash) > 0 && ok {
-					ctx.Raw(content)
+						return
+					}
+					// Check hash-specific cache
+					if content, ok := h.altcontent[prefix+hash+fpath]; ok {
+						if useGzip {
+							ctx.Header.Set("Content-Encoding", "gzip")
+						}
 
-					return
+						ctx.Raw(content)
+
+						return
+					}
 				}
 
 				content, changed, err := h.replaceContent(path, replacer)
@@ -103,15 +136,38 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 					return
 				}
 
-				// Update cache
 				if len(hash) > 0 {
-					if !changed {
-						h.altcontent[fpath] = content
-					} else {
-						h.altcontent[hash+fpath] = content
+					cacheKey := fpath
+					if changed {
+						cacheKey = hash + fpath
+					}
+
+					h.altcontent[cacheKey] = content
+
+					if h.gzip {
+						h.altcontent["gz:"+cacheKey] = fasthttp.AppendGzipBytesLevel(nil, content, fasthttp.CompressBestCompression)
+					}
+
+					if useGzip {
+						if gz, ok := h.altcontent["gz:"+cacheKey]; ok {
+							ctx.Header.Set("Content-Encoding", "gzip")
+							ctx.Raw(gz)
+
+							return
+						}
 					}
 				}
 
+				ctx.Raw(content)
+
+				return
+			}
+		}
+
+		// Serve pre-compressed content if available and client accepts gzip
+		if useGzip {
+			if content, ok := h.altcontent["gz:"+fpath]; ok {
+				ctx.Header.Set("Content-Encoding", "gzip")
 				ctx.Raw(content)
 
 				return
@@ -133,7 +189,7 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 func (a *App) StaticEmbedded(path string, f *embed.FS, opts ...StaticOption) error {
 	h := &staticHandler{
 		fs:         f,
-		altcontent: make(map[string][]byte, 5),
+		altcontent: make(map[string][]byte, 10),
 		extcache:   make(map[string]string, 10),
 	}
 	for _, o := range opts {
@@ -163,6 +219,16 @@ func (a *App) StaticEmbedded(path string, f *embed.FS, opts ...StaticOption) err
 
 		h.extcache[fpath] = mime.TypeByExtension(filepath.Ext(fpath))
 
+		if h.gzip {
+			if fh, ferr := f.Open(file); ferr == nil {
+				var buf bytes.Buffer
+
+				_, _ = io.Copy(&buf, fh)
+				_ = fh.Close()
+				h.altcontent["gz:"+fpath] = fasthttp.AppendGzipBytesLevel(nil, buf.Bytes(), fasthttp.CompressBestCompression)
+			}
+		}
+
 		a.Get(fpath, h.requestHandler(fpath, file))
 
 		return nil
@@ -181,13 +247,22 @@ func (a *App) StaticEmbedded(path string, f *embed.FS, opts ...StaticOption) err
 			return err
 		}
 
-		// Validate that the file exists
-		f, err := h.fs.Open(file)
+		// Validate that the file exists and pre-compress if needed.
+		ff, err := h.fs.Open(file)
 		if err != nil {
 			return fmt.Errorf("static SPA route handler file not found: %w", err)
 		}
 
-		f.Close() //nolint:errcheck,gosec
+		h.extcache[fpath] = mime.TypeByExtension(filepath.Ext(fpath))
+
+		if h.gzip {
+			var buf bytes.Buffer
+
+			_, _ = io.Copy(&buf, ff)
+			h.altcontent["gz:"+fpath] = fasthttp.AppendGzipBytesLevel(nil, buf.Bytes(), fasthttp.CompressBestCompression)
+		}
+
+		_ = ff.Close()
 
 		a.Get(base+"{path:*}", h.requestHandler(fpath, file))
 	}
