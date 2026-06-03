@@ -166,7 +166,7 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 
 		// Serve pre-compressed content if available and client accepts gzip
 		if useGzip {
-			if content, ok := h.altcontent["gz:"+fpath]; ok {
+			if content, ok := h.altcontent["gz:*"+fpath]; ok {
 				ctx.Header.Set("Content-Encoding", "gzip")
 				ctx.Raw(content)
 
@@ -225,7 +225,7 @@ func (a *App) StaticEmbedded(path string, f *embed.FS, opts ...StaticOption) err
 
 				_, _ = io.Copy(&buf, fh)
 				_ = fh.Close()
-				h.altcontent["gz:"+fpath] = fasthttp.AppendGzipBytesLevel(nil, buf.Bytes(), fasthttp.CompressBestCompression)
+				h.altcontent["gz:*"+fpath] = fasthttp.AppendGzipBytesLevel(nil, buf.Bytes(), fasthttp.CompressBestCompression)
 			}
 		}
 
@@ -259,7 +259,7 @@ func (a *App) StaticEmbedded(path string, f *embed.FS, opts ...StaticOption) err
 			var buf bytes.Buffer
 
 			_, _ = io.Copy(&buf, ff)
-			h.altcontent["gz:"+fpath] = fasthttp.AppendGzipBytesLevel(nil, buf.Bytes(), fasthttp.CompressBestCompression)
+			h.altcontent["gz:*"+fpath] = fasthttp.AppendGzipBytesLevel(nil, buf.Bytes(), fasthttp.CompressBestCompression)
 		}
 
 		_ = ff.Close()
