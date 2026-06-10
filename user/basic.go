@@ -1,6 +1,7 @@
 package user
 
 import (
+	"maps"
 	"strings"
 
 	"azugo.io/azugo/token"
@@ -86,6 +87,26 @@ func New(claims map[string]token.ClaimStrings, options ...Option) *Basic {
 	user.parseScopes()
 
 	return user
+}
+
+// NewIdentity creates a new user identity.
+// id is stored as the "sub" claim; scope is and stored as individual
+// entries in the "scope" claim.
+// Additional claims are merged in first, so id and scope take
+// precedence when both are provided.
+func NewIdentity(id, scope string, claims map[string]token.ClaimStrings, options ...Option) *Basic {
+	merged := make(map[string]token.ClaimStrings, len(claims)+2)
+	maps.Copy(merged, claims)
+
+	if id != "" {
+		merged["sub"] = token.ClaimStrings{id}
+	}
+
+	if scope != "" {
+		merged["scope"] = token.ClaimStrings(strings.Fields(scope))
+	}
+
+	return New(merged, options...)
 }
 
 // ClaimValue returns claim value.

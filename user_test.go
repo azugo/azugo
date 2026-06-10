@@ -45,6 +45,43 @@ func TestUser(t *testing.T) {
 	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 }
 
+func TestUserNewIdentity(t *testing.T) {
+	app := NewTestApp()
+
+	app.Use(func(h RequestHandler) RequestHandler {
+		return func(ctx *Context) {
+			u := user.NewIdentity("456", "read write:users", map[string]token.ClaimStrings{
+				"name":  {"Jane Doe"},
+				"email": {"jane@example.com"},
+			})
+			ctx.SetUser(u)
+			h(ctx)
+		}
+	})
+
+	app.Get("/test", func(ctx *Context) {
+		u := ctx.User()
+		qt.Check(t, qt.IsNotNil(u))
+		qt.Check(t, qt.IsTrue(u.Authorized()))
+		qt.Check(t, qt.Equals(u.ID(), "456"))
+		qt.Check(t, qt.Equals(u.DisplayName(), "Jane Doe"))
+		qt.Check(t, qt.IsTrue(u.HasScope("read")))
+		qt.Check(t, qt.IsTrue(u.HasScope("write")))
+		qt.Check(t, qt.IsTrue(u.HasScopeLevel("write", "users")))
+		qt.Check(t, qt.IsFalse(u.HasScope("delete")))
+		qt.Check(t, qt.Equals(u.ClaimValue("email"), "jane@example.com"))
+	})
+
+	app.Start(t)
+	defer app.Stop()
+
+	resp, err := app.TestClient().Get("/test")
+	qt.Assert(t, qt.IsNil(err))
+	defer fasthttp.ReleaseResponse(resp)
+
+	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+}
+
 func TestDefaultAnonymous(t *testing.T) {
 	app := NewTestApp()
 
