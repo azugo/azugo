@@ -411,36 +411,29 @@ func (c *Context) AcceptsExplicit(contentType string) bool {
 	}
 
 	ctGroup, _, _ := strings.Cut(contentType, "/")
-	ctGroup += "/*"
 
-	var (
-		part string
-		pos  int
-	)
-
-	for len(h) > 0 && pos != -1 {
-		pos = strings.IndexByte(h, ',')
-		if pos != -1 {
-			part = strings.Trim(h[:pos], " ")
+	for len(h) > 0 {
+		var part string
+		if i := strings.IndexByte(h, ','); i >= 0 {
+			part = strings.Trim(h[:i], " ")
+			h = h[i+1:]
 		} else {
 			part = strings.Trim(h, " ")
+			h = ""
 		}
 
-		// Ignore priority
-		if f := strings.IndexByte(part, ';'); f != -1 {
-			part = strings.TrimRight(part[:f], " ")
+		// Strip priority
+		if i := strings.IndexByte(part, ';'); i >= 0 {
+			part = strings.TrimRight(part[:i], " ")
 		}
 
 		if part == contentType {
 			return true
 		}
 
-		if part == ctGroup {
+		// Match "type/*" wildcard
+		if strings.HasPrefix(part, ctGroup) && part[len(ctGroup):] == "/*" {
 			return true
-		}
-
-		if pos != -1 {
-			h = h[pos+1:]
 		}
 	}
 

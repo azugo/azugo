@@ -1,7 +1,6 @@
 package azugo
 
 import (
-	"bytes"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -318,7 +317,8 @@ func (m *mux) HandleNotFound(ctx *Context) {
 }
 
 func (m *mux) HandleError(ctx *Context, err error, p bool) {
-	ct := ctx.Response().Header.ContentType()
+	// Copy content type before Reset()
+	ct := string(ctx.Response().Header.ContentType())
 	// Reset response so that no partial data is sent
 	ctx.Response().Reset()
 
@@ -338,14 +338,23 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 	}
 
 	// Check that the error implements method to customize the status code
-	switch rerr, ok := err.(http.ResponseStatusCode); {
-	case ok:
+	var rerr http.ResponseStatusCode
+	switch {
+	case errors.As(err, &rerr):
 		ctx.StatusCode(rerr.StatusCode())
 	case errors.As(err, &validator.ValidationErrors{}):
 		// Validation errors return a 422 (unprocessable entity) status code
 		ctx.StatusCode(fasthttp.StatusUnprocessableEntity)
 	default:
 		ctx.StatusCode(fasthttp.StatusInternalServerError)
+	}
+
+	// Set any additional response headers
+	var rh ErrorHeaders
+	if errors.As(err, &rh) {
+		for name, value := range rh.ErrorHeaders() {
+			ctx.Header.Set(name, value)
+		}
 	}
 
 	// Log debug information about error
@@ -356,13 +365,37 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 		m.app.Log().Error(err.Error(), zap.Error(err))
 	}
 
+	// Custom error marshaling
+	var enc ErrorMarshaler
+	if errors.As(err, &enc) {
+		if strings.HasPrefix(ct, ContentTypeJSON) || ctx.AcceptsExplicit(ContentTypeJSON) ||
+			(!strings.HasPrefix(ct, ContentTypeXML) && !ctx.AcceptsExplicit(ContentTypeXML)) {
+			if body, bodyCT, ok := enc.MarshalError(ContentTypeJSON); ok {
+				ctx.ContentType(bodyCT)
+				ctx.Raw(body)
+
+				return
+			}
+		}
+
+		if strings.HasPrefix(ct, ContentTypeXML) || ctx.AcceptsExplicit(ContentTypeXML) {
+			if body, bodyCT, ok := enc.MarshalError(ContentTypeXML); ok {
+				ctx.ContentType(bodyCT)
+				ctx.Raw(body)
+
+				return
+			}
+		}
+	}
+
 	// Check that the error implements method to for safe error message
 	resp := NewErrorResponse(err)
 	if resp == nil {
 		return
 	}
 
-	if hasCT := bytes.HasPrefix(ct, []byte(ContentTypeJSON)); hasCT || ctx.AcceptsExplicit(ContentTypeJSON) {
+	switch {
+	case strings.HasPrefix(ct, ContentTypeJSON) || ctx.AcceptsExplicit(ContentTypeJSON):
 		data, ierr := json.Marshal(resp)
 		if ierr != nil {
 			m.app.Log().Error("error marshalling error response", zap.Error(ierr))
@@ -370,12 +403,9 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 			return
 		}
 
-		if !hasCT {
-			ctx.ContentType(ContentTypeJSON)
-		}
-
+		ctx.ContentType(ContentTypeJSON)
 		ctx.Raw(data)
-	} else if hasCT := bytes.HasPrefix(ct, []byte(ContentTypeXML)); hasCT || ctx.AcceptsExplicit(ContentTypeXML) {
+	case strings.HasPrefix(ct, ContentTypeXML) || ctx.AcceptsExplicit(ContentTypeXML):
 		data, ierr := xml.Marshal(resp)
 		if ierr != nil {
 			m.app.Log().Error("error marshalling error response", zap.Error(ierr))
@@ -383,12 +413,9 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 			return
 		}
 
-		if !hasCT {
-			ctx.ContentType(ContentTypeXML)
-		}
-
+		ctx.ContentType(ContentTypeXML)
 		ctx.Raw(data)
-	} else {
+	default:
 		ctx.Text(resp.Errors[0].Message)
 	}
 }

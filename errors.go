@@ -3,6 +3,7 @@ package azugo
 import (
 	"errors"
 	"fmt"
+	"iter"
 	"reflect"
 
 	"azugo.io/core/http"
@@ -18,6 +19,19 @@ const (
 // that can be safely returned to the client.
 type SafeError interface {
 	SafeError() string
+}
+
+// ErrorHeaders is an interface that an error can implement to return
+// additional HTTP response headers to set when the error is handled.
+type ErrorHeaders interface {
+	ErrorHeaders() iter.Seq2[string, string]
+}
+
+// ErrorMarshaler is an interface that an error can implement to provide a
+// custom response body.
+// Return false to fallback to default formatting.
+type ErrorMarshaler interface {
+	MarshalError(contentType string) (body []byte, ct string, ok bool)
 }
 
 func fromSafeError(err SafeError) *http.ErrorResponseError {
