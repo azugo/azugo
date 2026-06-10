@@ -11,7 +11,6 @@ import (
 type BodyCtx struct {
 	noCopy noCopy
 
-	app *App
 	ctx *Context
 }
 

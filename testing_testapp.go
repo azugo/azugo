@@ -130,8 +130,9 @@ func (a *TestApp) TestClient() *TestClient {
 	}
 
 	return &TestClient{
-		app:    a,
-		client: client,
+		app:     a,
+		client:  client,
+		cookies: make(map[string]string),
 	}
 }
 

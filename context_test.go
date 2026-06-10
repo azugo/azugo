@@ -19,10 +19,18 @@ func (t *testExtValueContext) Context(ctx context.Context) context.Context {
 	return context.WithValue(ctx, "test", "value")
 }
 
-type testExtDeadlineContext struct{}
+type testExtDeadlineContext struct {
+	cancel context.CancelFunc
+}
 
 func (t *testExtDeadlineContext) Context(ctx context.Context) context.Context {
-	c, _ := context.WithDeadline(context.TODO(), time.Now().Add(time.Minute))
+	if t.cancel != nil {
+		t.cancel()
+	}
+
+	c, cancel := context.WithDeadline(context.TODO(), time.Now().Add(time.Minute))
+	t.cancel = cancel
+
 	return c
 }
 
@@ -54,10 +62,16 @@ func TestContextValueExtension(t *testing.T) {
 func TestContextDeadlineExtension(t *testing.T) {
 	app := NewTestApp()
 
-	app.SetExtendedContext(&testExtDeadlineContext{})
+	ext := &testExtDeadlineContext{}
+	app.SetExtendedContext(ext)
 
 	app.Start(t)
 	defer app.Stop()
+	t.Cleanup(func() {
+		if ext.cancel != nil {
+			ext.cancel()
+		}
+	})
 
 	app.Get("/test", func(ctx *Context) {
 		_, ok := ctx.Deadline()

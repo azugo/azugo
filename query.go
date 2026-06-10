@@ -12,7 +12,6 @@ import (
 type QueryCtx struct {
 	noCopy noCopy
 
-	app *App
 	ctx *Context
 }
 

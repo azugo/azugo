@@ -3,6 +3,7 @@ package azugo
 import (
 	"bytes"
 	"fmt"
+	"iter"
 	"strings"
 
 	"azugo.io/azugo/internal/utils"
@@ -33,7 +34,6 @@ const (
 type HeaderCtx struct {
 	noCopy noCopy
 
-	app *App
 	ctx *Context
 }
 
@@ -65,15 +65,15 @@ func (h *HeaderCtx) Values(key string) []string {
 	return data
 }
 
-// Keys returns all header keys in request.
-func (h *HeaderCtx) Keys() []string {
-	keys := make([]string, 0, h.ctx.Request().Header.Len())
-
-	for k := range h.ctx.Request().Header.All() {
-		keys = append(keys, utils.B2S(k))
+// Keys returns an iterator over all header keys in request.
+func (h *HeaderCtx) Keys() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		for k := range h.ctx.Request().Header.All() {
+			if !yield(utils.B2S(k)) {
+				return
+			}
+		}
 	}
-
-	return keys
 }
 
 // Set sets the response header entries associated with key to the single element value.

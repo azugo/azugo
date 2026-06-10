@@ -17,8 +17,9 @@ import (
 
 // TestClient is a test client for testing purposes.
 type TestClient struct {
-	app    *TestApp
-	client *fasthttp.Client
+	app     *TestApp
+	client  *fasthttp.Client
+	cookies map[string]string
 }
 
 // TestClientOption is a test client option.
@@ -35,6 +36,28 @@ func (c *TestClient) WithHost(host string) TestClientOption {
 	return func(_ *TestClient, r *fasthttp.Request) {
 		r.SetHost(host)
 	}
+}
+
+// WithCookie adds a cookie to the request, overriding any jar cookie with the same name.
+func (c *TestClient) WithCookie(name, value string) TestClientOption {
+	return func(_ *TestClient, r *fasthttp.Request) {
+		r.Header.SetCookie(name, value)
+	}
+}
+
+// Cookies returns a copy of all cookies currently held in the jar.
+func (c *TestClient) Cookies() map[string]string {
+	result := make(map[string]string, len(c.cookies))
+	for k, v := range c.cookies {
+		result[k] = v
+	}
+
+	return result
+}
+
+// ClearCookies removes all cookies from the jar.
+func (c *TestClient) ClearCookies() {
+	c.cookies = make(map[string]string)
 }
 
 // WithHeader adds header to request.
@@ -80,6 +103,10 @@ func (c *TestClient) CallRaw(method, endpoint, body []byte, options ...TestClien
 	req.Header.SetMethodBytes(method)
 	req.SetRequestURIBytes(endpoint)
 
+	for name, value := range c.cookies {
+		req.Header.SetCookie(name, value)
+	}
+
 	c.applyOptions(req, options)
 
 	if len(body) > fasthttp.DefaultMaxRequestBodySize {
@@ -94,6 +121,23 @@ func (c *TestClient) CallRaw(method, endpoint, body []byte, options ...TestClien
 
 	if err := c.client.Do(req, resp); err != nil {
 		return nil, err
+	}
+
+	// Update cookies in jar received from server
+	for k, v := range resp.Header.Cookies() {
+		name := string(k)
+		cookie := fasthttp.AcquireCookie()
+
+		if err := cookie.ParseBytes(v); err == nil {
+			value := string(cookie.Value())
+			if len(value) == 0 || cookie.Expire().Equal(fasthttp.CookieExpireDelete) {
+				delete(c.cookies, name)
+			} else {
+				c.cookies[name] = value
+			}
+		}
+
+		fasthttp.ReleaseCookie(cookie)
 	}
 
 	return resp, nil

@@ -56,6 +56,8 @@ type Context struct {
 
 	// Header access methods
 	Header HeaderCtx
+	// Cookie access methods
+	Cookie CookieCtx
 	// Query access methods
 	Query QueryCtx
 	// Body access methods
@@ -83,16 +85,12 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 		ctx = new(Context)
 		ctx.app = a
 		ctx.loggerFields = make(map[string]zap.Field, 10)
-		ctx.Header.app = a
 		ctx.Header.ctx = ctx
-		ctx.Query.app = a
+		ctx.Cookie.ctx = ctx
 		ctx.Query.ctx = ctx
-		ctx.Body.app = a
 		ctx.Body.ctx = ctx
-		ctx.Form.app = a
 		ctx.Form.ctx = ctx
 		ctx.Form.form = nilArgsValuer
-		ctx.Params.app = a
 		ctx.Params.ctx = ctx
 	}
 

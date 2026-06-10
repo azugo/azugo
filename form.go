@@ -25,7 +25,6 @@ type FormCtx struct {
 
 	form formKeyValuer
 
-	app *App
 	ctx *Context
 }
 

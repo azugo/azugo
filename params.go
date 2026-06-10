@@ -8,7 +8,6 @@ import (
 type ParamsCtx struct {
 	noCopy noCopy
 
-	app *App
 	ctx *Context
 }
 
