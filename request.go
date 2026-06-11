@@ -2,6 +2,7 @@ package azugo
 
 import (
 	"bytes"
+	"context"
 	"net"
 	"strings"
 	"time"
@@ -38,6 +39,8 @@ type Context struct {
 
 	// Base fastHTTP request context
 	context *fasthttp.RequestCtx
+	// reqCtx is the effective request context installed via SetContext.
+	reqCtx context.Context
 
 	method     string    // HTTP method
 	path       string    // HTTP path with the modifications by the configuration -> string copy from pathBuffer
@@ -169,6 +172,7 @@ func (c *Context) reset() {
 	c.Form.form = nilArgsValuer
 	c.user = nil
 	c.context = nil
+	c.reqCtx = nil
 	c.mux = nil
 	clear(c.loggerFields)
 	c.loggerCore = nil

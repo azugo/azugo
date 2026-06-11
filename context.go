@@ -5,6 +5,35 @@ import (
 	"time"
 )
 
+// requestContextKeyType is the type of the sentinel key under which a Context
+// returns itself from Value, so RequestContext can recover the *Context even
+// after it has been wrapped by other context.Context decorators.
+type requestContextKeyType struct{}
+
+var requestContextKey requestContextKeyType
+
+// SetContext installs the effective request context.
+//
+// ctx MUST be derived from c.Context() (the underlying request context),
+// for example using context.WithValue(c.Context(), key, value).
+func (c *Context) SetContext(ctx context.Context) {
+	c.reqCtx = ctx
+}
+
+func (c *Context) effectiveContext() context.Context {
+	if c.reqCtx != nil {
+		return c.reqCtx
+	}
+
+	if c.app.ctxExt != nil {
+		if ce := c.app.ctxExt.Context(c); ce != nil && ce != c {
+			return ce
+		}
+	}
+
+	return c.context
+}
+
 // Deadline returns the time when work done on behalf of this context
 // should be canceled. Deadline returns ok==false when no deadline is
 // set. Successive calls to Deadline return the same results.
@@ -13,13 +42,7 @@ func (c *Context) Deadline() (time.Time, bool) {
 		return time.Time{}, false
 	}
 
-	if c.app.ctxExt != nil {
-		if ce := c.app.ctxExt.Context(c); ce != nil && ce != c {
-			return ce.Deadline()
-		}
-	}
-
-	return c.context.Deadline()
+	return c.effectiveContext().Deadline()
 }
 
 // Done returns a channel that's closed when work done on behalf of this
@@ -58,13 +81,7 @@ func (c *Context) Done() <-chan struct{} {
 		return nil
 	}
 
-	if c.app.ctxExt != nil {
-		if ce := c.app.ctxExt.Context(c); ce != nil && ce != c {
-			return ce.Done()
-		}
-	}
-
-	return c.context.Done()
+	return c.effectiveContext().Done()
 }
 
 // Err returns nil if Done is not yet closed.
@@ -77,13 +94,7 @@ func (c *Context) Err() error {
 		return nil
 	}
 
-	if c.app.ctxExt != nil {
-		if ce := c.app.ctxExt.Context(c); ce != nil && ce != c {
-			return ce.Err()
-		}
-	}
-
-	return c.context.Err()
+	return c.effectiveContext().Err()
 }
 
 // Value returns the value associated with this context for key, or nil
@@ -136,6 +147,14 @@ func (c *Context) Value(key any) any {
 		return nil
 	}
 
+	if key == requestContextKey {
+		return c
+	}
+
+	if c.reqCtx != nil {
+		return c.reqCtx.Value(key)
+	}
+
 	if c.app.ctxExt != nil {
 		if ce := c.app.ctxExt.Context(c); ce != nil && ce != c {
 			if v := ce.Value(key); v != nil {
@@ -153,7 +172,8 @@ type Contexter interface {
 	RequestContext() context.Context
 }
 
-// RequestContext returns request context from context.
+// RequestContext returns the request context carried by ctx, or nil if
+// there is none.
 //
 //nolint:contextcheck
 func RequestContext(ctx context.Context) *Context {
@@ -163,17 +183,27 @@ func RequestContext(ctx context.Context) *Context {
 
 	if c, ok := ctx.(Contexter); ok {
 		ctx = c.RequestContext()
+		if ctx == nil {
+			return nil
+		}
 	}
 
-	rctx, ok := ctx.(*Context)
-	if !ok {
-		return nil
+	if rctx, ok := ctx.(*Context); ok {
+		return rctx
 	}
 
-	return rctx
+	// Recover through arbitrary wrappers that delegate Value up the chain.
+	if rctx, ok := ctx.Value(requestContextKey).(*Context); ok {
+		return rctx
+	}
+
+	return nil
 }
 
 // ExtendedContext is an interface that can be implemented to extend the context.
+//
+// Deprecated: use Context.SetContext to install the effective request context
+// instead.
 type ExtendedContext interface {
 	// Context returns extended context.
 	Context(ctx context.Context) context.Context

@@ -149,6 +149,9 @@ func (a *App) SetRouterSwitch(r RouteSwitcher) {
 }
 
 // SetExtendedContext sets the context extension.
+//
+// Deprecated: use Context.SetContext from a handler or middleware to install the
+// effective request context instead. See ExtendedContext for details.
 func (a *App) SetExtendedContext(ext ExtendedContext) {
 	a.ctxExt = ext
 }

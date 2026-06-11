@@ -16,7 +16,7 @@ func TestImplementsContextInterface(t *testing.T) {
 type testExtValueContext struct{}
 
 func (t *testExtValueContext) Context(ctx context.Context) context.Context {
-	return context.WithValue(ctx, "test", "value")
+	return context.WithValue(RequestContext(ctx).Context(), "test", "value")
 }
 
 type testExtDeadlineContext struct {
@@ -28,12 +28,13 @@ func (t *testExtDeadlineContext) Context(ctx context.Context) context.Context {
 		t.cancel()
 	}
 
-	c, cancel := context.WithDeadline(context.TODO(), time.Now().Add(time.Minute))
+	c, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Minute))
 	t.cancel = cancel
 
 	return c
 }
 
+// TestContextValueExtension covers the deprecated ExtendedContext hook path.
 func TestContextValueExtension(t *testing.T) {
 	app := NewTestApp()
 
@@ -43,6 +44,8 @@ func TestContextValueExtension(t *testing.T) {
 	defer app.Stop()
 
 	app.Get("/test", func(ctx *Context) {
+		qt.Check(t, qt.IsNil(ctx.Value("missing")))
+
 		v := ctx.Value("test")
 
 		if v == "value" {
@@ -57,6 +60,116 @@ func TestContextValueExtension(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 
 	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+}
+
+type testTxKeyType struct{}
+
+var testTxKey testTxKeyType
+
+type testTxContext struct {
+	context.Context
+
+	parent context.Context
+}
+
+func (c *testTxContext) RequestContext() context.Context { return c.parent }
+
+func wrapTestTx(ctx context.Context) *testTxContext {
+	t := &testTxContext{parent: ctx}
+	t.Context = context.WithValue(ctx, testTxKey, t)
+
+	return t
+}
+
+func TestContextSetContext(t *testing.T) {
+	app := NewTestApp()
+	app.Start(t)
+	defer app.Stop()
+
+	type pushKey struct{}
+
+	deadline := time.Now().Add(time.Minute)
+
+	app.Get("/test", func(ctx *Context) {
+		ctx.SetUserValue("base-key", "base-val")
+
+		ctx.SetContext(context.WithValue(ctx.Context(), pushKey{}, "push-val"))
+		qt.Check(t, qt.Equals(ctx.Value(pushKey{}).(string), "push-val"))
+		qt.Check(t, qt.Equals(ctx.Value("base-key").(string), "base-val"))
+		qt.Check(t, qt.IsNil(ctx.Value("missing")))
+
+		dctx, cancel := context.WithDeadline(context.Background(), deadline)
+		defer cancel()
+		ctx.SetContext(dctx)
+		d, ok := ctx.Deadline()
+		qt.Check(t, qt.IsTrue(ok))
+		qt.Check(t, qt.IsTrue(d.Equal(deadline)))
+
+		ctx.SetContext(nil)
+		qt.Check(t, qt.IsNil(ctx.Value(pushKey{})))
+		qt.Check(t, qt.Equals(ctx.Value("base-key").(string), "base-val"))
+
+		ctx.StatusCode(fasthttp.StatusNoContent)
+	})
+
+	resp, err := app.TestClient().Get("/test")
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNoContent))
+}
+
+func TestRequestContextRecovery(t *testing.T) {
+	app := NewTestApp()
+	app.Start(t)
+	defer app.Stop()
+
+	type slowKey struct{}
+
+	app.Get("/test", func(ctx *Context) {
+		qt.Check(t, qt.Equals(RequestContext(ctx), ctx))
+		tx := wrapTestTx(ctx)
+		qt.Check(t, qt.Equals(RequestContext(tx), ctx))
+		qt.Check(t, qt.Equals(RequestContext(context.WithValue(tx, slowKey{}, "5s")), ctx))
+		qt.Check(t, qt.Equals(RequestContext(context.WithValue(ctx, slowKey{}, "x")), ctx))
+		qt.Check(t, qt.IsNil(RequestContext(context.Background())))
+		qt.Check(t, qt.IsNil(RequestContext(nil)))
+
+		ctx.StatusCode(fasthttp.StatusNoContent)
+	})
+
+	resp, err := app.TestClient().Get("/test")
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNoContent))
+}
+
+func TestContextTransactionAndSpanStack(t *testing.T) {
+	app := NewTestApp()
+	app.Start(t)
+	defer app.Stop()
+
+	type spanKey struct{}
+
+	type slowKey struct{}
+
+	app.Get("/test", func(ctx *Context) {
+		ctx.SetContext(context.WithValue(ctx.Context(), spanKey{}, "span"))
+
+		tx := wrapTestTx(ctx)
+		stack := context.WithValue(tx, slowKey{}, "5s")
+
+		qt.Check(t, qt.Equals(RequestContext(stack), ctx))
+		qt.Check(t, qt.Equals(stack.Value(spanKey{}).(string), "span"))
+		qt.Check(t, qt.Equals(stack.Value(testTxKey).(*testTxContext), tx))
+		qt.Check(t, qt.Equals(stack.Value(slowKey{}).(string), "5s"))
+
+		ctx.StatusCode(fasthttp.StatusNoContent)
+	})
+
+	resp, err := app.TestClient().Get("/test")
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNoContent))
 }
 
 func TestContextDeadlineExtension(t *testing.T) {
