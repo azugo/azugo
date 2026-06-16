@@ -87,6 +87,50 @@ func (h *HeaderCtx) Add(key, value string) {
 	h.ctx.Response().Header.Add(key, value)
 }
 
+// SetAlways sets the response header like Set, and additionally re-applies it if
+// the response is later reset to render an error.
+// Use it for headers that must remain on error responses, such as CORS headers.
+func (h *HeaderCtx) SetAlways(key, value string) {
+	h.Set(key, value)
+	h.ctx.preserveHeader(key)
+}
+
+type headerEntry struct {
+	name  string
+	value []byte
+}
+
+func (c *Context) preserveHeader(name string) {
+	for i := range c.alwaysHeaders {
+		if c.alwaysHeaders[i].name == name {
+			return
+		}
+	}
+
+	if n := len(c.alwaysHeaders); n < cap(c.alwaysHeaders) {
+		c.alwaysHeaders = c.alwaysHeaders[:n+1]
+		c.alwaysHeaders[n].name = name
+
+		return
+	}
+
+	c.alwaysHeaders = append(c.alwaysHeaders, headerEntry{name: name})
+}
+
+func (c *Context) captureAlwaysHeaders() {
+	for i := range c.alwaysHeaders {
+		c.alwaysHeaders[i].value = append(c.alwaysHeaders[i].value[:0], c.Response().Header.Peek(c.alwaysHeaders[i].name)...)
+	}
+}
+
+func (c *Context) applyAlwaysHeaders() {
+	for i := range c.alwaysHeaders {
+		if len(c.alwaysHeaders[i].value) > 0 {
+			c.Response().Header.SetBytesV(c.alwaysHeaders[i].name, c.alwaysHeaders[i].value)
+		}
+	}
+}
+
 // Del deletes the values associated with key in both request and response.
 func (h *HeaderCtx) Del(key string) {
 	h.ctx.Request().Header.Del(key)

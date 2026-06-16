@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"azugo.io/core/http"
+	"azugo.io/core/instrumenter"
 	"github.com/go-quicktest/qt"
 )
 
@@ -15,7 +16,7 @@ func TestHTTPClient_Context(t *testing.T) {
 
 	a.Instrumentation(func(ctx context.Context, op string, args ...any) func(err error) {
 		if op != http.InstrumentationRequest {
-			return func(_ error) {}
+			return instrumenter.NullFinish
 		}
 
 		c, ok := ctx.(*Context)
@@ -23,7 +24,7 @@ func TestHTTPClient_Context(t *testing.T) {
 		qt.Check(t, qt.IsTrue(ok), qt.Commentf("expected *Context, got %T", ctx))
 		qt.Check(t, qt.IsNotNil(c), qt.Commentf("expected non-nil *Context"))
 
-		return func(_ error) {}
+		return instrumenter.NullFinish
 	})
 
 	a.Get("/test", func(ctx *Context) {
@@ -65,12 +66,12 @@ func TestHTTPClient_SimpleTracing(t *testing.T) {
 	a.App.Instrumentation(func(_ context.Context, op string, args ...any) func(err error) {
 		req, _, ok := http.InstrRequest(op, args...)
 		if !ok {
-			return func(_ error) {}
+			return instrumenter.NullFinish
 		}
 
 		forwardedTraceparent = string(req.Header.Peek("Traceparent"))
 
-		return func(_ error) {}
+		return instrumenter.NullFinish
 	})
 
 	a.Use(func(next RequestHandler) RequestHandler {

@@ -15,6 +15,32 @@ import (
 // Options is a set of options for the server.
 type Options server.Options
 
+func (o Options) apply(opt *options) {
+	opt.appOpt = o
+}
+
+// Option is an interface for configuring the app after creation.
+type Option interface {
+	apply(opt *options)
+}
+
+type options struct {
+	appOpt               Options
+	disableAutoRateLimit bool
+}
+
+type disableAutoRateLimitOpt struct{}
+
+func (d *disableAutoRateLimitOpt) apply(opt *options) {
+	opt.disableAutoRateLimit = true
+}
+
+// DisableAutoRateLimit returns an option that prevents the rate limit middleware
+// from being automatically added to the global middleware stack.
+func DisableAutoRateLimit() Option {
+	return &disableAutoRateLimitOpt{}
+}
+
 // newApp creates a new Azugo app with configuration loaded but without any middlewares.
 func newApp(cmd *cobra.Command, opt Options) (*azugo.App, error) {
 	var conf *config.Configuration
@@ -44,8 +70,14 @@ func newApp(cmd *cobra.Command, opt Options) (*azugo.App, error) {
 }
 
 // New returns new Azugo pre-configured server with default set of middlewares and default router options.
-func New(cmd *cobra.Command, opt Options) (*azugo.App, error) {
-	a, err := newApp(cmd, opt)
+func New(cmd *cobra.Command, opts ...Option) (*azugo.App, error) {
+	opt := &options{}
+
+	for _, o := range opts {
+		o.apply(opt)
+	}
+
+	a, err := newApp(cmd, opt.appOpt)
 	if err != nil {
 		return nil, err
 	}
@@ -63,6 +95,10 @@ func New(cmd *cobra.Command, opt Options) (*azugo.App, error) {
 	}
 	// Support CORS headers
 	a.Use(middleware.CORS(&a.RouterOptions().CORS))
+	// Optional global request rate limiting
+	if !opt.disableAutoRateLimit && a.Config().RateLimit.Enabled {
+		a.Use(middleware.RateLimit(a.Config().RateLimit))
+	}
 
 	return a, nil
 }

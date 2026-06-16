@@ -30,6 +30,30 @@ func TestHeaders(t *testing.T) {
 	qt.Check(t, qt.DeepEquals(resp.Header.Peek("X-Real-User"), []byte(want)), qt.Commentf("wrong response header value"))
 }
 
+func TestHeaderSetAlwaysSurvivesError(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/fail", func(ctx *Context) {
+		ctx.Header.Set("X-Normal", "dropped")
+		ctx.Header.SetAlways("X-Always", "kept")
+
+		ctx.Error(BadRequestError{Description: "nope"})
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/fail")
+	defer fasthttp.ReleaseResponse(resp)
+
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusBadRequest))
+	// The normal header is wiped when the response is reset to render the error.
+	qt.Check(t, qt.HasLen(string(resp.Header.Peek("X-Normal")), 0))
+	// The SetAlways header is preserved across the reset.
+	qt.Check(t, qt.Equals(string(resp.Header.Peek("X-Always")), "kept"))
+}
+
 func TestHeaderDel(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)

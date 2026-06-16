@@ -319,8 +319,12 @@ func (m *mux) HandleNotFound(ctx *Context) {
 func (m *mux) HandleError(ctx *Context, err error, p bool) {
 	// Copy content type before Reset()
 	ct := string(ctx.Response().Header.ContentType())
+	// Capture headers registered via Header.SetAlways before the reset clears them.
+	ctx.captureAlwaysHeaders()
 	// Reset response so that no partial data is sent
 	ctx.Response().Reset()
+	// Re-apply the preserved headers (e.g. CORS) so they remain on the error response.
+	ctx.applyAlwaysHeaders()
 
 	if m.RouterOptions.ErrorHandler != nil {
 		// Log debug information about error

@@ -3,13 +3,13 @@ module azugo.io/azugo
 go 1.25.0
 
 require (
-	azugo.io/core v0.32.0
+	azugo.io/core v0.33.0
 	github.com/VictoriaMetrics/metrics v1.43.2
 	github.com/beevik/etree v1.6.0
-	github.com/go-playground/validator/v10 v10.30.2
+	github.com/go-playground/validator/v10 v10.30.3
 	github.com/go-quicktest/qt v1.102.0
 	github.com/goccy/go-json v0.10.6
-	github.com/lafriks/go-xmldsig/v2 v2.2.1
+	github.com/lafriks/go-xmldsig/v2 v2.3.0
 	github.com/lafriks/http2 v0.5.0
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/oklog/ulid/v2 v2.1.1
@@ -37,11 +37,11 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lafriks/pkcs8 v1.2.3 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/mattn/go-colorable v0.1.14 // indirect
+	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
-	github.com/redis/go-redis/v9 v9.20.0 // indirect
+	github.com/redis/go-redis/v9 v9.20.1 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect

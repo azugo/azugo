@@ -57,6 +57,10 @@ type Context struct {
 	loggerFields map[string]zap.Field
 	logger       *zap.Logger
 
+	// alwaysHeaders are response headers re-applied after the response is reset
+	// to render an error (registered via Header.SetAlways).
+	alwaysHeaders []headerEntry
+
 	// Header access methods
 	Header HeaderCtx
 	// Cookie access methods
@@ -178,6 +182,7 @@ func (c *Context) reset() {
 	c.loggerCore = nil
 	c.logger = nil
 	c.requestID = nilRequestID
+	c.alwaysHeaders = c.alwaysHeaders[:0]
 }
 
 // App returns the application.
