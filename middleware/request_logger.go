@@ -41,7 +41,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		ns := time.Since(t1).Nanoseconds()
 
-		if val, ok := ctx.UserValue("__log_request").(bool); !ok || !val {
+		if ctx.IsSkipRequestLog() {
 			return
 		}
 

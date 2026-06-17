@@ -66,6 +66,14 @@ func (c *Context) SkipRequestLog() {
 	c.SetUserValue("__log_request", false)
 }
 
+// IsSkipRequestLog reports whether request logging and tracing are disabled for
+// the current request.
+func (c *Context) IsSkipRequestLog() bool {
+	val, ok := c.UserValue("__log_request").(bool)
+
+	return !ok || !val
+}
+
 // SkipMetrics sets to skip metrics recording for current request.
 func (c *Context) SkipMetrics() {
 	c.SetUserValue("__skip_metrics", true)
