@@ -29,6 +29,8 @@ type mux struct {
 	registeredPaths    map[string][]string
 	// Router middlewares
 	middlewares []RequestHandlerFunc
+	// Priority middlewares run before (outer to) the regular middlewares.
+	priorityMiddlewares []RequestHandlerFunc
 	// Cached value of global (*) allowed methods
 	globalAllowed string
 
@@ -126,9 +128,19 @@ func (m *mux) Use(middlewares ...RequestHandlerFunc) {
 	m.middlewares = append(m.middlewares, middlewares...)
 }
 
+// UsePriority appends a middleware to the priority chain, which runs before
+// (outer to) all middlewares registered with Use.
+func (m *mux) UsePriority(middlewares ...RequestHandlerFunc) {
+	m.priorityMiddlewares = append(m.priorityMiddlewares, middlewares...)
+}
+
 func (m *mux) Chain(handler RequestHandler) RequestHandler {
 	for i := len(m.middlewares) - 1; i >= 0; i-- {
 		handler = m.middlewares[i](handler)
+	}
+
+	for i := len(m.priorityMiddlewares) - 1; i >= 0; i-- {
+		handler = m.priorityMiddlewares[i](handler)
 	}
 
 	return handler

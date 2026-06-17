@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	azugo.io/azugo v0.0.0
-	azugo.io/core v0.33.0
+	azugo.io/core v0.33.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/valyala/fasthttp v1.71.0

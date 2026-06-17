@@ -52,19 +52,23 @@ func (c *RateLimit) Validate(valid *validation.Validate) error {
 	return valid.Struct(c)
 }
 
-// New creates a limiter from the configuration.
-func (c *RateLimit) New(cache *cache.Cache, name string) (ratelimit.Limiter, error) {
-	opts := make([]ratelimit.LimiterOption, 0, 1)
+// New creates a limiter from the configuration. Additional options (for
+// example ratelimit.Instrumenter) are appended after the configuration-derived
+// ones.
+func (c *RateLimit) New(cache *cache.Cache, name string, opts ...ratelimit.LimiterOption) (ratelimit.Limiter, error) {
+	o := make([]ratelimit.LimiterOption, 0, len(opts)+1)
 
 	if c.WaitLimit > 0 {
-		opts = append(opts, ratelimit.WaitLimit(c.WaitLimit))
+		o = append(o, ratelimit.WaitLimit(c.WaitLimit))
 	}
+
+	o = append(o, opts...)
 
 	switch c.Strategy {
 	case "fixed-window":
-		return ratelimit.NewFixedWindow(cache, name, c.Limit, c.Window, opts...)
+		return ratelimit.NewFixedWindow(cache, name, c.Limit, c.Window, o...)
 	case "token-bucket":
-		return ratelimit.NewTokenBucket(cache, name, c.Rate, c.Burst, opts...)
+		return ratelimit.NewTokenBucket(cache, name, c.Rate, c.Burst, o...)
 	default:
 		return nil, errors.New("unsupported rate limiter strategy")
 	}

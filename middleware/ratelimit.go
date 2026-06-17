@@ -44,7 +44,7 @@ func (*RateLimitError) StatusCode() int {
 func (e *RateLimitError) ErrorHeaders() iter.Seq2[string, string] {
 	return func(yield func(string, string) bool) {
 		if e.emitHeaders && e.Result.RetryAfter > 0 {
-			yield("Retry-After", strconv.FormatInt(seconds(e.Result.RetryAfter), 10))
+			yield("Retry-After", formatSeconds(e.Result.RetryAfter))
 		}
 	}
 }
@@ -118,7 +118,7 @@ func RateLimit(c *config.RateLimit, opts ...RateLimitOption) azugo.RequestHandle
 	switch c.Strategy {
 	case "fixed-window":
 		m.rateLimitLimit = c.Limit
-		m.rateLimitPolicy = "fixed-window;w=" + strconv.FormatInt(seconds(c.Window), 10) +
+		m.rateLimitPolicy = "fixed-window;w=" + formatSeconds(c.Window) +
 			";q=" + strconv.Itoa(c.Limit)
 	case "token-bucket":
 		m.rateLimitLimit = c.Burst
@@ -145,7 +145,8 @@ func (m *rateLimitMiddleware) getLimiter(ctx *azugo.Context) (ratelimit.Limiter,
 		return *l, nil
 	}
 
-	limiter, err := m.config.New(ctx.App().Cache(), m.name)
+	limiter, err := m.config.New(ctx.App().Cache(), m.name,
+		ratelimit.Instrumenter(ctx.App().Instrumenter()))
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +215,7 @@ func (m *rateLimitMiddleware) setHeaders(ctx *azugo.Context, res ratelimit.Resul
 	}
 
 	ctx.Header.SetAlways("RateLimit-Remaining", strconv.Itoa(max(res.Remaining, 0)))
-	ctx.Header.SetAlways("RateLimit-Reset", strconv.FormatInt(seconds(time.Until(res.ResetAt)), 10))
+	ctx.Header.SetAlways("RateLimit-Reset", formatSeconds(time.Until(res.ResetAt)))
 }
 
 func defaultRateLimitKey(ctx *azugo.Context) (string, error) {
@@ -227,9 +228,9 @@ func defaultRateLimitKey(ctx *azugo.Context) (string, error) {
 	return "ip:" + ctx.IP().String(), nil
 }
 
-func seconds(d time.Duration) int64 {
+func formatSeconds(d time.Duration) string {
 	if d <= 0 {
-		return 0
+		return "0"
 	}
 
 	s := d / time.Second
@@ -237,5 +238,5 @@ func seconds(d time.Duration) int64 {
 		s++
 	}
 
-	return int64(s)
+	return strconv.FormatInt(int64(s), 10)
 }

@@ -86,9 +86,9 @@ func New(cmd *cobra.Command, opts ...Option) (*azugo.App, error) {
 	a.ApplyConfig()
 
 	// Proxy support for client IP
-	a.Use(middleware.RealIP)
+	a.UsePriority(middleware.RealIP)
 	// Log requests
-	a.Use(middleware.RequestLogger)
+	a.UsePriority(middleware.RequestLogger)
 	// Provide metrics
 	if a.Config().Metrics.Enabled {
 		a.Use(middleware.Metrics(a.Config().Metrics.Path))

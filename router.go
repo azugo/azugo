@@ -242,6 +242,12 @@ func (a *App) Use(middlewares ...RequestHandlerFunc) {
 	a.defaultMux.Use(middlewares...)
 }
 
+// UsePriority appends a middleware to the priority chain, which runs before
+// (outer to) all middlewares registered with Use.
+func (a *App) UsePriority(middlewares ...RequestHandlerFunc) {
+	a.defaultMux.UsePriority(middlewares...)
+}
+
 // Get is a shortcut for HTTP GET method handler.
 func (a *App) Get(path string, handler RequestHandler) {
 	a.Handle(fasthttp.MethodGet, path, handler)
