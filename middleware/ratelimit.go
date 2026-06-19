@@ -50,13 +50,13 @@ func (e *RateLimitError) ErrorHeaders() iter.Seq2[string, string] {
 }
 
 type rateLimitMiddleware struct {
-	config            *config.RateLimit
-	name              string
-	emitHeaders       bool
-	keyGenerator      func(ctx *azugo.Context) (string, error)
-	rateLimitPolicy   string
-	rateLimitLimit    int
-	rateLimitLimitStr string
+	config       *config.RateLimit
+	name         string
+	emitHeaders  bool
+	keyGenerator func(ctx *azugo.Context) (string, error)
+	limitFunc    func(ctx *azugo.Context) int
+	defaultLimit int
+	policyPrefix string
 
 	mu      sync.Mutex
 	limiter atomic.Pointer[ratelimit.Limiter]
@@ -94,6 +94,15 @@ func (o RateLimitName) apply(opt *rateLimitMiddleware) {
 	opt.name = string(o)
 }
 
+// RateLimitResolver allows to prived custom resolver for context based custom
+// limits.
+// If zero is returned default configured limit is used.
+type RateLimitResolver func(ctx *azugo.Context) int
+
+func (o RateLimitResolver) apply(opt *rateLimitMiddleware) {
+	opt.limitFunc = o
+}
+
 // RateLimit applies a request rate limit per client.
 //
 // CORS preflight requests flagged by the CORS middleware are exempt.
@@ -117,17 +126,11 @@ func RateLimit(c *config.RateLimit, opts ...RateLimitOption) azugo.RequestHandle
 
 	switch c.Strategy {
 	case "fixed-window":
-		m.rateLimitLimit = c.Limit
-		m.rateLimitPolicy = "fixed-window;w=" + formatSeconds(c.Window) +
-			";q=" + strconv.Itoa(c.Limit)
+		m.defaultLimit = c.Limit
+		m.policyPrefix = "fixed-window;w=" + formatSeconds(c.Window) + ";q="
 	case "token-bucket":
-		m.rateLimitLimit = c.Burst
-		m.rateLimitPolicy = "token-bucket;rate=" + strconv.FormatFloat(c.Rate, 'f', -1, 64) +
-			";burst=" + strconv.Itoa(c.Burst)
-	}
-
-	if m.rateLimitLimit > 0 {
-		m.rateLimitLimitStr = strconv.Itoa(m.rateLimitLimit)
+		m.defaultLimit = c.Burst
+		m.policyPrefix = "token-bucket;rate=" + strconv.FormatFloat(c.Rate, 'f', -1, 64) + ";burst="
 	}
 
 	return m.handler
@@ -184,15 +187,25 @@ func (m *rateLimitMiddleware) handler(next azugo.RequestHandler) azugo.RequestHa
 			return
 		}
 
-		res, err := limiter.Allow(ctx, key)
+		limit := 0
+		if m.limitFunc != nil {
+			limit = m.limitFunc(ctx)
+		}
+
+		res, err := limiter.AllowLimit(ctx, key, limit)
 		if err != nil {
 			ctx.Error(err)
 
 			return
 		}
 
+		effLimit := m.defaultLimit
+		if limit > 0 {
+			effLimit = limit
+		}
+
 		if m.emitHeaders {
-			m.setHeaders(ctx, res)
+			m.setHeaders(ctx, res, effLimit)
 		}
 
 		if !res.Allowed {
@@ -205,13 +218,15 @@ func (m *rateLimitMiddleware) handler(next azugo.RequestHandler) azugo.RequestHa
 	}
 }
 
-func (m *rateLimitMiddleware) setHeaders(ctx *azugo.Context, res ratelimit.Result) {
-	if m.rateLimitLimitStr != "" {
-		ctx.Header.SetAlways("RateLimit-Limit", m.rateLimitLimitStr)
-	}
+func (m *rateLimitMiddleware) setHeaders(ctx *azugo.Context, res ratelimit.Result, effLimit int) {
+	if effLimit > 0 {
+		limitStr := strconv.Itoa(effLimit)
 
-	if m.rateLimitPolicy != "" {
-		ctx.Header.SetAlways("RateLimit-Policy", m.rateLimitPolicy)
+		ctx.Header.SetAlways("RateLimit-Limit", limitStr)
+
+		if m.policyPrefix != "" {
+			ctx.Header.SetAlways("RateLimit-Policy", m.policyPrefix+limitStr)
+		}
 	}
 
 	ctx.Header.SetAlways("RateLimit-Remaining", strconv.Itoa(max(res.Remaining, 0)))

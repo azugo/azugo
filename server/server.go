@@ -27,6 +27,7 @@ type Option interface {
 type options struct {
 	appOpt               Options
 	disableAutoRateLimit bool
+	rateLimitOptions     []middleware.RateLimitOption
 }
 
 type disableAutoRateLimitOpt struct{}
@@ -39,6 +40,20 @@ func (d *disableAutoRateLimitOpt) apply(opt *options) {
 // from being automatically added to the global middleware stack.
 func DisableAutoRateLimit() Option {
 	return &disableAutoRateLimitOpt{}
+}
+
+type rateLimitOptionsOpt struct {
+	opts []middleware.RateLimitOption
+}
+
+func (o *rateLimitOptionsOpt) apply(opt *options) {
+	opt.rateLimitOptions = append(opt.rateLimitOptions, o.opts...)
+}
+
+// RateLimitOptions configures the automatic rate limit middleware with
+// additional rate limit options.
+func RateLimitOptions(opts ...middleware.RateLimitOption) Option {
+	return &rateLimitOptionsOpt{opts: opts}
 }
 
 // newApp creates a new Azugo app with configuration loaded but without any middlewares.
@@ -97,7 +112,7 @@ func New(cmd *cobra.Command, opts ...Option) (*azugo.App, error) {
 	a.Use(middleware.CORS(&a.RouterOptions().CORS))
 	// Optional global request rate limiting
 	if !opt.disableAutoRateLimit && a.Config().RateLimit.Enabled {
-		a.Use(middleware.RateLimit(a.Config().RateLimit))
+		a.Use(middleware.RateLimit(a.Config().RateLimit, opt.rateLimitOptions...))
 	}
 
 	return a, nil

@@ -490,3 +490,56 @@ func TestRateLimitNameIsolation(t *testing.T) {
 	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 }
+
+func TestRateLimitResolver(t *testing.T) {
+	a := azugo.NewTestApp()
+
+	a.Use(RateLimit(
+		&config.RateLimit{Enabled: true, Strategy: "fixed-window", Limit: 1, Window: time.Minute},
+		RateLimitKeyGenerator(func(ctx *azugo.Context) (string, error) {
+			return ctx.Header.Get("X-User"), nil
+		}),
+		RateLimitResolver(func(ctx *azugo.Context) int {
+			if ctx.Header.Get("X-Plan") == "pro" {
+				return 5 // pro plan limit
+			}
+
+			return 0 // default
+		}),
+	))
+
+	a.Get("/test", func(ctx *azugo.Context) {
+		ctx.StatusCode(fasthttp.StatusOK)
+	})
+
+	a.Start(t)
+	defer a.Stop()
+
+	tc := a.TestClient()
+
+	// Default limit (1) for user "a": first allowed (header shows 1), second denied.
+	resp, err := tc.Get("/test", tc.WithHeader("X-User", "a"))
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), "1"))
+	fasthttp.ReleaseResponse(resp)
+
+	resp, err = tc.Get("/test", tc.WithHeader("X-User", "a"))
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	fasthttp.ReleaseResponse(resp)
+
+	// Pro limit (5) for user "b": its own counter, higher ceiling, header shows 5.
+	for range 5 {
+		resp, err = tc.Get("/test", tc.WithHeader("X-User", "b"), tc.WithHeader("X-Plan", "pro"))
+		qt.Assert(t, qt.IsNil(err))
+		qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+		qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), "5"))
+		fasthttp.ReleaseResponse(resp)
+	}
+
+	resp, err = tc.Get("/test", tc.WithHeader("X-User", "b"), tc.WithHeader("X-Plan", "pro"))
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	fasthttp.ReleaseResponse(resp)
+}

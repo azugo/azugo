@@ -5,6 +5,7 @@ import (
 
 	"azugo.io/azugo"
 	"azugo.io/azugo/config"
+	"azugo.io/azugo/middleware"
 	"github.com/go-quicktest/qt"
 	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
@@ -52,6 +53,30 @@ func TestAutoRateLimitEnabled(t *testing.T) {
 
 	// Second request is rejected by the auto-wired rate limit middleware.
 	resp, err = ta.TestClient().Get("/test")
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	fasthttp.ReleaseResponse(resp)
+}
+
+func TestAutoRateLimitResolver(t *testing.T) {
+	// The configured limit is 1, but the resolver raises it to 5 for the auto
+	// middleware, proving RateLimitOptions reach it.
+	ta := newRateLimitedApp(t, RateLimitOptions(
+		middleware.RateLimitResolver(func(_ *azugo.Context) int { return 5 }),
+	))
+
+	ta.Start(t)
+	defer ta.Stop()
+
+	for range 5 {
+		resp, err := ta.TestClient().Get("/test")
+		qt.Assert(t, qt.IsNil(err))
+		qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+		qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), "5"))
+		fasthttp.ReleaseResponse(resp)
+	}
+
+	resp, err := ta.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
