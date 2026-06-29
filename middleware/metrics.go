@@ -92,7 +92,7 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 			return
 		}
 
-		elapsed := float64(time.Since(ctx.StartTime())) / float64(time.Second)
+		elapsed := float64(time.Since(ctx.Context().Time())) / float64(time.Second)
 
 		var respSize float64
 
