@@ -46,6 +46,7 @@ type Context struct {
 	path       string    // HTTP path with the modifications by the configuration -> string copy from pathBuffer
 	routerPath string    // HTTP path as registered in the router
 	requestID  ulid.ULID // Request ID
+	startTime  time.Time // Time the request started being processed
 
 	// Core data
 	app  *App
@@ -125,8 +126,10 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 		}
 	}
 
+	ctx.startTime = time.Now()
+
 	// Ignore error
-	ctx.requestID, _ = ulid.New(ulid.Timestamp(time.Now().UTC()), a.entropy)
+	ctx.requestID, _ = ulid.New(ulid.Timestamp(ctx.startTime.UTC()), a.entropy)
 
 	// Attach base fastHTTP request context
 	ctx.context = c
@@ -182,6 +185,7 @@ func (c *Context) reset() {
 	c.loggerCore = nil
 	c.logger = nil
 	c.requestID = nilRequestID
+	c.startTime = time.Time{}
 	c.alwaysHeaders = c.alwaysHeaders[:0]
 }
 
@@ -204,6 +208,14 @@ func (c *Context) RouterOptions() *RouterOptions {
 // a cancellation signal, and other values across API boundaries.
 func (c *Context) Context() *fasthttp.RequestCtx {
 	return c.context
+}
+
+// StartTime returns the time the request started being processed.
+//
+// Unlike fasthttp's ConnTime, this is set once per request, so it is accurate
+// for requests served over reused keep-alive connections.
+func (c *Context) StartTime() time.Time {
+	return c.startTime
 }
 
 // Request return the *fasthttp.Request object
