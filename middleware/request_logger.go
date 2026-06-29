@@ -37,7 +37,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		next(ctx)
 
-		ns := time.Since(ctx.StartTime()).Nanoseconds()
+		ns := time.Since(ctx.Context().Time()).Nanoseconds()
 
 		if ctx.IsSkipRequestLog() {
 			return
@@ -67,7 +67,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		// Request time
 		_, _ = msg.Write([]byte(" ["))
-		_, _ = msg.WriteString(ctx.StartTime().Format("02/Jan/2006:15:04:05 -0700"))
+		_, _ = msg.WriteString(ctx.Context().Time().Format("02/Jan/2006:15:04:05 -0700"))
 		_, _ = msg.Write([]byte("] \""))
 
 		// Method
