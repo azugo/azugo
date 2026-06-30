@@ -65,6 +65,7 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 	return func(ctx *azugo.Context) {
 		if strings.EqualFold(ctx.Path(), p.metricsPath) {
 			if p.isTrusted(ctx) {
+				ctx.SkipRequestLog()
 				p.serveMetrics(ctx)
 			} else {
 				h(ctx)
