@@ -263,7 +263,7 @@ func Test_TreeNilHandler(t *testing.T) {
 		t.Fatal("Expected panic")
 	}
 
-	if err != nil && panicMsg != fmt.Sprint(err) {
+	if panicMsg != fmt.Sprint(err) {
 		t.Errorf("Invalid conflict error text (%v)", err)
 	}
 }
@@ -325,9 +325,7 @@ func Benchmark_Get(b *testing.B) {
 
 	ctx := new(fasthttp.RequestCtx)
 
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		tree.Get("/update", ctx)
 	}
 }
@@ -340,9 +338,7 @@ func Benchmark_GetWithRegex(b *testing.B) {
 
 	tree.Add("/api/{version:v[0-9]}/data", handler)
 
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		tree.Get("/api/v1/data", ctx)
 	}
 }
@@ -355,9 +351,7 @@ func Benchmark_GetWithParams(b *testing.B) {
 
 	tree.Add("/api/{version}/data", handler)
 
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		tree.Get("/api/v1/data", ctx)
 	}
 }
@@ -370,9 +364,7 @@ func Benchmark_FindCaseInsensitivePath(b *testing.B) {
 
 	tree.Add("/endpoint", handler)
 
-	b.ResetTimer()
-
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		tree.FindCaseInsensitivePath("/ENdpOiNT", false, buf)
 		buf.Reset()
 	}

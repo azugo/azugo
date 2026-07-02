@@ -16,6 +16,9 @@ var requestContextKey requestContextKeyType
 //
 // ctx MUST be derived from c.Context() (the underlying request context),
 // for example using context.WithValue(c.Context(), key, value).
+//
+// Passing a nil ctx resets the effective context back to the base request
+// context.
 func (c *Context) SetContext(ctx context.Context) {
 	c.reqCtx = ctx
 }

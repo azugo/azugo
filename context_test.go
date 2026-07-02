@@ -105,7 +105,8 @@ func TestContextSetContext(t *testing.T) {
 		qt.Check(t, qt.IsTrue(ok))
 		qt.Check(t, qt.IsTrue(d.Equal(deadline)))
 
-		ctx.SetContext(nil)
+		var reset context.Context
+		ctx.SetContext(reset)
 		qt.Check(t, qt.IsNil(ctx.Value(pushKey{})))
 		qt.Check(t, qt.Equals(ctx.Value("base-key").(string), "base-val"))
 
@@ -132,7 +133,8 @@ func TestRequestContextRecovery(t *testing.T) {
 		qt.Check(t, qt.Equals(RequestContext(context.WithValue(tx, slowKey{}, "5s")), ctx))
 		qt.Check(t, qt.Equals(RequestContext(context.WithValue(ctx, slowKey{}, "x")), ctx))
 		qt.Check(t, qt.IsNil(RequestContext(context.Background())))
-		qt.Check(t, qt.IsNil(RequestContext(nil)))
+		var noContext context.Context
+		qt.Check(t, qt.IsNil(RequestContext(noContext)))
 
 		ctx.StatusCode(fasthttp.StatusNoContent)
 	})
