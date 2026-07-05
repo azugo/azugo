@@ -11,6 +11,7 @@ import (
 	"azugo.io/azugo/user"
 
 	"azugo.io/core"
+	"azugo.io/core/http"
 	"azugo.io/core/paginator"
 	"github.com/oklog/ulid/v2"
 	"github.com/valyala/bytebufferpool"
@@ -23,11 +24,11 @@ var (
 	protocolHTTPS     = []byte("https")
 	protocolSeparator = []byte("://")
 
-	headerXForwardedProto = []byte("X-Forwarded-Proto")
-	headerXForwardedHost  = []byte("X-Forwarded-Host")
+	headerXForwardedProto = []byte(http.HeaderXForwardedProto)
+	headerXForwardedHost  = []byte(http.HeaderXForwardedHost)
 
-	contentTypeFormURLEncoded    = []byte("application/x-www-form-urlencoded")
-	contentTypeMultipartFormData = []byte("multipart/form-data")
+	contentTypeFormURLEncoded    = []byte(http.ContentTypeFormURLEncoded)
+	contentTypeMultipartFormData = []byte(http.ContentTypeMultipartFormData)
 
 	nilArgsValuer formKeyValuer = &nilArgs{}
 	nilRequestID                = ulid.ULID{}
@@ -42,10 +43,10 @@ type Context struct {
 	// reqCtx is the effective request context installed via SetContext.
 	reqCtx context.Context
 
-	method     string    // HTTP method
-	path       string    // HTTP path with the modifications by the configuration -> string copy from pathBuffer
-	routerPath string    // HTTP path as registered in the router
-	requestID  ulid.ULID // Request ID
+	method     http.Method // HTTP method
+	path       string      // HTTP path with the modifications by the configuration -> string copy from pathBuffer
+	routerPath string      // HTTP path as registered in the router
+	requestID  ulid.ULID   // Request ID
 
 	// Core data
 	app  *App
@@ -103,7 +104,7 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 
 	// Set method
 	if c != nil {
-		ctx.method = utils.B2S(c.Request.Header.Method())
+		ctx.method = http.Method(utils.B2S(c.Request.Header.Method()))
 		if u := c.Request.URI(); u != nil {
 			ctx.path = utils.B2S(u.Path())
 		}
@@ -111,7 +112,7 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 
 	ctx.routerPath = path
 
-	if ctx.method == fasthttp.MethodPost || ctx.method == fasthttp.MethodPut || ctx.method == fasthttp.MethodPatch {
+	if ctx.method == http.MethodPost || ctx.method == http.MethodPut || ctx.method == http.MethodPatch || ctx.method == http.MethodQuery {
 		if bytes.HasPrefix(c.Request.Header.ContentType(), contentTypeFormURLEncoded) {
 			ctx.Form.form = &postArgs{
 				args: c.Request.PostArgs(),
@@ -229,7 +230,7 @@ func (c *Context) IP() net.IP {
 }
 
 // Method returns the request method.
-func (c *Context) Method() string {
+func (c *Context) Method() http.Method {
 	return c.method
 }
 
@@ -305,6 +306,28 @@ func (c *Context) UserAgent() string {
 	return utils.B2S(c.context.Request.Header.UserAgent())
 }
 
+// Referer returns the client's Referer, if sent in the request.
+func (c *Context) Referer() string {
+	return utils.B2S(c.context.Request.Header.Referer())
+}
+
+// Protocol returns the HTTP protocol version of the request.
+func (c *Context) Protocol() string {
+	return utils.B2S(c.context.Request.Header.Protocol())
+}
+
+// ContentLength returns the request Content-Length header value.
+//
+// It may be negative if the request body size is unknown.
+func (c *Context) ContentLength() int {
+	return c.context.Request.Header.ContentLength()
+}
+
+// Time when the request was received by the server.
+func (c *Context) Time() time.Time {
+	return c.context.Time()
+}
+
 // SetUserValue stores the given value (arbitrary object)
 // under the given key in context.
 //
@@ -365,7 +388,7 @@ func (c *Context) Paging() *paginator.Paginator {
 
 // Accepts checks if provided content type is acceptable for client.
 func (c *Context) Accepts(contentType string) bool {
-	h := c.Header.Get(HeaderAccept)
+	h := c.Header.Get(http.HeaderAccept)
 	if len(h) == 0 {
 		return true
 	}
@@ -412,7 +435,7 @@ func (c *Context) Accepts(contentType string) bool {
 
 // AcceptsExplicit checks if provided content type is explicitly acceptable for client.
 func (c *Context) AcceptsExplicit(contentType string) bool {
-	h := c.Header.Get(HeaderAccept)
+	h := c.Header.Get(http.HeaderAccept)
 	if len(h) == 0 {
 		return false
 	}

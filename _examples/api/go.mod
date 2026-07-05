@@ -4,10 +4,9 @@ go 1.25.0
 
 require (
 	azugo.io/azugo v0.0.0
-	azugo.io/core v0.34.1
+	azugo.io/core v0.35.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
-	github.com/valyala/fasthttp v1.72.0
 	go.uber.org/zap v1.28.0
 )
 
@@ -47,6 +46,7 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
+	github.com/valyala/fasthttp v1.72.0 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
 	github.com/valyala/histogram v1.2.0 // indirect
 	go.elastic.co/ecszap v1.0.3 // indirect

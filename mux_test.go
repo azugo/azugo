@@ -3,6 +3,7 @@ package azugo
 import (
 	"testing"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -52,13 +53,13 @@ func BenchmarkAllowed(b *testing.B) {
 	b.Run("Global", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			_ = m.Allowed("*", fasthttp.MethodOptions)
+			_ = m.Allowed("*", http.MethodOptions)
 		}
 	})
 	b.Run("Path", func(b *testing.B) {
 		b.ReportAllocs()
 		for i := 0; i < b.N; i++ {
-			_ = m.Allowed("/path", fasthttp.MethodOptions)
+			_ = m.Allowed("/path", http.MethodOptions)
 		}
 	})
 }
@@ -117,11 +118,11 @@ func BenchmarkRouterGet_ANY(b *testing.B) {
 
 	m := newMux(NewTestApp().App)
 	m.Get("/", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text(resp)
 	})
 	m.Any("/", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text(respANY)
 	})
 

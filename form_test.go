@@ -4,6 +4,7 @@ import (
 	"mime/multipart"
 	"testing"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -37,7 +38,7 @@ func TestFormValidParams(t *testing.T) {
 		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter bb should be present"))
 		qt.Check(t, qt.IsFalse(b), qt.Commentf("Form parameter bb should be false"))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().PostForm("/user", map[string]any{
@@ -51,7 +52,29 @@ func TestFormValidParams(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK), qt.Commentf("wrong response status code"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK), qt.Commentf("wrong response status code"))
+}
+
+func TestQueryMethodFormParams(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Query("/user", func(ctx *Context) {
+		s, err := ctx.Form.String("s")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter s should be present"))
+		qt.Check(t, qt.Equals(s, "test"), qt.Commentf("Form parameter s should be equal to test"))
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp, err := a.TestClient().QueryForm("/user", map[string]any{
+		"s": "test",
+	})
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK), qt.Commentf("wrong response status code"))
 }
 
 func TestMultiPartFormValidParams(t *testing.T) {
@@ -83,7 +106,7 @@ func TestMultiPartFormValidParams(t *testing.T) {
 		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter bb should be present"))
 		qt.Check(t, qt.IsFalse(b), qt.Commentf("Form parameter bb should be false"))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	form := &multipart.Form{
@@ -102,5 +125,5 @@ func TestMultiPartFormValidParams(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK), qt.Commentf("wrong response status code"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK), qt.Commentf("wrong response status code"))
 }

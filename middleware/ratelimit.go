@@ -11,8 +11,8 @@ import (
 	"azugo.io/azugo"
 	"azugo.io/azugo/config"
 
+	"azugo.io/core/http"
 	"azugo.io/core/ratelimit"
-	"github.com/valyala/fasthttp"
 )
 
 var errEmptyRateLimitKey = errors.New("rate limit key is empty")
@@ -37,14 +37,14 @@ func (*RateLimitError) SafeError() string {
 
 // StatusCode returns the HTTP status code for the rate limit error.
 func (*RateLimitError) StatusCode() int {
-	return fasthttp.StatusTooManyRequests
+	return http.StatusTooManyRequests
 }
 
 // ErrorHeaders returns the RateLimit response headers to set on the response.
 func (e *RateLimitError) ErrorHeaders() iter.Seq2[string, string] {
 	return func(yield func(string, string) bool) {
 		if e.emitHeaders && e.Result.RetryAfter > 0 {
-			yield("Retry-After", formatSeconds(e.Result.RetryAfter))
+			yield(http.HeaderRetryAfter, formatSeconds(e.Result.RetryAfter))
 		}
 	}
 }
@@ -222,15 +222,15 @@ func (m *rateLimitMiddleware) setHeaders(ctx *azugo.Context, res ratelimit.Resul
 	if effLimit > 0 {
 		limitStr := strconv.Itoa(effLimit)
 
-		ctx.Header.SetAlways("RateLimit-Limit", limitStr)
+		ctx.Header.SetAlways(http.HeaderRateLimitLimit, limitStr)
 
 		if m.policyPrefix != "" {
-			ctx.Header.SetAlways("RateLimit-Policy", m.policyPrefix+limitStr)
+			ctx.Header.SetAlways(http.HeaderRateLimitPolicy, m.policyPrefix+limitStr)
 		}
 	}
 
-	ctx.Header.SetAlways("RateLimit-Remaining", strconv.Itoa(max(res.Remaining, 0)))
-	ctx.Header.SetAlways("RateLimit-Reset", formatSeconds(time.Until(res.ResetAt)))
+	ctx.Header.SetAlways(http.HeaderRateLimitRemaining, strconv.Itoa(max(res.Remaining, 0)))
+	ctx.Header.SetAlways(http.HeaderRateLimitReset, formatSeconds(time.Until(res.ResetAt)))
 }
 
 func defaultRateLimitKey(ctx *azugo.Context) (string, error) {

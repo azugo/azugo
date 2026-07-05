@@ -10,6 +10,7 @@ import (
 
 	"azugo.io/azugo/internal/utils"
 
+	"azugo.io/core/http"
 	"github.com/goccy/go-json"
 	"github.com/oklog/ulid/v2"
 	"github.com/valyala/fasthttp"
@@ -144,28 +145,52 @@ func (c *TestClient) CallRaw(method, endpoint, body []byte, options ...TestClien
 }
 
 // Call calls the given method and endpoint with the given body and options.
-func (c *TestClient) Call(method, endpoint string, body []byte, options ...TestClientOption) (*fasthttp.Response, error) {
+func (c *TestClient) Call(method http.Method, endpoint string, body []byte, options ...TestClientOption) (*fasthttp.Response, error) {
 	return c.CallRaw([]byte(method), []byte("http://test"+endpoint), body, options...)
 }
 
 // Get calls GET method with given options.
 func (c *TestClient) Get(endpoint string, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodGet, endpoint, nil, options...)
+	return c.Call(http.MethodGet, endpoint, nil, options...)
 }
 
 // Head calls HEAD method with given options.
 func (c *TestClient) Head(endpoint string, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodHead, endpoint, nil, options...)
+	return c.Call(http.MethodHead, endpoint, nil, options...)
+}
+
+// Query calls QUERY method with given body and options.
+func (c *TestClient) Query(endpoint string, body []byte, options ...TestClientOption) (*fasthttp.Response, error) {
+	return c.Call(http.MethodQuery, endpoint, body, options...)
+}
+
+// QueryJSON calls QUERY method with given object marshaled as JSON and options.
+func (c *TestClient) QueryJSON(endpoint string, body any, options ...TestClientOption) (*fasthttp.Response, error) {
+	b, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	options = append(options, c.WithHeader(http.HeaderContentType, http.ContentTypeJSON))
+
+	return c.Query(endpoint, b, options...)
+}
+
+// QueryForm calls QUERY method with given map marshaled as URL encoded form and options.
+func (c *TestClient) QueryForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
+	options = append(options, c.WithHeader(http.HeaderContentType, http.ContentTypeFormURLEncoded))
+
+	return c.Query(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
 
 // Delete calls DELETE method with given options.
 func (c *TestClient) Delete(endpoint string, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodDelete, endpoint, nil, options...)
+	return c.Call(http.MethodDelete, endpoint, nil, options...)
 }
 
 // Patch calls PATCH method with given body and options.
 func (c *TestClient) Patch(endpoint string, body []byte, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodPatch, endpoint, body, options...)
+	return c.Call(http.MethodPatch, endpoint, body, options...)
 }
 
 // PatchJSON calls PATCH method with given object marshaled as JSON and options.
@@ -175,14 +200,14 @@ func (c *TestClient) PatchJSON(endpoint string, body any, options ...TestClientO
 		return nil, err
 	}
 
-	options = append(options, c.WithHeader("Content-Type", "application/json"))
+	options = append(options, c.WithHeader(http.HeaderContentType, http.ContentTypeJSON))
 
 	return c.Patch(endpoint, b, options...)
 }
 
 // PatchForm calls PATCH method with given map marshaled as URL encoded form and options.
 func (c *TestClient) PatchForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
-	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+	options = append(options, c.WithHeader(http.HeaderContentType, http.ContentTypeFormURLEncoded))
 
 	return c.Patch(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
@@ -201,12 +226,12 @@ func (c *TestClient) PatchMultiPartForm(endpoint string, form *multipart.Form, o
 		return nil, err
 	}
 
-	return c.Put(endpoint, body.Bytes(), options...)
+	return c.Patch(endpoint, body.Bytes(), options...)
 }
 
 // Put calls PUT method with given body and options.
 func (c *TestClient) Put(endpoint string, body []byte, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodPut, endpoint, body, options...)
+	return c.Call(http.MethodPut, endpoint, body, options...)
 }
 
 // PutJSON calls PUT method with given object marshaled as JSON and options.
@@ -216,14 +241,14 @@ func (c *TestClient) PutJSON(endpoint string, body any, options ...TestClientOpt
 		return nil, err
 	}
 
-	options = append(options, c.WithHeader("Content-Type", "application/json"))
+	options = append(options, c.WithHeader(http.HeaderContentType, http.ContentTypeJSON))
 
 	return c.Put(endpoint, b, options...)
 }
 
 // PutForm calls PUT method with given map marshaled as URL encoded form and options.
 func (c *TestClient) PutForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
-	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+	options = append(options, c.WithHeader(http.HeaderContentType, http.ContentTypeFormURLEncoded))
 
 	return c.Put(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
@@ -247,7 +272,7 @@ func (c *TestClient) PutMultiPartForm(endpoint string, form *multipart.Form, opt
 
 // Post calls POST method with given body and options.
 func (c *TestClient) Post(endpoint string, body []byte, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodPost, endpoint, body, options...)
+	return c.Call(http.MethodPost, endpoint, body, options...)
 }
 
 // PostJSON calls POST method with given object marshaled as JSON and options.
@@ -257,14 +282,14 @@ func (c *TestClient) PostJSON(endpoint string, body any, options ...TestClientOp
 		return nil, err
 	}
 
-	options = append(options, c.WithHeader("Content-Type", "application/json"))
+	options = append(options, c.WithHeader(http.HeaderContentType, http.ContentTypeJSON))
 
 	return c.Post(endpoint, b, options...)
 }
 
 // PostForm calls POST method with given map marshaled as URL encoded form and options.
 func (c *TestClient) PostForm(endpoint string, params map[string]any, options ...TestClientOption) (*fasthttp.Response, error) {
-	options = append(options, c.WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+	options = append(options, c.WithHeader(http.HeaderContentType, http.ContentTypeFormURLEncoded))
 
 	return c.Post(endpoint, []byte(utils.MapToURLValues(params)), options...)
 }
@@ -288,15 +313,15 @@ func (c *TestClient) PostMultiPartForm(endpoint string, form *multipart.Form, op
 
 // Connect calls CONNECT method with given options.
 func (c *TestClient) Connect(endpoint string, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodConnect, endpoint, nil, options...)
+	return c.Call(http.MethodConnect, endpoint, nil, options...)
 }
 
 // Options calls OPTIONS method with given options.
 func (c *TestClient) Options(endpoint string, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodOptions, endpoint, nil, options...)
+	return c.Call(http.MethodOptions, endpoint, nil, options...)
 }
 
 // Trace calls TRACE method with given options.
 func (c *TestClient) Trace(endpoint string, options ...TestClientOption) (*fasthttp.Response, error) {
-	return c.Call(fasthttp.MethodTrace, endpoint, nil, options...)
+	return c.Call(http.MethodTrace, endpoint, nil, options...)
 }

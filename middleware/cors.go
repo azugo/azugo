@@ -4,16 +4,7 @@ package middleware
 import (
 	"azugo.io/azugo"
 
-	"github.com/valyala/fasthttp"
-)
-
-const (
-	headerOrigin           string = "Origin"
-	headerRequestMethod    string = "Access-Control-Request-Method"
-	headerAllowOrigin      string = "Access-Control-Allow-Origin"
-	headerAllowMethods     string = "Access-Control-Allow-Methods"
-	headerAllowHeaders     string = "Access-Control-Allow-Headers"
-	headerAllowCredentials string = "Access-Control-Allow-Credentials"
+	"azugo.io/core/http"
 )
 
 const userValueCORSPreflight = "__cors_preflight"
@@ -22,7 +13,7 @@ const userValueCORSPreflight = "__cors_preflight"
 func CORS(opts *azugo.CORSOptions) func(azugo.RequestHandler) azugo.RequestHandler {
 	return func(h azugo.RequestHandler) azugo.RequestHandler {
 		return func(ctx *azugo.Context) {
-			origin := ctx.Header.Get(headerOrigin)
+			origin := ctx.Header.Get(http.HeaderOrigin)
 			if len(origin) == 0 || !opts.ValidOrigin(origin) {
 				if h != nil {
 					h(ctx)
@@ -31,15 +22,15 @@ func CORS(opts *azugo.CORSOptions) func(azugo.RequestHandler) azugo.RequestHandl
 				return
 			}
 
-			ctx.Header.SetAlways(headerAllowOrigin, origin)
-			ctx.Header.SetAlways(headerAllowMethods, opts.Methods())
-			ctx.Header.SetAlways(headerAllowHeaders, opts.Headers())
+			ctx.Header.SetAlways(http.HeaderAccessControlAllowOrigin, origin)
+			ctx.Header.SetAlways(http.HeaderAccessControlAllowMethods, opts.Methods())
+			ctx.Header.SetAlways(http.HeaderAccessControlAllowHeaders, opts.Headers())
 
 			if opts.AllowCredentials() {
-				ctx.Header.SetAlways(headerAllowCredentials, "true")
+				ctx.Header.SetAlways(http.HeaderAccessControlAllowCredentials, "true")
 			}
 
-			if ctx.Method() == fasthttp.MethodOptions && ctx.Header.Get(headerRequestMethod) != "" {
+			if ctx.Method() == http.MethodOptions && ctx.Header.Get(http.HeaderAccessControlRequestMethod) != "" {
 				ctx.SetUserValue(userValueCORSPreflight, true)
 			}
 

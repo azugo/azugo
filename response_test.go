@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
+	"azugo.io/core/http"
 	"azugo.io/core/paginator"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
@@ -29,7 +30,7 @@ func TestResponseJSON(t *testing.T) {
 	var user testBodyUser
 	err = json.Unmarshal(resp.Body(), &user)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(string(resp.Header.ContentType()), "application/json"))
+	qt.Check(t, qt.Equals(string(resp.Header.ContentType()), http.ContentTypeJSON))
 	qt.Check(t, qt.Equals(user.Name, "test"))
 }
 
@@ -39,7 +40,7 @@ func TestResponseContentType(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		ctx.ContentType("application/xml", "UTF-8")
+		ctx.ContentType(http.ContentTypeXML, "UTF-8")
 		ctx.Raw([]byte("<test></test>"))
 	})
 
@@ -67,7 +68,7 @@ func TestResponsePaging(t *testing.T) {
 			"name": name,
 		}, p)
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	c := a.TestClient()
@@ -75,9 +76,9 @@ func TestResponsePaging(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(string(resp.Header.Peek(HeaderTotalCount)), "100"))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek(HeaderLink)), `<http://test/user/test?page=2&per_page=20>; rel="next",<http://test/user/test?page=5&per_page=20>; rel="last"`))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek(HeaderAccessControlExposeHeaders)), "X-Total-Count, Link"))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderTotalCount)), "100"))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderLink)), `<http://test/user/test?page=2&per_page=20>; rel="next",<http://test/user/test?page=5&per_page=20>; rel="last"`))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderAccessControlExposeHeaders)), "X-Total-Count, Link"))
 }
 
 func TestResponseRedirect(t *testing.T) {
@@ -94,8 +95,8 @@ func TestResponseRedirect(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusFound))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("Location")), "http://test/"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusFound))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderLocation)), "http://test/"))
 }
 
 func TestResponseRedirectStatusCode(t *testing.T) {
@@ -104,7 +105,7 @@ func TestResponseRedirectStatusCode(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/user", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusPermanentRedirect)
+		ctx.StatusCode(http.StatusPermanentRedirect)
 		ctx.Redirect("http://test/")
 	})
 
@@ -113,6 +114,6 @@ func TestResponseRedirectStatusCode(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusPermanentRedirect))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("Location")), "http://test/"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusPermanentRedirect))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderLocation)), "http://test/"))
 }

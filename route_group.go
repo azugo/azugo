@@ -1,7 +1,7 @@
 package azugo
 
 import (
-	"github.com/valyala/fasthttp"
+	"azugo.io/core/http"
 )
 
 // RouteGroup is a sub-router to group paths.
@@ -56,53 +56,58 @@ func (g *RouteGroup) Use(middleware ...RequestHandlerFunc) {
 // This function is intended for bulk loading and to allow the usage of less
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
-func (g *RouteGroup) Handle(method, path string, handler RequestHandler) {
+func (g *RouteGroup) Handle(method http.Method, path string, handler RequestHandler) {
 	g.mux.Handle(method, g.prefix+path, g.chain(handler))
 }
 
 // Get is a shortcut for HTTP GET method handler.
 func (g *RouteGroup) Get(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodGet, path, handler)
+	g.Handle(http.MethodGet, path, handler)
 }
 
 // Head is a shortcut for HTTP HEAD method handler.
 func (g *RouteGroup) Head(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodHead, path, handler)
+	g.Handle(http.MethodHead, path, handler)
+}
+
+// Query is a shortcut for HTTP QUERY method handler.
+func (g *RouteGroup) Query(path string, handler RequestHandler) {
+	g.Handle(http.MethodQuery, path, handler)
 }
 
 // Post is a shortcut for HTTP POST method handler.
 func (g *RouteGroup) Post(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodPost, path, handler)
+	g.Handle(http.MethodPost, path, handler)
 }
 
 // Put is a shortcut for HTTP PUT method handler.
 func (g *RouteGroup) Put(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodPut, path, handler)
+	g.Handle(http.MethodPut, path, handler)
 }
 
 // Patch is a shortcut for HTTP PATCH method handler.
 func (g *RouteGroup) Patch(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodPatch, path, handler)
+	g.Handle(http.MethodPatch, path, handler)
 }
 
 // Delete is a shortcut for HTTP DELETE method handler.
 func (g *RouteGroup) Delete(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodDelete, path, handler)
+	g.Handle(http.MethodDelete, path, handler)
 }
 
 // Connect is a shortcut for HTTP CONNECT method handler.
 func (g *RouteGroup) Connect(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodConnect, path, handler)
+	g.Handle(http.MethodConnect, path, handler)
 }
 
 // Options is a shortcut for HTTP OPTIONS method handler.
 func (g *RouteGroup) Options(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodOptions, path, handler)
+	g.Handle(http.MethodOptions, path, handler)
 }
 
 // Trace is a shortcut for HTTP TRACE method handler.
 func (g *RouteGroup) Trace(path string, handler RequestHandler) {
-	g.Handle(fasthttp.MethodTrace, path, handler)
+	g.Handle(http.MethodTrace, path, handler)
 }
 
 // Proxy is helper to proxy requests to another host.

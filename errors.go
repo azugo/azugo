@@ -8,7 +8,6 @@ import (
 
 	"azugo.io/core/http"
 	"github.com/go-playground/validator/v10"
-	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -102,7 +101,7 @@ func (e ParamRequiredError) SafeError() string {
 
 // StatusCode returns the HTTP status code for ParamRequiredError.
 func (ParamRequiredError) StatusCode() int {
-	return fasthttp.StatusBadRequest
+	return http.StatusBadRequest
 }
 
 // ParamInvalidError is an error that occurs when a parameter is invalid.
@@ -127,7 +126,7 @@ func (e ParamInvalidError) SafeError() string {
 
 // StatusCode returns the HTTP status code for ParamInvalidError.
 func (ParamInvalidError) StatusCode() int {
-	return fasthttp.StatusUnprocessableEntity
+	return http.StatusUnprocessableEntity
 }
 
 // BadRequestError is an error that occurs when request is malformed.
@@ -155,5 +154,5 @@ func (e BadRequestError) Error() string {
 
 // StatusCode returns the HTTP status code for BadRequestError.
 func (BadRequestError) StatusCode() int {
-	return fasthttp.StatusBadRequest
+	return http.StatusBadRequest
 }

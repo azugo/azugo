@@ -8,9 +8,9 @@ import (
 	"azugo.io/azugo/healthz"
 	"azugo.io/azugo/server"
 	"azugo.io/core/cli"
+	"azugo.io/core/http"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
 )
 
@@ -59,7 +59,7 @@ func runWeb(cmd *cobra.Command, _ []string) error {
 		ctx.Log().Debug("Hello endpoint called")
 
 		ctx.ContentType("application/json")
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("Hello, world!")
 	})
 	a.Post("/test", func(ctx *azugo.Context) {

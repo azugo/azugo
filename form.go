@@ -123,7 +123,7 @@ func (a *multiPartArgs) Files(key string) []*multipart.FileHeader {
 }
 
 func (a *multiPartArgs) Reset(ctx *Context) {
-	ctx.Context().Request.RemoveMultipartFormFiles()
+	ctx.Request().RemoveMultipartFormFiles()
 }
 
 // Values returns all values associated with the given key in query.

@@ -3,6 +3,7 @@ package azugo
 import (
 	"testing"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -20,14 +21,14 @@ func TestRouteValidParams(t *testing.T) {
 		qt.Check(t, qt.IsNil(err), qt.Commentf("Route parameter id should not be nil"))
 		qt.Check(t, qt.Equals(id, 1), qt.Commentf("Route parameter id should be equal to 1"))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user/gopher/1")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestRouteInvalidParams(t *testing.T) {
@@ -40,14 +41,14 @@ func TestRouteInvalidParams(t *testing.T) {
 		qt.Check(t, qt.IsNotNil(err), qt.Commentf("Route parameter name should have error"))
 		qt.Check(t, qt.Equals(id, 0), qt.Commentf("Route parameter name should be equal to 0"))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user/gopher")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Check(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestRouteNonexistingParams(t *testing.T) {
@@ -59,12 +60,12 @@ func TestRouteNonexistingParams(t *testing.T) {
 		qt.Check(t, qt.IsFalse(ctx.Params.Has("type")))
 		qt.Check(t, qt.IsTrue(ctx.Params.Has("id")))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user/gopher")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }

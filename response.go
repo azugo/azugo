@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 
+	"azugo.io/core/http"
 	"azugo.io/core/paginator"
 	"github.com/goccy/go-json"
 	"github.com/valyala/fasthttp"
@@ -38,11 +39,11 @@ func (c *Context) ContentType(contentType string, charset ...string) {
 // Redirect redirects the request to a given URL with status code 302 (Found) if other redirect status code
 // not set already.
 func (c *Context) Redirect(url string) {
-	if !fasthttp.StatusCodeIsRedirect(c.Response().StatusCode()) {
-		c.StatusCode(fasthttp.StatusFound)
+	if !http.StatusCodeIsRedirect(c.Response().StatusCode()) {
+		c.StatusCode(http.StatusFound)
 	}
 	// TODO: Check if it's safe to redirect to provided URL
-	c.Header.Set("Location", url)
+	c.Header.Set(http.HeaderLocation, url)
 }
 
 // JSON serializes the given struct as JSON and sets it as the response body.
@@ -92,8 +93,8 @@ func (c *Context) NotFound() {
 
 // SetPaging sets pagination headers and metadata on the response.
 func (c *Context) SetPaging(values map[string]string, paginator *paginator.Paginator) {
-	c.Header.Set(HeaderTotalCount, strconv.Itoa(paginator.Total()))
-	c.Header.AppendAccessControlExposeHeaders(HeaderTotalCount)
+	c.Header.Set(http.HeaderTotalCount, strconv.Itoa(paginator.Total()))
+	c.Header.AppendAccessControlExposeHeaders(http.HeaderTotalCount)
 
 	route := c.RouterPath()
 	if len(route) == 0 {
@@ -115,7 +116,7 @@ func (c *Context) SetPaging(values map[string]string, paginator *paginator.Pagin
 
 	links := paginator.Links()
 	if len(links) > 0 {
-		c.Header.Set(HeaderLink, strings.Join(links, ","))
-		c.Header.AppendAccessControlExposeHeaders(HeaderLink)
+		c.Header.Set(http.HeaderLink, strings.Join(links, ","))
+		c.Header.AppendAccessControlExposeHeaders(http.HeaderLink)
 	}
 }

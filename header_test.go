@@ -3,6 +3,7 @@ package azugo
 import (
 	"testing"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -47,7 +48,7 @@ func TestHeaderSetAlwaysSurvivesError(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusBadRequest))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusBadRequest))
 	// The normal header is wiped when the response is reset to render the error.
 	qt.Check(t, qt.HasLen(string(resp.Header.Peek("X-Normal")), 0))
 	// The SetAlways header is preserved across the reset.
@@ -92,6 +93,39 @@ func TestHeaderValues(t *testing.T) {
 
 	c := a.TestClient()
 	resp, err := c.Get("/user", c.WithHeader("X-Users", "gopher,user"), c.WithHeader("X-Users", "test"), c.WithHeader("X-User", "gopher"))
+	defer fasthttp.ReleaseResponse(resp)
+
+	qt.Assert(t, qt.IsNil(err))
+}
+
+func TestHeaderAll(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		all := make(map[string]string)
+		for key, value := range ctx.Header.All() {
+			all[key] = value
+		}
+
+		qt.Check(t, qt.Equals(all["X-User"], "gopher"), qt.Commentf("wrong header value in All"))
+		qt.Check(t, qt.Equals(all["X-Role"], "admin"), qt.Commentf("wrong header value in All"))
+
+		ordered := make([]string, 0, 2)
+		for key, value := range ctx.Header.AllInOrder() {
+			if key == "X-User" || key == "X-Role" {
+				ordered = append(ordered, key+"="+value)
+			}
+		}
+
+		qt.Check(t, qt.DeepEquals(ordered, []string{"X-User=gopher", "X-Role=admin"}), qt.Commentf("wrong header order in AllInOrder"))
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user",
+		c.WithHeader("X-User", "gopher"),
+		c.WithHeader("X-Role", "admin"))
 	defer fasthttp.ReleaseResponse(resp)
 
 	qt.Assert(t, qt.IsNil(err))

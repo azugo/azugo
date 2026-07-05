@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"testing"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -25,14 +26,14 @@ func TestBodyBytes(t *testing.T) {
 
 	a.Post("/user", func(ctx *Context) {
 		qt.Check(t, qt.ContentEquals(ctx.Body.Bytes(), expect), qt.Commentf("Body should be equal to test"))
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Post("/user", expect)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK), qt.Commentf("wrong status code"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK), qt.Commentf("wrong status code"))
 }
 
 func TestBodyStream(t *testing.T) {
@@ -53,7 +54,7 @@ func TestBodyStream(t *testing.T) {
 
 		received = buf.Bytes()
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Post("/user", expect)
@@ -61,7 +62,7 @@ func TestBodyStream(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK), qt.Commentf("wrong status code"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK), qt.Commentf("wrong status code"))
 	if !bytes.Equal(received, expect) {
 		t.Fatal("Received request body should be equal to sent body")
 	}
@@ -82,14 +83,14 @@ func TestBodyPostJSON(t *testing.T) {
 			return
 		}
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().PostJSON("/user", expect)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	qt.Assert(t, qt.DeepEquals(expect, user))
 }
 
@@ -108,14 +109,14 @@ func TestBodyPutJSON(t *testing.T) {
 			return
 		}
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().PutJSON("/user", expect)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	qt.Assert(t, qt.DeepEquals(expect, user))
 }
 
@@ -134,14 +135,14 @@ func TestBodyPatchJSON(t *testing.T) {
 			return
 		}
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().PatchJSON("/user", expect)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	qt.Assert(t, qt.DeepEquals(expect, user))
 }
 
@@ -153,7 +154,7 @@ func TestBodyJSONValidationError(t *testing.T) {
 	expect := testBodyUser{Name: "test1234567890"}
 
 	a.Patch("/user", func(ctx *Context) {
-		ctx.ContentType(ContentTypeJSON)
+		ctx.ContentType(http.ContentTypeJSON)
 
 		var user testBodyUser
 		if err := ctx.Body.JSON(&user); err != nil {
@@ -162,14 +163,14 @@ func TestBodyJSONValidationError(t *testing.T) {
 			return
 		}
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().PatchJSON("/user", expect)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusUnprocessableEntity))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusUnprocessableEntity))
 	qt.Assert(t, qt.Equals(string(resp.Body()), `{"errors":[{"type":"FieldError","message":"Key: 'testBodyUser.Name' Error:Field validation for 'Name' failed on the 'max' tag"}]}`))
 }
 
@@ -192,13 +193,13 @@ func TestBodyXML(t *testing.T) {
 			return
 		}
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Put("/user", []byte("<user><name>test</name></user>"))
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	qt.Assert(t, qt.DeepEquals(expect, user))
 }

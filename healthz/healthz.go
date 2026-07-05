@@ -7,7 +7,7 @@ package healthz
 import (
 	"azugo.io/azugo"
 
-	"github.com/valyala/fasthttp"
+	"azugo.io/core/http"
 )
 
 // Status indicates the health status of the service.
@@ -99,7 +99,7 @@ func Handler(checks ...CheckFunc) azugo.RequestHandler {
 		}
 
 		if resp.Status == Fail {
-			ctx.StatusCode(fasthttp.StatusServiceUnavailable)
+			ctx.StatusCode(http.StatusServiceUnavailable)
 		}
 
 		ctx.JSON(resp)

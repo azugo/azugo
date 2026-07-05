@@ -6,6 +6,7 @@ import (
 	"azugo.io/azugo/token"
 	"azugo.io/azugo/user"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -42,7 +43,7 @@ func TestUser(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 	defer fasthttp.ReleaseResponse(resp)
 
-	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestUserNewIdentity(t *testing.T) {
@@ -79,7 +80,7 @@ func TestUserNewIdentity(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 	defer fasthttp.ReleaseResponse(resp)
 
-	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestDefaultAnonymous(t *testing.T) {

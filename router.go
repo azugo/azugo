@@ -3,11 +3,12 @@ package azugo
 import (
 	"azugo.io/azugo/config"
 
+	"azugo.io/core/http"
 	"github.com/valyala/fasthttp"
 )
 
 // MethodWild wild HTTP method.
-const MethodWild = "*"
+const MethodWild http.Method = "*"
 
 // Instrumentation operation names.
 const (
@@ -16,8 +17,8 @@ const (
 )
 
 var (
-	contentTypeText = []byte("text/plain; charset=utf-8")
-	contentTypeJSON = []byte("application/json")
+	contentTypeText = []byte(http.ContentTypeTextPlain + "; charset=utf-8")
+	contentTypeJSON = []byte(http.ContentTypeJSON)
 	questionMark    = byte('?')
 )
 
@@ -50,13 +51,16 @@ type Router interface {
 	// This function is intended for bulk loading and to allow the usage of less
 	// frequently used, non-standardized or custom methods (e.g. for internal
 	// communication with a proxy).
-	Handle(method, path string, handler RequestHandler)
+	Handle(method http.Method, path string, handler RequestHandler)
 
 	// Get is a shortcut for HTTP GET method handler.
 	Get(path string, handler RequestHandler)
 
 	// Head is a shortcut for HTTP HEAD method handler.
 	Head(path string, handler RequestHandler)
+
+	// Query is a shortcut for HTTP QUERY method handler.
+	Query(path string, handler RequestHandler)
 
 	// Post is a shortcut for HTTP POST method handler.
 	Post(path string, handler RequestHandler)
@@ -158,7 +162,7 @@ type RouterOptions struct {
 
 	// Configurable RequestHandler which is called when a request
 	// cannot be routed and HandleMethodNotAllowed is true.
-	// If it is not set, fasthttp.StatusMethodNotAllowed will be returned.
+	// If it is not set, http.StatusMethodNotAllowed will be returned.
 	// The "Allow" header with allowed request methods is set before the handler
 	// is called.
 	MethodNotAllowed RequestHandler
@@ -210,7 +214,7 @@ func (a *App) Mutable(v bool) {
 // This function is intended for bulk loading and to allow the usage of less
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
-func (a *App) Handle(method, path string, handler RequestHandler) {
+func (a *App) Handle(method http.Method, path string, handler RequestHandler) {
 	a.defaultMux.Handle(method, path, handler)
 }
 
@@ -230,7 +234,7 @@ func (a *App) Handler(ctx *fasthttp.RequestCtx) {
 }
 
 // Routes returns all registered routes grouped by method.
-func (a *App) Routes() map[string][]string {
+func (a *App) Routes() map[http.Method][]string {
 	return a.defaultMux.Routes()
 }
 
@@ -250,47 +254,52 @@ func (a *App) UsePriority(middlewares ...RequestHandlerFunc) {
 
 // Get is a shortcut for HTTP GET method handler.
 func (a *App) Get(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodGet, path, handler)
+	a.Handle(http.MethodGet, path, handler)
 }
 
 // Head is a shortcut for HTTP HEAD method handler.
 func (a *App) Head(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodHead, path, handler)
+	a.Handle(http.MethodHead, path, handler)
+}
+
+// Query is a shortcut for HTTP QUERY method handler.
+func (a *App) Query(path string, handler RequestHandler) {
+	a.Handle(http.MethodQuery, path, handler)
 }
 
 // Post is a shortcut for HTTP POST method handler.
 func (a *App) Post(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodPost, path, handler)
+	a.Handle(http.MethodPost, path, handler)
 }
 
 // Put is a shortcut for HTTP PUT method handler.
 func (a *App) Put(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodPut, path, handler)
+	a.Handle(http.MethodPut, path, handler)
 }
 
 // Patch is a shortcut for HTTP PATCH method handler.
 func (a *App) Patch(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodPatch, path, handler)
+	a.Handle(http.MethodPatch, path, handler)
 }
 
 // Delete is a shortcut for HTTP DELETE method handler.
 func (a *App) Delete(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodDelete, path, handler)
+	a.Handle(http.MethodDelete, path, handler)
 }
 
 // Connect is a shortcut for HTTP CONNECT method handler.
 func (a *App) Connect(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodConnect, path, handler)
+	a.Handle(http.MethodConnect, path, handler)
 }
 
 // Options is a shortcut for HTTP OPTIONS method handler.
 func (a *App) Options(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodOptions, path, handler)
+	a.Handle(http.MethodOptions, path, handler)
 }
 
 // Trace is a shortcut for HTTP TRACE method handler.
 func (a *App) Trace(path string, handler RequestHandler) {
-	a.Handle(fasthttp.MethodTrace, path, handler)
+	a.Handle(http.MethodTrace, path, handler)
 }
 
 // Proxy is helper to proxy requests to another host.

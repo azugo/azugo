@@ -4,6 +4,7 @@ import (
 	"os"
 	"strings"
 
+	"azugo.io/core/http"
 	"azugo.io/core/validation"
 	"github.com/spf13/viper"
 )
@@ -36,7 +37,7 @@ func (c *Proxy) Bind(prefix string, v *viper.Viper) {
 		}
 	}
 
-	headers := []string{"X-Real-IP", "X-Forwarded-For"}
+	headers := []string{http.HeaderRealIP, http.HeaderXForwardedFor}
 	if env := os.Getenv("REVERSE_PROXY_TRUSTED_HEADERS"); len(env) > 0 {
 		headers = make([]string, 0, 3)
 

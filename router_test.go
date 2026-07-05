@@ -7,25 +7,27 @@ import (
 
 	"azugo.io/azugo/internal/utils"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
-var httpMethods = []string{
-	fasthttp.MethodGet,
-	fasthttp.MethodHead,
-	fasthttp.MethodPost,
-	fasthttp.MethodPut,
-	fasthttp.MethodPatch,
-	fasthttp.MethodDelete,
-	fasthttp.MethodConnect,
-	fasthttp.MethodOptions,
-	fasthttp.MethodTrace,
+var httpMethods = []http.Method{
+	http.MethodGet,
+	http.MethodHead,
+	http.MethodPost,
+	http.MethodPut,
+	http.MethodPatch,
+	http.MethodDelete,
+	http.MethodConnect,
+	http.MethodOptions,
+	http.MethodTrace,
+	http.MethodQuery,
 	MethodWild,
 	"CUSTOM",
 }
 
-func randomHTTPMethod() string {
+func randomHTTPMethod() http.Method {
 	method := httpMethods[rand.Intn(len(httpMethods)-1)]
 
 	for method == MethodWild {
@@ -39,7 +41,7 @@ func randomHTTPMethod() string {
 // If the path was found, it returns the handler function.
 // Otherwise the second return value indicates whether a redirection to
 // the same path with an extra / without the trailing slash should be performed.
-func routerLookupRequest(r *mux, method, path string, ctx *fasthttp.RequestCtx) (fasthttp.RequestHandler, bool) {
+func routerLookupRequest(r *mux, method http.Method, path string, ctx *fasthttp.RequestCtx) (fasthttp.RequestHandler, bool) {
 	methodIndex := r.MethodIndexOf(method)
 	if methodIndex == -1 {
 		return nil, false
@@ -61,7 +63,7 @@ func routerLookupRequest(r *mux, method, path string, ctx *fasthttp.RequestCtx) 
 
 func TestGetOptionalPath(t *testing.T) {
 	handler := func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	}
 
 	expected := []struct {
@@ -91,7 +93,7 @@ func TestGetOptionalPath(t *testing.T) {
 	for _, e := range expected {
 		ctx := new(fasthttp.RequestCtx)
 
-		h, tsr := routerLookupRequest(a.defaultMux, fasthttp.MethodGet, e.path, ctx)
+		h, tsr := routerLookupRequest(a.defaultMux, http.MethodGet, e.path, ctx)
 
 		qt.Check(t, qt.Equals(tsr, e.tsr), qt.Commentf("TSR (path: %s)", e.path))
 
@@ -116,7 +118,7 @@ func TestRouter(t *testing.T) {
 		qt.Check(t, qt.IsTrue(ok), qt.Commentf("wrong wildcard value missing"))
 		qt.Check(t, qt.Equals(param, want), qt.Commentf("wrong wildcard value"))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get(fmt.Sprintf("/user/%s", want))
@@ -124,11 +126,11 @@ func TestRouter(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 
 	qt.Check(t, qt.IsTrue(routed), qt.Commentf("routing failed"))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestRouterAPI(t *testing.T) {
-	var handled, get, head, post, put, patch, delete, connect, options, trace, any bool
+	var handled, get, head, query, post, put, patch, delete, connect, options, trace, any bool
 
 	a := NewTestApp()
 	a.Start(t)
@@ -139,6 +141,9 @@ func TestRouterAPI(t *testing.T) {
 	})
 	a.Head("/HEAD", func(ctx *Context) {
 		head = true
+	})
+	a.Query("/QUERY", func(ctx *Context) {
+		query = true
 	})
 	a.Post("/POST", func(ctx *Context) {
 		post = true
@@ -164,7 +169,7 @@ func TestRouterAPI(t *testing.T) {
 	a.Any("/ANY", func(ctx *Context) {
 		any = true
 	})
-	a.Handle(fasthttp.MethodGet, "/Handler", func(ctx *Context) {
+	a.Handle(http.MethodGet, "/Handler", func(ctx *Context) {
 		handled = true
 	})
 
@@ -177,6 +182,11 @@ func TestRouterAPI(t *testing.T) {
 	fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.IsTrue(head), qt.Commentf("HEAD route not handled"))
+
+	resp, err = a.TestClient().Query("/QUERY", nil)
+	fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(query), qt.Commentf("QUERY route not handled"))
 
 	resp, err = a.TestClient().Post("/POST", nil)
 	fasthttp.ReleaseResponse(resp)
@@ -227,6 +237,38 @@ func TestRouterAPI(t *testing.T) {
 	}
 }
 
+func TestRouterQueryContentType(t *testing.T) {
+	a := NewTestApp()
+
+	a.Query("/search", func(ctx *Context) {
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	a.Start(t)
+	defer a.Stop()
+
+	noContentType := TestClientOption(func(_ *TestClient, r *fasthttp.Request) {
+		r.Header.SetNoDefaultContentType(true)
+	})
+
+	// Content without a media type must be rejected (RFC 10008, Section 2.1)
+	resp, err := a.TestClient().Query("/search", []byte("test"), noContentType)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusBadRequest))
+	fasthttp.ReleaseResponse(resp)
+
+	resp, err = a.TestClient().Query("/search", []byte("test"), a.TestClient().WithHeader(http.HeaderContentType, http.ContentTypeTextPlain))
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+	fasthttp.ReleaseResponse(resp)
+
+	// Empty content does not require a media type
+	resp, err = a.TestClient().Query("/search", nil, noContentType)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+	fasthttp.ReleaseResponse(resp)
+}
+
 func TestRouterBasePath(t *testing.T) {
 	a := NewTestApp()
 	a.Config().Server.Path = "/TEST"
@@ -238,7 +280,7 @@ func TestRouterBasePath(t *testing.T) {
 	a.Get("/user", func(ctx *Context) {
 		routed = true
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/test/user")
@@ -246,7 +288,7 @@ func TestRouterBasePath(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 
 	qt.Check(t, qt.IsTrue(routed), qt.Commentf("routing failed"))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestRouterBasePathMatchWithStrippedBase(t *testing.T) {
@@ -260,7 +302,7 @@ func TestRouterBasePathMatchWithStrippedBase(t *testing.T) {
 	a.Get("/p", func(ctx *Context) {
 		routed = true
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/p")
@@ -268,7 +310,7 @@ func TestRouterBasePathMatchWithStrippedBase(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 
 	qt.Check(t, qt.IsTrue(routed), qt.Commentf("routing failed"))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestRouterInvalidInput(t *testing.T) {
@@ -301,7 +343,7 @@ func TestRouterRegexUserValues(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/metrics", func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	v4 := a.Group("/v4")
@@ -310,7 +352,7 @@ func TestRouterRegexUserValues(t *testing.T) {
 	var v1 any
 	id.Get("/click", func(ctx *Context) {
 		v1 = ctx.UserValue("id")
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/v4/123/click")
@@ -399,17 +441,17 @@ func TestRouterOPTIONS(t *testing.T) {
 		resp, err := a.TestClient().Options(path)
 		if qt.Check(t, qt.IsNil(err)) {
 			qt.Check(t, qt.Equals(resp.StatusCode(), expectedStatusCode))
-			qt.Check(t, qt.Equals(string(resp.Header.Peek("Allow")), expectedAllowed))
+			qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderAllow)), expectedAllowed))
 		}
 		fasthttp.ReleaseResponse(resp)
 	}
 
 	// path
-	checkHandling("/path", "OPTIONS, POST", fasthttp.StatusNoContent)
+	checkHandling("/path", "OPTIONS, POST", http.StatusNoContent)
 
 	resp, err := a.TestClient().Options("/doesnotexist")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNotFound))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNotFound))
 	fasthttp.ReleaseResponse(resp)
 
 	// add another method
@@ -418,11 +460,11 @@ func TestRouterOPTIONS(t *testing.T) {
 	// set a global OPTIONS handler
 	a.RouterOptions().GlobalOPTIONS = func(ctx *Context) {
 		// Adjust status code to 200
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	}
 
 	// path
-	checkHandling("/path", "GET, OPTIONS, POST", fasthttp.StatusOK)
+	checkHandling("/path", "GET, OPTIONS, POST", http.StatusOK)
 
 	// custom handler
 	var custom bool
@@ -431,7 +473,7 @@ func TestRouterOPTIONS(t *testing.T) {
 	})
 
 	// test again
-	checkHandling("/path", "", fasthttp.StatusOK)
+	checkHandling("/path", "", http.StatusOK)
 	qt.Check(t, qt.IsTrue(custom), qt.Commentf("custom OPTIONS handler should be called"))
 }
 
@@ -448,33 +490,33 @@ func TestRouterNotAllowed(t *testing.T) {
 		resp, err := a.TestClient().Get(path)
 		if qt.Check(t, qt.IsNil(err)) {
 			qt.Check(t, qt.Equals(resp.StatusCode(), expectedStatusCode))
-			qt.Check(t, qt.Equals(string(resp.Header.Peek("Allow")), expectedAllowed))
+			qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderAllow)), expectedAllowed))
 		}
 	}
 
 	// test not allowed
-	checkHandling("/path", "OPTIONS, POST", fasthttp.StatusMethodNotAllowed)
+	checkHandling("/path", "OPTIONS, POST", http.StatusMethodNotAllowed)
 
 	// add another method
 	a.Delete("/path", handlerFunc)
 	a.Options("/path", handlerFunc) // must be ignored
 
 	// test again
-	checkHandling("/path", "DELETE, OPTIONS, POST", fasthttp.StatusMethodNotAllowed)
+	checkHandling("/path", "DELETE, OPTIONS, POST", http.StatusMethodNotAllowed)
 
 	// test custom handler
 	responseText := "custom method"
 	a.RouterOptions().MethodNotAllowed = func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusTeapot)
+		ctx.StatusCode(http.StatusTeapot)
 		ctx.Text(responseText)
 	}
 
 	resp, err := a.TestClient().Get("/path")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTeapot))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTeapot))
 	qt.Check(t, qt.Equals(string(resp.Body()), responseText))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("Allow")), "DELETE, OPTIONS, POST"))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderAllow)), "DELETE, OPTIONS, POST"))
 }
 
 func TestRouterPanicHandler(t *testing.T) {
@@ -501,7 +543,7 @@ func TestRouterPanicHandler(t *testing.T) {
 	qt.Check(t, qt.IsTrue(panicHandled))
 }
 
-func testRouterNotFoundByMethod(t *testing.T, method string) {
+func testRouterNotFoundByMethod(t *testing.T, method http.Method) {
 	handlerFunc := func(*Context) {}
 	host := "test"
 
@@ -518,13 +560,13 @@ func testRouterNotFoundByMethod(t *testing.T, method string) {
 	defer a.Stop()
 
 	// Moved Permanently, request with GET method
-	expectedCode := fasthttp.StatusMovedPermanently
-	if method == fasthttp.MethodConnect {
+	expectedCode := http.StatusMovedPermanently
+	if method == http.MethodConnect {
 		// CONNECT method does not allow redirects, so Not Found (404)
-		expectedCode = fasthttp.StatusNotFound
-	} else if method != fasthttp.MethodGet {
+		expectedCode = http.StatusNotFound
+	} else if method != http.MethodGet {
 		// Permanent Redirect, request with same method
-		expectedCode = fasthttp.StatusPermanentRedirect
+		expectedCode = http.StatusPermanentRedirect
 	}
 
 	type testRoute struct {
@@ -534,12 +576,12 @@ func testRouterNotFoundByMethod(t *testing.T, method string) {
 	}
 
 	testRoutes := []testRoute{
-		{"", fasthttp.StatusOK, ""}, // TSR +/ (Not clean by router, this path is cleaned by fasthttp `ctx.Path()`)
+		{"", http.StatusOK, ""}, // TSR +/ (Not clean by router, this path is cleaned by fasthttp `ctx.Path()`)
 		// {"/../path", expectedCode, fmt.Sprintf("http://%s%s", host, "/path")}, // CleanPath (Not clean by router, this path is cleaned by fasthttp `ctx.Path()`)
-		{"/nope", fasthttp.StatusNotFound, ""}, // NotFound
+		{"/nope", http.StatusNotFound, ""}, // NotFound
 	}
 
-	if method != fasthttp.MethodConnect {
+	if method != http.MethodConnect {
 		testRoutes = append(testRoutes, []testRoute{
 			{"/path/", expectedCode, fmt.Sprintf("http://%s%s", host, "/path")},                                   // TSR -/
 			{"/dir", expectedCode, fmt.Sprintf("http://%s%s", host, "/dir/")},                                     // TSR +/
@@ -557,7 +599,7 @@ func testRouterNotFoundByMethod(t *testing.T, method string) {
 
 	reqMethod := method
 	if method == MethodWild {
-		reqMethod = fasthttp.MethodPut
+		reqMethod = http.MethodPut
 	}
 
 	for _, tr := range testRoutes {
@@ -565,8 +607,8 @@ func testRouterNotFoundByMethod(t *testing.T, method string) {
 		qt.Assert(t, qt.IsNil(err))
 
 		qt.Check(t, qt.Equals(resp.StatusCode(), tr.code), qt.Commentf("%s %s: unexpected response status code", reqMethod, tr.route))
-		if tr.code != fasthttp.StatusNotFound {
-			qt.Check(t, qt.Equals(string(resp.Header.Peek("Location")), tr.location), qt.Commentf("%s %s: unexpected response header", reqMethod, tr.route))
+		if tr.code != http.StatusNotFound {
+			qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderLocation)), tr.location), qt.Commentf("%s %s: unexpected response header", reqMethod, tr.route))
 		}
 		fasthttp.ReleaseResponse(resp)
 	}
@@ -574,14 +616,14 @@ func testRouterNotFoundByMethod(t *testing.T, method string) {
 	// Test custom not found handler
 	var notFound bool
 	a.RouterOptions().NotFound = func(ctx *Context) {
-		ctx.StatusCode(fasthttp.StatusNotFound)
+		ctx.StatusCode(http.StatusNotFound)
 		notFound = true
 	}
 
 	resp, err := a.TestClient().Call(reqMethod, "/nope", nil)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNotFound))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNotFound))
 	qt.Check(t, qt.IsTrue(notFound))
 }
 
@@ -597,18 +639,18 @@ func TestRouterNotFound(t *testing.T) {
 	// Test other method than GET (want 308 instead of 301)
 	a.Patch("/path", func(*Context) {})
 
-	resp, err := a.TestClient().Call(fasthttp.MethodPatch, "/path/?key=val", nil)
+	resp, err := a.TestClient().Call(http.MethodPatch, "/path/?key=val", nil)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusPermanentRedirect))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("Location")), "http://test/path?key=val"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusPermanentRedirect))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderLocation)), "http://test/path?key=val"))
 
 	// Test special case where no node for the prefix "/" exists
 	a.Get("/a", func(*Context) {})
 
-	resp, err = a.TestClient().Call(fasthttp.MethodPatch, "/", nil)
+	resp, err = a.TestClient().Call(http.MethodPatch, "/", nil)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNotFound))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNotFound))
 }
 
 func TestRouterNotFound_MethodWild(t *testing.T) {
@@ -636,19 +678,19 @@ func TestRouterNotFound_MethodWild(t *testing.T) {
 		resp, err := client.Call(method, "/specific", nil)
 		qt.Assert(t, qt.IsNil(err))
 
-		if method == fasthttp.MethodPost {
+		if method == http.MethodPost {
 			qt.Check(t, qt.IsTrue(postFound), qt.Commentf("post handler should be called"))
 		} else {
 			qt.Check(t, qt.IsTrue(anyFound), qt.Commentf("any handler should be called"))
 		}
-		qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+		qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 
 		fasthttp.ReleaseResponse(resp)
 		postFound, anyFound = false, false
 	}
 }
 
-func testRouterLookupByMethod(t *testing.T, method string) {
+func testRouterLookupByMethod(t *testing.T, method http.Method) {
 	reqMethod := method
 	if method == MethodWild {
 		reqMethod = randomHTTPMethod()
@@ -762,11 +804,11 @@ func TestRouterMatchedRoutePath(t *testing.T) {
 }
 
 func TestRoutesList(t *testing.T) {
-	expected := map[string][]string{
-		"GET":    {"/bar"},
-		"PATCH":  {"/foo"},
-		"POST":   {"/v1/users/{name}/{surname?}"},
-		"DELETE": {"/v1/users/{id?}"},
+	expected := map[http.Method][]string{
+		http.MethodGet:    {"/bar"},
+		http.MethodPatch:  {"/foo"},
+		http.MethodPost:   {"/v1/users/{name}/{surname?}"},
+		http.MethodDelete: {"/v1/users/{id?}"},
 	}
 
 	a := NewTestApp()

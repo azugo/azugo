@@ -37,7 +37,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		next(ctx)
 
-		ns := time.Since(ctx.Context().Time()).Nanoseconds()
+		ns := time.Since(ctx.Time()).Nanoseconds()
 
 		if ctx.IsSkipRequestLog() {
 			return
@@ -52,10 +52,10 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 			cleanedPath = path[len(basePath):]
 		}
 
-		query := ctx.Request().URI().QueryString()
+		query := ctx.Query.Raw()
 
-		referer := ctx.Header.Get("Referer")
-		userAgent := ctx.Header.Get("User-Agent")
+		referer := ctx.Referer()
+		userAgent := ctx.UserAgent()
 
 		msg := bytebufferpool.Get()
 		defer bytebufferpool.Put(msg)
@@ -67,22 +67,22 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		// Request time
 		_, _ = msg.Write([]byte(" ["))
-		_, _ = msg.WriteString(ctx.Context().Time().Format("02/Jan/2006:15:04:05 -0700"))
+		_, _ = msg.WriteString(ctx.Time().Format("02/Jan/2006:15:04:05 -0700"))
 		_, _ = msg.Write([]byte("] \""))
 
 		// Method
-		_, _ = msg.WriteString(method)
+		_, _ = msg.WriteString(method.String())
 		// Path
 		_ = msg.WriteByte(' ')
 		_, _ = msg.WriteString(cleanedPath)
 		// Query string
 		if len(query) > 0 {
 			_ = msg.WriteByte('?')
-			_, _ = msg.Write(query)
+			_, _ = msg.WriteString(query)
 		}
 		// HTTP protocol
 		_ = msg.WriteByte(' ')
-		_, _ = msg.Write(ctx.Context().Response.Header.Protocol())
+		_, _ = msg.Write(ctx.Response().Header.Protocol())
 		_ = msg.WriteByte('"')
 
 		// Status Code
@@ -117,9 +117,9 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		// Request
 		fields = append(fields,
-			zap.String("http.version", utils.B2S(ctx.Context().Request.Header.Protocol())),
+			zap.String("http.version", ctx.Protocol()),
 			zap.String("http.request.id", ctx.ID()),
-			zap.String("http.request.method", method),
+			zap.String("http.request.method", method.String()),
 		)
 
 		if len(referer) > 0 {
@@ -156,8 +156,8 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 			fields = append(fields, zap.String("url.username", utils.B2S(usr)))
 		}
 
-		if q := u.QueryString(); len(q) > 0 {
-			fields = append(fields, zap.String("url.query", utils.B2S(q)))
+		if len(query) > 0 {
+			fields = append(fields, zap.String("url.query", query))
 		}
 
 		if h := u.Hash(); len(h) > 0 {

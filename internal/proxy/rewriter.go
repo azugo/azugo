@@ -3,6 +3,7 @@ package proxy
 import (
 	"bytes"
 
+	"azugo.io/core/http"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 )
@@ -14,14 +15,14 @@ var (
 )
 
 var (
-	contentTypePlain  = []byte("text/plain")
-	contentTypeHTML   = []byte("text/html")
+	contentTypePlain  = []byte(http.ContentTypeTextPlain)
+	contentTypeHTML   = []byte(http.ContentTypeTextHTML)
 	contentTypeCSS    = []byte("text/css")
 	contentTypeJS     = []byte("text/javascript")
 	contentTypeJSAlt  = []byte("application/javascript")
 	contentTypeJSXAlt = []byte("application/x-javascript")
-	contentTypeJSON   = []byte("application/json")
-	contentTypeXML    = []byte("application/xml")
+	contentTypeJSON   = []byte(http.ContentTypeJSON)
+	contentTypeXML    = []byte(http.ContentTypeXML)
 	contentTypeXHTML  = []byte("application/xhtml")
 )
 
@@ -69,7 +70,7 @@ func (r *BodyRewriter) AddReplace(from, to []byte) {
 }
 
 func getDecodedBody(resp *fasthttp.Response) []byte {
-	enc := resp.Header.Peek("Content-Encoding")
+	enc := resp.Header.Peek(http.HeaderContentEncoding)
 	if bytes.Equal(enc, contentEncodingGzip) {
 		b, err := resp.BodyGunzip()
 		if err != nil {
@@ -107,7 +108,7 @@ func setEncodedBody(resp *fasthttp.Response, body []byte) {
 		return
 	}
 
-	enc := resp.Header.Peek("Content-Encoding")
+	enc := resp.Header.Peek(http.HeaderContentEncoding)
 	if bytes.Equal(enc, contentEncodingGzip) {
 		w := responseBodyPool.Get()
 		body = fasthttp.AppendGzipBytes(w.B, body)

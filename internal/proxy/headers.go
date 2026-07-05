@@ -1,15 +1,19 @@
 package proxy
 
+import (
+	"azugo.io/core/http"
+)
+
 var hopHeaders = []string{
-	"Connection",          // Connection
-	"Proxy-Connection",    // non-standard but still sent by libcurl and rejected by e.g. google
-	"Keep-Alive",          // Keep-Alive
-	"Proxy-Authenticate",  // Proxy-Authenticate
-	"Proxy-Authorization", // Proxy-Authorization
-	"Te",                  // canonicalized version of "TE"
-	"Trailer",             // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
-	"Transfer-Encoding",   // Transfer-Encoding
-	"Upgrade",             // Upgrade
+	http.HeaderConnection,
+	http.HeaderProxyConnection, // non-standard but still sent by libcurl and rejected by e.g. google
+	http.HeaderKeepAlive,
+	http.HeaderProxyAuthenticate,
+	http.HeaderProxyAuthorization,
+	http.HeaderTE,
+	http.HeaderTrailer, // not Trailers per URL above; https://www.rfc-editor.org/errata_search.php?eid=4522
+	http.HeaderTransferEncoding,
+	http.HeaderUpgrade,
 }
 
 // HeaderDel is an interface for deleting HTTP headers.

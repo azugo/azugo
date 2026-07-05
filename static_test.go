@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -23,10 +24,10 @@ func TestRouterStatic(t *testing.T) {
 	}))
 	qt.Assert(t, qt.IsNil(err))
 
-	resp, err := a.TestClient().Call(fasthttp.MethodGet, "/index.html", nil)
+	resp, err := a.TestClient().Call(http.MethodGet, "/index.html", nil)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	qt.Check(t, qt.Equals(string(resp.Header.ContentType()), "text/html; charset=utf-8"))
 	qt.Check(t, qt.StringContains(string(resp.Body()), `var baseURL = "http://test";`))
 	qt.Check(t, qt.StringContains(string(resp.Body()), `var basePath = "";`))
@@ -43,10 +44,10 @@ func TestRouterStaticSPARouter(t *testing.T) {
 	}))
 	qt.Assert(t, qt.IsNil(err))
 
-	resp, err := a.TestClient().Call(fasthttp.MethodGet, "/", nil)
+	resp, err := a.TestClient().Call(http.MethodGet, "/", nil)
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	qt.Check(t, qt.Equals(string(resp.Header.ContentType()), "text/html; charset=utf-8"))
 	qt.Check(t, qt.StringContains(string(resp.Body()), `var baseURL = "http://test";`))
 	qt.Check(t, qt.StringContains(string(resp.Body()), `var basePath = "";`))

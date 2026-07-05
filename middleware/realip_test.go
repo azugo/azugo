@@ -6,6 +6,7 @@ import (
 
 	"azugo.io/azugo"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -21,50 +22,50 @@ func TestRealIPMiddleware(t *testing.T) {
 	}{
 		{
 			limit:       1,
-			trusted:     []string{"X-Forwarded-For"},
-			headerName:  "X-Forwarded-For",
+			trusted:     []string{http.HeaderXForwardedFor},
+			headerName:  http.HeaderXForwardedFor,
 			headerValue: "1.1.1.1",
 			expectedIP:  "1.1.1.1",
 		},
 		{
 			limit:       2,
-			trusted:     []string{"X-Forwarded-For"},
-			headerName:  "X-Forwarded-For",
+			trusted:     []string{http.HeaderXForwardedFor},
+			headerName:  http.HeaderXForwardedFor,
 			headerValue: "1.1.1.1",
 			expectedIP:  "1.1.1.1",
 		},
 		{
 			limit:       1,
-			trusted:     []string{"X-Forwarded-For"},
-			headerName:  "X-Forwarded-For",
+			trusted:     []string{http.HeaderXForwardedFor},
+			headerName:  http.HeaderXForwardedFor,
 			headerValue: "1.0.0.1, 1.1.1.1",
 			expectedIP:  "1.1.1.1",
 		},
 		{
 			limit:       1,
-			trusted:     []string{"X-Forwarded-For"},
-			headerName:  "X-Forwarded-For",
+			trusted:     []string{http.HeaderXForwardedFor},
+			headerName:  http.HeaderXForwardedFor,
 			headerValue: "1.0.0.1,1.1.1.1",
 			expectedIP:  "1.1.1.1",
 		},
 		{
 			limit:       2,
-			trusted:     []string{"X-Real-IP", "X-Forwarded-For"},
-			headerName:  "X-Forwarded-For",
+			trusted:     []string{http.HeaderRealIP, http.HeaderXForwardedFor},
+			headerName:  http.HeaderXForwardedFor,
 			headerValue: "1.0.0.1,1.1.1.1",
 			expectedIP:  "1.0.0.1",
 		},
 		{
 			limit:       2,
-			trusted:     []string{"X-Real-IP", "X-Forwarded-For"},
-			headerName:  "X-Real-IP",
+			trusted:     []string{http.HeaderRealIP, http.HeaderXForwardedFor},
+			headerName:  http.HeaderRealIP,
 			headerValue: "1.0.0.1",
 			expectedIP:  "1.0.0.1",
 		},
 		{
 			limit:       2,
 			trusted:     []string{"CF-Connecting-IP"},
-			headerName:  "X-Real-IP",
+			headerName:  http.HeaderRealIP,
 			headerValue: "1.0.0.1",
 			expectedIP:  "<nil>",
 		},
@@ -77,8 +78,8 @@ func TestRealIPMiddleware(t *testing.T) {
 		},
 		{
 			limit:       2,
-			trusted:     []string{"X-Real-IP"},
-			headerName:  "X-Real-IP",
+			trusted:     []string{http.HeaderRealIP},
+			headerName:  http.HeaderRealIP,
 			headerValue: "1.0.0.1, 1.1.1.1",
 			expectedIP:  "<nil>",
 		},

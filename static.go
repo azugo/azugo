@@ -12,6 +12,7 @@ import (
 	"strings"
 	"sync"
 
+	"azugo.io/core/http"
 	"github.com/valyala/fasthttp"
 )
 
@@ -107,11 +108,11 @@ func (h *staticHandler) replaceContent(file string, replacer *strings.Replacer) 
 
 func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 	return func(ctx *Context) {
-		ctx.Header.Set("Content-Type", h.extcache[fpath])
+		ctx.Header.Set(http.HeaderContentType, h.extcache[fpath])
 
-		useGzip := h.gzip && ctx.Request().Header.HasAcceptEncoding("gzip")
+		useGzip := h.gzip && ctx.Header.AcceptsEncoding("gzip")
 		if h.gzip {
-			ctx.Header.Set("Vary", "Accept-Encoding")
+			ctx.Header.Set(http.HeaderVary, http.HeaderAcceptEncoding)
 		}
 
 		// Modify content on the fly and replace values in content
@@ -126,7 +127,7 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 					// Check non-hash-specific cache (content didn't change)
 					if content, ok := h.getContent(prefix + fpath); ok {
 						if useGzip {
-							ctx.Header.Set("Content-Encoding", "gzip")
+							ctx.Header.Set(http.HeaderContentEncoding, "gzip")
 						}
 
 						ctx.Raw(content)
@@ -136,7 +137,7 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 					// Check hash-specific cache
 					if content, ok := h.getContent(prefix + hash + fpath); ok {
 						if useGzip {
-							ctx.Header.Set("Content-Encoding", "gzip")
+							ctx.Header.Set(http.HeaderContentEncoding, "gzip")
 						}
 
 						ctx.Raw(content)
@@ -166,7 +167,7 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 
 					if useGzip {
 						if gz, ok := h.getContent("gz:" + cacheKey); ok {
-							ctx.Header.Set("Content-Encoding", "gzip")
+							ctx.Header.Set(http.HeaderContentEncoding, "gzip")
 							ctx.Raw(gz)
 
 							return
@@ -183,7 +184,7 @@ func (h *staticHandler) requestHandler(fpath, path string) RequestHandler {
 		// Serve pre-compressed content if available and client accepts gzip
 		if useGzip {
 			if content, ok := h.getContent("gz:*" + fpath); ok {
-				ctx.Header.Set("Content-Encoding", "gzip")
+				ctx.Header.Set(http.HeaderContentEncoding, "gzip")
 				ctx.Raw(content)
 
 				return

@@ -8,8 +8,8 @@ import (
 
 	"azugo.io/azugo"
 
+	"azugo.io/core/http"
 	"github.com/VictoriaMetrics/metrics"
-	"github.com/valyala/fasthttp"
 )
 
 var requestDurationBuckets = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10, 15, 20, 30, 40, 50, 60}
@@ -89,11 +89,11 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 		}
 
 		status := ctx.Response().StatusCode()
-		if status == fasthttp.StatusNotFound {
+		if status == http.StatusNotFound {
 			return
 		}
 
-		elapsed := float64(time.Since(ctx.Context().Time())) / float64(time.Second)
+		elapsed := float64(time.Since(ctx.Time())) / float64(time.Second)
 
 		var respSize float64
 
@@ -112,21 +112,21 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 		metrics.GetOrCreateCounter(p.metricName("requests_total") + labels).Inc()
 		metrics.GetOrCreatePrometheusHistogramExt(p.metricName("request_duration_seconds")+labels, requestDurationBuckets).Update(elapsed)
 
-		p.reqSize.Update(float64(computeApproximateRequestSize(ctx.Request())))
+		p.reqSize.Update(float64(computeApproximateRequestSize(ctx)))
 		p.respSize.Update(respSize)
 	}
 }
 
 func (p *metricsHandler) serveMetrics(ctx *azugo.Context) {
-	accept := string(ctx.Request().Header.Peek("Accept"))
+	accept := ctx.Header.Get(http.HeaderAccept)
 	w := ctx.Response().BodyWriter()
 
 	if negotiateOpenMetrics(accept) {
-		ctx.Response().Header.Set("Content-Type", "application/openmetrics-text; version=1.0.0; charset=utf-8")
+		ctx.Header.Set(http.HeaderContentType, "application/openmetrics-text; version=1.0.0; charset=utf-8")
 		metrics.WritePrometheus(w, true)
 		_, _ = w.Write([]byte("# EOF\n"))
 	} else {
-		ctx.Response().Header.Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		ctx.Header.Set(http.HeaderContentType, "text/plain; version=0.0.4; charset=utf-8")
 		metrics.WritePrometheus(w, true)
 	}
 }
@@ -157,24 +157,23 @@ func (p *metricsHandler) isTrusted(ctx *azugo.Context) bool {
 	return ctx.App().MetricsOptions.IsTrusted(ctx.IP())
 }
 
-func computeApproximateRequestSize(req *fasthttp.Request) int {
-	s := 0
-	if req.URI() != nil {
-		s += len(req.URI().Path())
-		s += len(req.URI().Host())
+func computeApproximateRequestSize(ctx *azugo.Context) int {
+	s := len(ctx.Path())
+	if uri := ctx.Request().URI(); uri != nil {
+		s += len(uri.Host())
 	}
 
-	s += len(req.Header.Method())
-	s += len(req.Header.Protocol())
+	s += len(ctx.Method())
+	s += len(ctx.Protocol())
 
-	for key, value := range req.Header.All() {
-		if string(key) != "Host" {
+	for key, value := range ctx.Header.All() {
+		if key != http.HeaderHost {
 			s += len(key) + len(value)
 		}
 	}
 
-	if req.Header.ContentLength() != -1 {
-		s += req.Header.ContentLength()
+	if cl := ctx.ContentLength(); cl != -1 {
+		s += cl
 	}
 
 	return s

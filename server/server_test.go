@@ -6,6 +6,7 @@ import (
 	"azugo.io/azugo"
 	"azugo.io/azugo/config"
 	"azugo.io/azugo/middleware"
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/spf13/cobra"
 	"github.com/valyala/fasthttp"
@@ -32,7 +33,7 @@ func newRateLimitedApp(t *testing.T, opts ...Option) *azugo.TestApp {
 	qt.Assert(t, qt.IsTrue(a.Config().RateLimit.Enabled))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -48,13 +49,13 @@ func TestAutoRateLimitEnabled(t *testing.T) {
 	// First request is within the limit.
 	resp, err := ta.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 
 	// Second request is rejected by the auto-wired rate limit middleware.
 	resp, err = ta.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -71,14 +72,14 @@ func TestAutoRateLimitResolver(t *testing.T) {
 	for range 5 {
 		resp, err := ta.TestClient().Get("/test")
 		qt.Assert(t, qt.IsNil(err))
-		qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
-		qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), "5"))
+		qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+		qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitLimit)), "5"))
 		fasthttp.ReleaseResponse(resp)
 	}
 
 	resp, err := ta.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -105,11 +106,11 @@ func TestDisableAutoRateLimit(t *testing.T) {
 	// keeps the middleware out of the global stack, so no request is rejected.
 	resp, err := ta.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = ta.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 }

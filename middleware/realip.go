@@ -8,12 +8,9 @@ import (
 	"azugo.io/azugo"
 	"azugo.io/azugo/internal/utils"
 
+	"azugo.io/core/http"
 	"github.com/valyala/bytebufferpool"
 	"go.uber.org/zap"
-)
-
-const (
-	xForwardedFor = "X-Forwarded-For"
 )
 
 var xForwardedForSep = []byte(", ")
@@ -30,13 +27,13 @@ func forwardedFor(ctx *azugo.Context) net.IP {
 	buf := bytebufferpool.Get()
 	defer bytebufferpool.Put(buf)
 
-	for key, value := range ctx.Context().Request.Header.AllInOrder() {
-		if strings.EqualFold(utils.B2S(key), xForwardedFor) {
+	for key, value := range ctx.Header.AllInOrder() {
+		if strings.EqualFold(key, http.HeaderXForwardedFor) {
 			if buf.Len() > 0 {
 				_, _ = buf.Write(xForwardedForSep)
 			}
 
-			_, _ = buf.Write(value)
+			_, _ = buf.WriteString(value)
 		}
 	}
 
@@ -86,7 +83,7 @@ func realIPOrForwardedFor(ctx *azugo.Context) net.Addr {
 	}
 
 	for _, header := range ctx.RouterOptions().Proxy.TrustedHeaders {
-		if strings.EqualFold(header, xForwardedFor) {
+		if strings.EqualFold(header, http.HeaderXForwardedFor) {
 			if ip := forwardedFor(ctx); ip != nil {
 				return &net.TCPAddr{
 					IP: ip,

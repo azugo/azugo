@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -59,7 +60,7 @@ func TestContextValueExtension(t *testing.T) {
 	resp, err := app.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 type testTxKeyType struct{}
@@ -110,13 +111,13 @@ func TestContextSetContext(t *testing.T) {
 		qt.Check(t, qt.IsNil(ctx.Value(pushKey{})))
 		qt.Check(t, qt.Equals(ctx.Value("base-key").(string), "base-val"))
 
-		ctx.StatusCode(fasthttp.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	})
 
 	resp, err := app.TestClient().Get("/test")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNoContent))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
 }
 
 func TestRequestContextRecovery(t *testing.T) {
@@ -136,13 +137,13 @@ func TestRequestContextRecovery(t *testing.T) {
 		var noContext context.Context
 		qt.Check(t, qt.IsNil(RequestContext(noContext)))
 
-		ctx.StatusCode(fasthttp.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	})
 
 	resp, err := app.TestClient().Get("/test")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNoContent))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
 }
 
 func TestContextTransactionAndSpanStack(t *testing.T) {
@@ -165,13 +166,13 @@ func TestContextTransactionAndSpanStack(t *testing.T) {
 		qt.Check(t, qt.Equals(stack.Value(testTxKey).(*testTxContext), tx))
 		qt.Check(t, qt.Equals(stack.Value(slowKey{}).(string), "5s"))
 
-		ctx.StatusCode(fasthttp.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	})
 
 	resp, err := app.TestClient().Get("/test")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNoContent))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
 }
 
 func TestContextDeadlineExtension(t *testing.T) {
@@ -202,5 +203,5 @@ func TestContextDeadlineExtension(t *testing.T) {
 	resp, err := app.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }

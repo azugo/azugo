@@ -8,7 +8,9 @@ import (
 	"azugo.io/azugo"
 	"azugo.io/azugo/config"
 	"azugo.io/azugo/token"
+
 	"azugo.io/azugo/user"
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -24,7 +26,7 @@ func TestRateLimit(t *testing.T) {
 	}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -33,18 +35,18 @@ func TestRateLimit(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
-	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), "")))
-	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek("RateLimit-Remaining")), "")))
-	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek("RateLimit-Reset")), "")))
-	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek("RateLimit-Policy")), "")))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitLimit)), "")))
+	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitRemaining)), "")))
+	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitReset)), "")))
+	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitPolicy)), "")))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
-	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek("Retry-After")), "")))
-	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek("RateLimit-Remaining")), "")))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
+	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek(http.HeaderRetryAfter)), "")))
+	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitRemaining)), "")))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -59,7 +61,7 @@ func TestRateLimitPlainOptionsIsLimited(t *testing.T) {
 	}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -69,13 +71,13 @@ func TestRateLimitPlainOptionsIsLimited(t *testing.T) {
 	// A plain OPTIONS request (without CORS preflight headers) consumes quota.
 	resp, err := a.TestClient().Options("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Not(qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests)))
+	qt.Check(t, qt.Not(qt.Equals(resp.StatusCode(), http.StatusTooManyRequests)))
 	fasthttp.ReleaseResponse(resp)
 
 	// The next plain OPTIONS request is rejected by the limiter.
 	resp, err = a.TestClient().Options("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -92,7 +94,7 @@ func TestRateLimitCORSPreflightBypassesLimit(t *testing.T) {
 	}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -104,11 +106,11 @@ func TestRateLimitCORSPreflightBypassesLimit(t *testing.T) {
 	// request per window.
 	for range 3 {
 		resp, err := a.TestClient().Options("/test",
-			a.TestClient().WithHeader(headerOrigin, "https://example.com"),
-			a.TestClient().WithHeader(headerRequestMethod, fasthttp.MethodGet),
+			a.TestClient().WithHeader(http.HeaderOrigin, "https://example.com"),
+			a.TestClient().WithHeader(http.HeaderAccessControlRequestMethod, http.MethodGet.String()),
 		)
 		qt.Assert(t, qt.IsNil(err))
-		qt.Check(t, qt.Not(qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests)))
+		qt.Check(t, qt.Not(qt.Equals(resp.StatusCode(), http.StatusTooManyRequests)))
 		fasthttp.ReleaseResponse(resp)
 	}
 }
@@ -125,7 +127,7 @@ func TestRateLimitCORSPreflightDisallowedOriginIsLimited(t *testing.T) {
 	}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -135,19 +137,19 @@ func TestRateLimitCORSPreflightDisallowedOriginIsLimited(t *testing.T) {
 	// A preflight-looking request from a non allow-listed origin is not flagged
 	// by CORS, so it cannot be used to bypass the limit by spoofing headers.
 	resp, err := a.TestClient().Options("/test",
-		a.TestClient().WithHeader(headerOrigin, "https://evil.example"),
-		a.TestClient().WithHeader(headerRequestMethod, fasthttp.MethodGet),
+		a.TestClient().WithHeader(http.HeaderOrigin, "https://evil.example"),
+		a.TestClient().WithHeader(http.HeaderAccessControlRequestMethod, http.MethodGet.String()),
 	)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Not(qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests)))
+	qt.Check(t, qt.Not(qt.Equals(resp.StatusCode(), http.StatusTooManyRequests)))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Options("/test",
-		a.TestClient().WithHeader(headerOrigin, "https://evil.example"),
-		a.TestClient().WithHeader(headerRequestMethod, fasthttp.MethodGet),
+		a.TestClient().WithHeader(http.HeaderOrigin, "https://evil.example"),
+		a.TestClient().WithHeader(http.HeaderAccessControlRequestMethod, http.MethodGet.String()),
 	)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -163,28 +165,28 @@ func TestRateLimitPreservesCORSHeadersOnReject(t *testing.T) {
 	}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
 	a.Start(t)
 	defer a.Stop()
 
-	origin := a.TestClient().WithHeader(headerOrigin, "https://example.com")
+	origin := a.TestClient().WithHeader(http.HeaderOrigin, "https://example.com")
 
 	// First cross-origin request succeeds and carries the CORS origin header.
 	resp, err := a.TestClient().Get("/test", origin)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek(headerAllowOrigin)), "https://example.com"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderAccessControlAllowOrigin)), "https://example.com"))
 	fasthttp.ReleaseResponse(resp)
 
 	// The rate-limited response must keep the CORS header so the browser can
 	// read the 429 instead of having it blocked by the same-origin policy.
 	resp, err = a.TestClient().Get("/test", origin)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek(headerAllowOrigin)), "https://example.com"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderAccessControlAllowOrigin)), "https://example.com"))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -199,7 +201,7 @@ func TestRateLimitJSONErrorResponse(t *testing.T) {
 	}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -208,18 +210,18 @@ func TestRateLimitJSONErrorResponse(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 
 	// A JSON client receives a content-negotiated error body, and the RateLimit
 	// response headers survive the framework error handling.
-	resp, err = a.TestClient().Get("/test", a.TestClient().WithHeader("Accept", "application/json"))
+	resp, err = a.TestClient().Get("/test", a.TestClient().WithHeader(http.HeaderAccept, http.ContentTypeJSON))
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
-	qt.Check(t, qt.StringContains(string(resp.Header.ContentType()), "application/json"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
+	qt.Check(t, qt.StringContains(string(resp.Header.ContentType()), http.ContentTypeJSON))
 	qt.Check(t, qt.StringContains(string(resp.Body()), "rate limit exceeded"))
-	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek("Retry-After")), "")))
-	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek("RateLimit-Reset")), "")))
+	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek(http.HeaderRetryAfter)), "")))
+	qt.Check(t, qt.Not(qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitReset)), "")))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -232,7 +234,7 @@ func TestRateLimitCustomErrorHandler(t *testing.T) {
 			return false
 		}
 
-		ctx.StatusCode(fasthttp.StatusTooManyRequests)
+		ctx.StatusCode(http.StatusTooManyRequests)
 		ctx.Text("custom: slow down")
 
 		return true
@@ -246,7 +248,7 @@ func TestRateLimitCustomErrorHandler(t *testing.T) {
 	}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -255,13 +257,13 @@ func TestRateLimitCustomErrorHandler(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 
 	// The exported RateLimitError lets a custom handler fully override the response.
 	resp, err = a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	qt.Check(t, qt.Equals(string(resp.Body()), "custom: slow down"))
 	fasthttp.ReleaseResponse(resp)
 }
@@ -274,7 +276,7 @@ func TestRateLimitDisabledIsPassthrough(t *testing.T) {
 	a.Use(RateLimit(&config.RateLimit{Enabled: false}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -284,8 +286,8 @@ func TestRateLimitDisabledIsPassthrough(t *testing.T) {
 	for range 3 {
 		resp, err := a.TestClient().Get("/test")
 		qt.Assert(t, qt.IsNil(err))
-		qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
-		qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), ""))
+		qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+		qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitLimit)), ""))
 		fasthttp.ReleaseResponse(resp)
 	}
 }
@@ -296,7 +298,7 @@ func TestRateLimitNilConfigIsPassthrough(t *testing.T) {
 	a.Use(RateLimit(nil))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -305,7 +307,7 @@ func TestRateLimitNilConfigIsPassthrough(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -320,7 +322,7 @@ func TestRateLimitHeadersDisabled(t *testing.T) {
 	}, DisableRateLimitHeaders()))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -329,17 +331,17 @@ func TestRateLimitHeadersDisabled(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), ""))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Remaining")), ""))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Reset")), ""))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Policy")), ""))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitLimit)), ""))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitRemaining)), ""))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitReset)), ""))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitPolicy)), ""))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("Retry-After")), ""))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRetryAfter)), ""))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -367,7 +369,7 @@ func TestRateLimitUsesUserIDWhenAuthorized(t *testing.T) {
 	}))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -376,17 +378,17 @@ func TestRateLimitUsesUserIDWhenAuthorized(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test", a.TestClient().WithHeader("X-User-ID", "u1"))
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/test", a.TestClient().WithHeader("X-User-ID", "u2"))
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/test", a.TestClient().WithHeader("X-User-ID", "u1"))
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -403,7 +405,7 @@ func TestRateLimitCustomKeyGenerator(t *testing.T) {
 	})))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -412,12 +414,12 @@ func TestRateLimitCustomKeyGenerator(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -434,7 +436,7 @@ func TestRateLimitCustomKeyGeneratorError(t *testing.T) {
 	})))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("ok")
 	})
 
@@ -443,7 +445,7 @@ func TestRateLimitCustomKeyGeneratorError(t *testing.T) {
 
 	resp, err := a.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusInternalServerError))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusInternalServerError))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -463,31 +465,31 @@ func TestRateLimitNameIsolation(t *testing.T) {
 	// Use() applies globally so per-group isolation is tested via separate apps.
 	appA := azugo.NewTestApp()
 	appA.Use(RateLimit(cfg, RateLimitName("isolation-a"), fixedKey))
-	appA.Get("/test", func(ctx *azugo.Context) { ctx.StatusCode(fasthttp.StatusOK); ctx.Text("ok") })
+	appA.Get("/test", func(ctx *azugo.Context) { ctx.StatusCode(http.StatusOK); ctx.Text("ok") })
 	appA.Start(t)
 	defer appA.Stop()
 
 	appB := azugo.NewTestApp()
 	appB.Use(RateLimit(cfg, RateLimitName("isolation-b"), fixedKey))
-	appB.Get("/test", func(ctx *azugo.Context) { ctx.StatusCode(fasthttp.StatusOK); ctx.Text("ok") })
+	appB.Get("/test", func(ctx *azugo.Context) { ctx.StatusCode(http.StatusOK); ctx.Text("ok") })
 	appB.Start(t)
 	defer appB.Stop()
 
 	// Exhaust group-a's quota.
 	resp, err := appA.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = appA.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 
 	// group-b must still have its own full quota despite the same key string.
 	resp, err = appB.TestClient().Get("/test")
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
 }
 
@@ -509,7 +511,7 @@ func TestRateLimitResolver(t *testing.T) {
 	))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	a.Start(t)
@@ -520,26 +522,26 @@ func TestRateLimitResolver(t *testing.T) {
 	// Default limit (1) for user "a": first allowed (header shows 1), second denied.
 	resp, err := tc.Get("/test", tc.WithHeader("X-User", "a"))
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
-	qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), "1"))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitLimit)), "1"))
 	fasthttp.ReleaseResponse(resp)
 
 	resp, err = tc.Get("/test", tc.WithHeader("X-User", "a"))
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 
 	// Pro limit (5) for user "b": its own counter, higher ceiling, header shows 5.
 	for range 5 {
 		resp, err = tc.Get("/test", tc.WithHeader("X-User", "b"), tc.WithHeader("X-Plan", "pro"))
 		qt.Assert(t, qt.IsNil(err))
-		qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
-		qt.Check(t, qt.Equals(string(resp.Header.Peek("RateLimit-Limit")), "5"))
+		qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+		qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderRateLimitLimit)), "5"))
 		fasthttp.ReleaseResponse(resp)
 	}
 
 	resp, err = tc.Get("/test", tc.WithHeader("X-User", "b"), tc.WithHeader("X-Plan", "pro"))
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusTooManyRequests))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusTooManyRequests))
 	fasthttp.ReleaseResponse(resp)
 }

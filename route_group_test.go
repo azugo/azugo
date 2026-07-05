@@ -3,12 +3,13 @@ package azugo
 import (
 	"testing"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
 
 func TestRouterGroupAPI(t *testing.T) {
-	var handled, get, head, post, put, patch, delete, connect, options, trace, anyHandled bool
+	var handled, get, head, query, post, put, patch, delete, connect, options, trace, anyHandled bool
 
 	a := NewTestApp()
 	a.Start(t)
@@ -21,6 +22,9 @@ func TestRouterGroupAPI(t *testing.T) {
 	})
 	g.Head("/HEAD", func(ctx *Context) {
 		head = true
+	})
+	g.Query("/QUERY", func(ctx *Context) {
+		query = true
 	})
 	g.Post("/POST", func(ctx *Context) {
 		post = true
@@ -46,7 +50,7 @@ func TestRouterGroupAPI(t *testing.T) {
 	g.Any("/ANY", func(ctx *Context) {
 		anyHandled = true
 	})
-	g.Handle(fasthttp.MethodGet, "/Handler", func(ctx *Context) {
+	g.Handle(http.MethodGet, "/Handler", func(ctx *Context) {
 		handled = true
 	})
 
@@ -59,6 +63,11 @@ func TestRouterGroupAPI(t *testing.T) {
 	fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.IsTrue(head), qt.Commentf("HEAD route not handled"))
+
+	resp, err = a.TestClient().Query("/v1/QUERY", nil)
+	fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.IsTrue(query), qt.Commentf("QUERY route not handled"))
 
 	resp, err = a.TestClient().Post("/v1/POST", nil)
 	fasthttp.ReleaseResponse(resp)

@@ -1,7 +1,6 @@
 package azugo
 
 import (
-	"bytes"
 	"fmt"
 	"iter"
 	"strings"
@@ -9,25 +8,6 @@ import (
 	"azugo.io/azugo/internal/utils"
 
 	"azugo.io/core/http"
-	"github.com/valyala/fasthttp"
-)
-
-// HTTP header name constants.
-const (
-	HeaderAccept                     string = "Accept"
-	HeaderTotalCount                 string = "X-Total-Count"
-	HeaderLink                       string = "Link"
-	HeaderAccessControlExposeHeaders string = "Access-Control-Expose-Headers"
-	HeaderContentType                string = "Content-Type"
-	HeaderContentDisposition         string = "Content-Disposition"
-	HeaderContentTransferEncoding    string = "Content-Transfer-Encoding"
-)
-
-// HTTP content type constants.
-const (
-	ContentTypeJSON        string = "application/json"
-	ContentTypeXML         string = "application/xml"
-	ContentTypeOctetStream string = "application/octet-stream"
 )
 
 // HeaderCtx represents the key-value pairs in an HTTP header.
@@ -47,29 +27,55 @@ func (h *HeaderCtx) Get(key string) string {
 func (h *HeaderCtx) Values(key string) []string {
 	data := make([]string, 0, 1)
 
-	for k, val := range h.ctx.Request().Header.All() {
-		if !strings.EqualFold(key, utils.B2S(k)) {
+	for k, val := range h.All() {
+		if !strings.EqualFold(key, k) {
 			continue
 		}
 
-		if bytes.Contains(val, []byte{','}) {
-			values := bytes.Split(val, []byte{','})
-			for i := range values {
-				data = append(data, utils.B2S(values[i]))
-			}
+		if strings.Contains(val, ",") {
+			data = append(data, strings.Split(val, ",")...)
 		} else {
-			data = append(data, utils.B2S(val))
+			data = append(data, val)
 		}
 	}
 
 	return data
 }
 
+// All returns an iterator over all request header entries.
+func (h *HeaderCtx) All() iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		for k, val := range h.ctx.Request().Header.All() {
+			if !yield(utils.B2S(k), utils.B2S(val)) {
+				return
+			}
+		}
+	}
+}
+
+// AllInOrder returns an iterator over all request header entries in the order they were received.
+//
+// It is slightly slower than All because it has to reparse the raw headers to get the order.
+func (h *HeaderCtx) AllInOrder() iter.Seq2[string, string] {
+	return func(yield func(string, string) bool) {
+		for k, val := range h.ctx.Request().Header.AllInOrder() {
+			if !yield(utils.B2S(k), utils.B2S(val)) {
+				return
+			}
+		}
+	}
+}
+
+// AcceptsEncoding returns true if the request accepts the given content encoding.
+func (h *HeaderCtx) AcceptsEncoding(encoding string) bool {
+	return h.ctx.Request().Header.HasAcceptEncoding(encoding)
+}
+
 // Keys returns an iterator over all header keys in request.
 func (h *HeaderCtx) Keys() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		for k := range h.ctx.Request().Header.All() {
-			if !yield(utils.B2S(k)) {
+		for k := range h.All() {
+			if !yield(k) {
 				return
 			}
 		}
@@ -139,18 +145,18 @@ func (h *HeaderCtx) Del(key string) {
 
 // AppendAccessControlExposeHeaders appends the given headers to the Access-Control-Expose-Headers header.
 func (h *HeaderCtx) AppendAccessControlExposeHeaders(names ...string) {
-	val := h.ctx.Response().Header.Peek(HeaderAccessControlExposeHeaders)
+	val := h.ctx.Response().Header.Peek(http.HeaderAccessControlExposeHeaders)
 	if len(val) != 0 {
-		h.ctx.Response().Header.Set(HeaderAccessControlExposeHeaders, fmt.Sprintf("%s, %s", val, strings.Join(names, ", ")))
+		h.ctx.Response().Header.Set(http.HeaderAccessControlExposeHeaders, fmt.Sprintf("%s, %s", val, strings.Join(names, ", ")))
 	} else {
-		h.ctx.Response().Header.Set(HeaderAccessControlExposeHeaders, strings.Join(names, ", "))
+		h.ctx.Response().Header.Set(http.HeaderAccessControlExposeHeaders, strings.Join(names, ", "))
 	}
 }
 
 // InheritAuthorization returns HTTP client request option with inherited authorization from request.
 func (h *HeaderCtx) InheritAuthorization() http.RequestOption {
-	if auth := h.Get(fasthttp.HeaderAuthorization); auth != "" {
-		return http.WithHeader(fasthttp.HeaderAuthorization, auth)
+	if auth := h.Get(http.HeaderAuthorization); auth != "" {
+		return http.WithHeader(http.HeaderAuthorization, auth)
 	}
 
 	return nil

@@ -8,6 +8,7 @@ import (
 
 	"azugo.io/azugo/internal/proxy"
 
+	"azugo.io/core/http"
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
@@ -116,8 +117,8 @@ func (m *mux) newUpstreamProxy(basePath string, options ...ProxyOption) *Proxy {
 // Handler implements azugo.Handler to handle incoming request.
 func (p *Proxy) Handler(ctx *Context) {
 	if len(p.options.Upstream) == 0 {
-		ctx.StatusCode(fasthttp.StatusBadGateway)
-		ctx.Text(fasthttp.StatusMessage(fasthttp.StatusBadGateway))
+		ctx.StatusCode(http.StatusBadGateway)
+		ctx.Text(http.StatusMessage(http.StatusBadGateway))
 
 		return
 	}
@@ -132,7 +133,7 @@ func (p *Proxy) Handler(ctx *Context) {
 
 	ctx.Request().CopyTo(req)
 
-	resp := &ctx.Context().Response
+	resp := ctx.Response()
 
 	uri := bytebufferpool.Get()
 	defer bytebufferpool.Put(uri)
@@ -160,8 +161,8 @@ func (p *Proxy) Handler(ctx *Context) {
 
 	if err := p.client.Do(req, resp); err != nil {
 		ctx.Log().With(zap.Error(err)).Warn("proxy upstream failed")
-		ctx.StatusCode(fasthttp.StatusBadGateway)
-		ctx.Text(fasthttp.StatusMessage(fasthttp.StatusBadGateway))
+		ctx.StatusCode(http.StatusBadGateway)
+		ctx.Text(http.StatusMessage(http.StatusBadGateway))
 
 		return
 	}

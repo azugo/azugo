@@ -9,6 +9,7 @@ import (
 
 	"azugo.io/azugo"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -29,13 +30,13 @@ func TestMetricsHandler(t *testing.T) {
 	a.Use(Metrics(azugo.DefaultMetricPath, MetricsSubsystem("subsystem")))
 
 	a.Get("/test", func(ctx *azugo.Context) {
-		ctx.ContentType("application/json")
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.ContentType(http.ContentTypeJSON)
+		ctx.StatusCode(http.StatusOK)
 		ctx.Text("Hello, world!")
 	})
 	a.Get("/stream", func(ctx *azugo.Context) {
-		ctx.ContentType("application/json")
-		ctx.Header.Set("Content-Length", "4")
+		ctx.ContentType(http.ContentTypeJSON)
+		ctx.Header.Set(http.HeaderContentLength, "4")
 		ctx.Response().SetBodyStream(bytes.NewReader([]byte("test")), 4)
 	})
 
@@ -61,7 +62,7 @@ func TestMetricsHandler(t *testing.T) {
 	resp, err = a.TestClient().Get("/metrics")
 
 	qt.Assert(t, qt.IsNil(err))
-	qt.Assert(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 
 	i := strings.Index(string(resp.Body()), "requests_total")
 	fasthttp.ReleaseResponse(resp)

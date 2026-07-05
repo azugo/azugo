@@ -3,6 +3,7 @@ package azugo
 import (
 	"testing"
 
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -36,14 +37,14 @@ func TestQueryValidParams(t *testing.T) {
 		qt.Check(t, qt.IsNil(err), qt.Commentf("Query parameter bb should not be nil"))
 		qt.Check(t, qt.IsFalse(b), qt.Commentf("Query parameter bb should be false"))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user?multi=a,c&i=1&multi=b&s=test&l=500&b=TRUE&bb=0")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestQueryRequiredError(t *testing.T) {
@@ -71,14 +72,14 @@ func TestQueryRequiredError(t *testing.T) {
 		qt.Check(t, qt.ErrorIs(err, ParamRequiredError{"b"}), qt.Commentf("Query parameter b should result in required error"))
 		qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'b' Error:Field validation for 'b' failed on the 'required' tag"))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestQueryInvalidValueError(t *testing.T) {
@@ -95,7 +96,7 @@ func TestQueryInvalidValueError(t *testing.T) {
 		qt.Check(t, qt.ErrorAs(err, &ParamInvalidError{}), qt.Commentf("Query parameter i should result in invalid parameter error"))
 		qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag"))
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	c := a.TestClient()
@@ -106,7 +107,7 @@ func TestQueryInvalidValueError(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestQueryOptionalValidParams(t *testing.T) {
@@ -135,7 +136,7 @@ func TestQueryOptionalValidParams(t *testing.T) {
 			qt.Check(t, qt.IsTrue(*b), qt.Commentf("Query parameter b should be true"))
 		}
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	c := a.TestClient()
@@ -148,7 +149,7 @@ func TestQueryOptionalValidParams(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestQueryOptionalNoValues(t *testing.T) {
@@ -178,14 +179,14 @@ func TestQueryOptionalNoValues(t *testing.T) {
 			qt.Check(t, qt.IsNil(b), qt.Commentf("Query parameter b should be nil"))
 		}
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	resp, err := a.TestClient().Get("/user")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
 func TestQueryOptionalInvalidValueError(t *testing.T) {
@@ -204,7 +205,7 @@ func TestQueryOptionalInvalidValueError(t *testing.T) {
 			qt.Check(t, qt.Equals(err.(SafeError).SafeError(), "Key: 'l' Error:Field validation for 'l' failed on the 'numeric' tag"))
 		}
 
-		ctx.StatusCode(fasthttp.StatusOK)
+		ctx.StatusCode(http.StatusOK)
 	})
 
 	c := a.TestClient()
@@ -215,5 +216,5 @@ func TestQueryOptionalInvalidValueError(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusOK))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }

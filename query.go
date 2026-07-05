@@ -15,6 +15,11 @@ type QueryCtx struct {
 	ctx *Context
 }
 
+// Raw returns the raw query string part of the request URL.
+func (q *QueryCtx) Raw() string {
+	return utils.B2S(q.ctx.Request().URI().QueryString())
+}
+
 // Values returns all values associated with the given key in query.
 func (q *QueryCtx) Values(key string) []string {
 	data := make([]string, 0, 1)

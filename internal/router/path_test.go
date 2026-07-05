@@ -87,7 +87,7 @@ func Test_cleanPath(t *testing.T) {
 func TestGetOptionalPath(t *testing.T) {
 	// TODO: Move to router_test.go
 	// handler := func(ctx *fasthttp.RequestCtx) {
-	// 	ctx.SetStatusCode(fasthttp.StatusOK)
+	// 	ctx.SetStatusCode(http.StatusOK)
 	// }
 
 	// expected := []struct {

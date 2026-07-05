@@ -25,8 +25,8 @@ type mux struct {
 	// Routing tree
 	trees              []*radix.Tree
 	treeMutable        bool
-	customMethodsIndex map[string]int
-	registeredPaths    map[string][]string
+	customMethodsIndex map[http.Method]int
+	registeredPaths    map[http.Method][]string
 	// Router middlewares
 	middlewares []RequestHandlerFunc
 	// Priority middlewares run before (outer to) the regular middlewares.
@@ -48,9 +48,9 @@ func newMux(app *App) *mux {
 	return &mux{
 		app: app,
 
-		trees:              make([]*radix.Tree, 10),
-		customMethodsIndex: make(map[string]int),
-		registeredPaths:    make(map[string][]string),
+		trees:              make([]*radix.Tree, 11),
+		customMethodsIndex: make(map[http.Method]int),
+		registeredPaths:    make(map[http.Method][]string),
 		middlewares:        make([]RequestHandlerFunc, 0, 10),
 
 		RouterOptions: &RouterOptions{
@@ -61,7 +61,7 @@ func newMux(app *App) *mux {
 			HandleMethodNotAllowed: true,
 			HandleOPTIONS:          true,
 			GlobalOPTIONS: func(ctx *Context) {
-				ctx.StatusCode(fasthttp.StatusNoContent)
+				ctx.StatusCode(http.StatusNoContent)
 			},
 		},
 	}
@@ -116,7 +116,7 @@ func (m *mux) Mutable(v bool) {
 }
 
 // Routes returns all registered routes grouped by method.
-func (m *mux) Routes() map[string][]string {
+func (m *mux) Routes() map[http.Method][]string {
 	return m.registeredPaths
 }
 
@@ -168,7 +168,7 @@ func (m *mux) WrapHandler(path string, handler RequestHandler) fasthttp.RequestH
 // This function is intended for bulk loading and to allow the usage of less
 // frequently used, non-standardized or custom methods (e.g. for internal
 // communication with a proxy).
-func (m *mux) Handle(method, path string, handler RequestHandler) {
+func (m *mux) Handle(method http.Method, path string, handler RequestHandler) {
 	switch {
 	case len(method) == 0:
 		panic("method must not be empty")
@@ -213,18 +213,18 @@ func (m *mux) Handle(method, path string, handler RequestHandler) {
 	}
 }
 
-func (m *mux) Allowed(path, reqMethod string) string {
-	allowed := make([]string, 0, 9)
+func (m *mux) Allowed(path string, reqMethod http.Method) string {
+	allowed := make([]string, 0, 10)
 
 	if path == "*" || path == "/*" { // server-wide{ // server-wide
 		// empty method is used for internal calls to refresh the cache
 		if reqMethod == "" {
 			for method := range m.registeredPaths {
-				if method == fasthttp.MethodOptions {
+				if method == http.MethodOptions {
 					continue
 				}
 				// Add request method to list of allowed methods
-				allowed = append(allowed, method)
+				allowed = append(allowed, method.String())
 			}
 		} else {
 			return m.globalAllowed
@@ -232,21 +232,21 @@ func (m *mux) Allowed(path, reqMethod string) string {
 	} else { // specific path
 		for method := range m.registeredPaths {
 			// Skip the requested method - we already tried this one
-			if method == reqMethod || method == fasthttp.MethodOptions {
+			if method == reqMethod || method == http.MethodOptions {
 				continue
 			}
 
 			handle, _ := m.trees[m.MethodIndexOf(method)].Get(path, nil)
 			if handle != nil {
 				// Add request method to list of allowed methods
-				allowed = append(allowed, method)
+				allowed = append(allowed, method.String())
 			}
 		}
 	}
 
 	if len(allowed) > 0 {
 		// Add request method to list of allowed methods
-		allowed = append(allowed, fasthttp.MethodOptions)
+		allowed = append(allowed, http.MethodOptions.String())
 
 		// Sort allowed methods.
 		// sort.Strings(allowed) unfortunately causes unnecessary allocations
@@ -264,28 +264,30 @@ func (m *mux) Allowed(path, reqMethod string) string {
 	return ""
 }
 
-func (m *mux) MethodIndexOf(method string) int {
+func (m *mux) MethodIndexOf(method http.Method) int {
 	switch method {
-	case fasthttp.MethodGet:
+	case http.MethodGet:
 		return 0
-	case fasthttp.MethodHead:
+	case http.MethodHead:
 		return 1
-	case fasthttp.MethodPost:
+	case http.MethodPost:
 		return 2
-	case fasthttp.MethodPut:
+	case http.MethodPut:
 		return 3
-	case fasthttp.MethodPatch:
+	case http.MethodPatch:
 		return 4
-	case fasthttp.MethodDelete:
+	case http.MethodDelete:
 		return 5
-	case fasthttp.MethodConnect:
+	case http.MethodConnect:
 		return 6
-	case fasthttp.MethodOptions:
+	case http.MethodOptions:
 		return 7
-	case fasthttp.MethodTrace:
+	case http.MethodTrace:
 		return 8
-	case MethodWild:
+	case http.MethodQuery:
 		return 9
+	case MethodWild:
+		return 10
 	}
 
 	if i, ok := m.customMethodsIndex[method]; ok {
@@ -324,8 +326,8 @@ func (m *mux) HandleNotFound(ctx *Context) {
 		return
 	}
 
-	ctx.StatusCode(fasthttp.StatusNotFound)
-	ctx.Text(fasthttp.StatusMessage(fasthttp.StatusNotFound))
+	ctx.StatusCode(http.StatusNotFound)
+	ctx.Text(http.StatusMessage(http.StatusNotFound))
 }
 
 func (m *mux) HandleError(ctx *Context, err error, p bool) {
@@ -360,9 +362,9 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 		ctx.StatusCode(rerr.StatusCode())
 	case errors.As(err, &validator.ValidationErrors{}):
 		// Validation errors return a 422 (unprocessable entity) status code
-		ctx.StatusCode(fasthttp.StatusUnprocessableEntity)
+		ctx.StatusCode(http.StatusUnprocessableEntity)
 	default:
-		ctx.StatusCode(fasthttp.StatusInternalServerError)
+		ctx.StatusCode(http.StatusInternalServerError)
 	}
 
 	// Set any additional response headers
@@ -384,9 +386,9 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 	// Custom error marshaling
 	var enc ErrorMarshaler
 	if errors.As(err, &enc) {
-		if strings.HasPrefix(ct, ContentTypeJSON) || ctx.AcceptsExplicit(ContentTypeJSON) ||
-			(!strings.HasPrefix(ct, ContentTypeXML) && !ctx.AcceptsExplicit(ContentTypeXML)) {
-			if body, bodyCT, ok := enc.MarshalError(ContentTypeJSON); ok {
+		if strings.HasPrefix(ct, http.ContentTypeJSON) || ctx.AcceptsExplicit(http.ContentTypeJSON) ||
+			(!strings.HasPrefix(ct, http.ContentTypeXML) && !ctx.AcceptsExplicit(http.ContentTypeXML)) {
+			if body, bodyCT, ok := enc.MarshalError(http.ContentTypeJSON); ok {
 				ctx.ContentType(bodyCT)
 				ctx.Raw(body)
 
@@ -394,8 +396,8 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 			}
 		}
 
-		if strings.HasPrefix(ct, ContentTypeXML) || ctx.AcceptsExplicit(ContentTypeXML) {
-			if body, bodyCT, ok := enc.MarshalError(ContentTypeXML); ok {
+		if strings.HasPrefix(ct, http.ContentTypeXML) || ctx.AcceptsExplicit(http.ContentTypeXML) {
+			if body, bodyCT, ok := enc.MarshalError(http.ContentTypeXML); ok {
 				ctx.ContentType(bodyCT)
 				ctx.Raw(body)
 
@@ -411,7 +413,7 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 	}
 
 	switch {
-	case strings.HasPrefix(ct, ContentTypeJSON) || ctx.AcceptsExplicit(ContentTypeJSON):
+	case strings.HasPrefix(ct, http.ContentTypeJSON) || ctx.AcceptsExplicit(http.ContentTypeJSON):
 		data, ierr := json.Marshal(resp)
 		if ierr != nil {
 			m.app.Log().Error("error marshalling error response", zap.Error(ierr))
@@ -419,9 +421,9 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 			return
 		}
 
-		ctx.ContentType(ContentTypeJSON)
+		ctx.ContentType(http.ContentTypeJSON)
 		ctx.Raw(data)
-	case strings.HasPrefix(ct, ContentTypeXML) || ctx.AcceptsExplicit(ContentTypeXML):
+	case strings.HasPrefix(ct, http.ContentTypeXML) || ctx.AcceptsExplicit(http.ContentTypeXML):
 		data, ierr := xml.Marshal(resp)
 		if ierr != nil {
 			m.app.Log().Error("error marshalling error response", zap.Error(ierr))
@@ -429,11 +431,24 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 			return
 		}
 
-		ctx.ContentType(ContentTypeXML)
+		ctx.ContentType(http.ContentTypeXML)
 		ctx.Raw(data)
 	default:
 		ctx.Text(resp.Errors[0].Message)
 	}
+}
+
+// rejectInvalidQuery rejects QUERY request content without a media type as required by RFC 10008, Section 2.1.
+func (m *mux) rejectInvalidQuery(ctx *fasthttp.RequestCtx) bool {
+	if len(ctx.Request.Body()) == 0 || len(ctx.Request.Header.ContentType()) > 0 {
+		return false
+	}
+
+	m.WrapHandler("", m.Chain(func(c *Context) {
+		c.Error(BadRequestError{Description: "QUERY request content requires a media type"})
+	}))(ctx)
+
+	return true
 }
 
 func (m *mux) InternalRedirect(path string, ctx *fasthttp.RequestCtx, uri []byte, code int) {
@@ -442,12 +457,12 @@ func (m *mux) InternalRedirect(path string, ctx *fasthttp.RequestCtx, uri []byte
 	}))(ctx)
 }
 
-func (m *mux) TryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, method, path string) bool {
+func (m *mux) TryRedirect(ctx *fasthttp.RequestCtx, tree *radix.Tree, tsr bool, method http.Method, path string) bool {
 	// Moved Permanently, request with GET method
-	code := fasthttp.StatusMovedPermanently
-	if method != fasthttp.MethodGet {
+	code := http.StatusMovedPermanently
+	if method != http.MethodGet {
 		// Permanent Redirect, request with same method
-		code = fasthttp.StatusPermanentRedirect
+		code = http.StatusPermanentRedirect
 	}
 
 	if tsr && m.RouterOptions.RedirectTrailingSlash {
@@ -514,47 +529,52 @@ func (m *mux) Group(path string) Router {
 
 // Get is a shortcut for HTTP GET method handler.
 func (m *mux) Get(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodGet, path, handler)
+	m.Handle(http.MethodGet, path, handler)
 }
 
 // Head is a shortcut for HTTP HEAD method handler.
 func (m *mux) Head(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodHead, path, handler)
+	m.Handle(http.MethodHead, path, handler)
+}
+
+// Query is a shortcut for HTTP QUERY method handler.
+func (m *mux) Query(path string, handler RequestHandler) {
+	m.Handle(http.MethodQuery, path, handler)
 }
 
 // Post is a shortcut for HTTP POST method handler.
 func (m *mux) Post(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodPost, path, handler)
+	m.Handle(http.MethodPost, path, handler)
 }
 
 // Put is a shortcut for HTTP PUT method handler.
 func (m *mux) Put(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodPut, path, handler)
+	m.Handle(http.MethodPut, path, handler)
 }
 
 // Patch is a shortcut for HTTP PATCH method handler.
 func (m *mux) Patch(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodPatch, path, handler)
+	m.Handle(http.MethodPatch, path, handler)
 }
 
 // Delete is a shortcut for HTTP DELETE method handler.
 func (m *mux) Delete(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodDelete, path, handler)
+	m.Handle(http.MethodDelete, path, handler)
 }
 
 // Connect is a shortcut for HTTP CONNECT method handler.
 func (m *mux) Connect(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodConnect, path, handler)
+	m.Handle(http.MethodConnect, path, handler)
 }
 
 // Options is a shortcut for HTTP OPTIONS method handler.
 func (m *mux) Options(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodOptions, path, handler)
+	m.Handle(http.MethodOptions, path, handler)
 }
 
 // Trace is a shortcut for HTTP TRACE method handler.
 func (m *mux) Trace(path string, handler RequestHandler) {
-	m.Handle(fasthttp.MethodTrace, path, handler)
+	m.Handle(http.MethodTrace, path, handler)
 }
 
 // Proxy is helper to proxy requests to another host.
@@ -598,16 +618,20 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 		}
 	}
 
-	method := utils.B2S(ctx.Request.Header.Method())
+	method := http.Method(utils.B2S(ctx.Request.Header.Method()))
 	methodIndex := m.MethodIndexOf(method)
 
 	if methodIndex > -1 {
 		if tree := m.trees[methodIndex]; tree != nil {
 			if handler, tsr := tree.Get(path, ctx); handler != nil {
+				if method == http.MethodQuery && m.rejectInvalidQuery(ctx) {
+					return
+				}
+
 				handler(ctx)
 
 				return
-			} else if method != fasthttp.MethodConnect && path != "/" {
+			} else if method != http.MethodConnect && path != "/" {
 				if ok := m.TryRedirect(ctx, tree, tsr, method, path); ok {
 					return
 				}
@@ -618,20 +642,24 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 	// Try to search in the wild method tree
 	if tree := m.trees[m.MethodIndexOf(MethodWild)]; tree != nil {
 		if handler, tsr := tree.Get(path, ctx); handler != nil {
+			if method == http.MethodQuery && m.rejectInvalidQuery(ctx) {
+				return
+			}
+
 			handler(ctx)
 
 			return
-		} else if method != fasthttp.MethodConnect && path != "/" {
+		} else if method != http.MethodConnect && path != "/" {
 			if ok := m.TryRedirect(ctx, tree, tsr, method, path); ok {
 				return
 			}
 		}
 	}
 
-	if m.RouterOptions.HandleOPTIONS && method == fasthttp.MethodOptions {
+	if m.RouterOptions.HandleOPTIONS && method == http.MethodOptions {
 		// Handle OPTIONS requests
-		if allow := m.Allowed(path, fasthttp.MethodOptions); allow != "" {
-			ctx.Response.Header.Set("Allow", allow)
+		if allow := m.Allowed(path, http.MethodOptions); allow != "" {
+			ctx.Response.Header.Set(http.HeaderAllow, allow)
 
 			if m.RouterOptions.GlobalOPTIONS != nil {
 				m.WrapHandler("", m.Chain(m.RouterOptions.GlobalOPTIONS))(ctx)
@@ -642,7 +670,7 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 	} else if m.RouterOptions.HandleMethodNotAllowed {
 		// Handle 405
 		if allow := m.Allowed(path, method); allow != "" {
-			ctx.Response.Header.Set("Allow", allow)
+			ctx.Response.Header.Set(http.HeaderAllow, allow)
 
 			if m.RouterOptions.MethodNotAllowed != nil {
 				m.WrapHandler("", m.Chain(m.RouterOptions.MethodNotAllowed))(ctx)
@@ -652,8 +680,8 @@ func (m *mux) Handler(ctx *fasthttp.RequestCtx) {
 
 			// TODO: move as default value?
 			m.WrapHandler("", m.Chain(func(c *Context) {
-				c.StatusCode(fasthttp.StatusMethodNotAllowed)
-				c.Text(fasthttp.StatusMessage(fasthttp.StatusMethodNotAllowed))
+				c.StatusCode(http.StatusMethodNotAllowed)
+				c.Text(http.StatusMessage(http.StatusMethodNotAllowed))
 			}))(ctx)
 
 			return

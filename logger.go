@@ -22,7 +22,7 @@ func (c *Context) initLoggerFields() {
 	fields = append(fields,
 		// Basic request fields
 		zap.String("http.request.id", c.ID()),
-		zap.String("http.request.method", method),
+		zap.String("http.request.method", method.String()),
 		zap.String("url.path", cleanedPath),
 		// Source
 		zap.String("source.ip", c.IP().String()),

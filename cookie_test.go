@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"azugo.io/core"
+	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
@@ -25,13 +26,13 @@ func TestCookieGet(t *testing.T) {
 
 	a.Get("/", func(ctx *Context) {
 		qt.Check(t, qt.Equals(ctx.Cookie.Get("session"), "abc123"))
-		ctx.StatusCode(fasthttp.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	})
 
 	resp, err := a.TestClient().Get("/", a.TestClient().WithCookie("session", "abc123"))
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNoContent))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
 }
 
 func TestCookieKeysAndAll(t *testing.T) {
@@ -52,7 +53,7 @@ func TestCookieKeysAndAll(t *testing.T) {
 		}
 		qt.Check(t, qt.DeepEquals(all, map[string]string{"session": "abc123", "theme": "dark"}))
 
-		ctx.StatusCode(fasthttp.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	})
 
 	tc := a.TestClient()
@@ -60,7 +61,7 @@ func TestCookieKeysAndAll(t *testing.T) {
 	resp, err := tc.Get("/", tc.WithCookie("session", "abc123"), tc.WithCookie("theme", "dark"))
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp.StatusCode(), fasthttp.StatusNoContent))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
 }
 
 func TestCookieSet(t *testing.T) {
@@ -76,7 +77,7 @@ func TestCookieSet(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	c := parseCookie(t, resp.Header.Peek("Set-Cookie"))
+	c := parseCookie(t, resp.Header.Peek(http.HeaderSetCookie))
 	qt.Check(t, qt.Equals(string(c.Key()), "session"))
 	qt.Check(t, qt.Equals(string(c.Value()), "abc123"))
 	qt.Check(t, qt.IsTrue(c.HTTPOnly()))
@@ -97,7 +98,7 @@ func TestCookieClear(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	c := parseCookie(t, resp.Header.Peek("Set-Cookie"))
+	c := parseCookie(t, resp.Header.Peek(http.HeaderSetCookie))
 	qt.Check(t, qt.Equals(string(c.Key()), "session"))
 	qt.Check(t, qt.Equals(string(c.Path()), "/"))
 	qt.Check(t, qt.IsTrue(c.Expire().Before(fasthttp.CookieExpireDelete.Add(1))))
@@ -118,7 +119,7 @@ func TestCookieDefaultSecurityHostPrefix(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	c := parseCookie(t, resp.Header.Peek("Set-Cookie"))
+	c := parseCookie(t, resp.Header.Peek(http.HeaderSetCookie))
 	qt.Check(t, qt.Equals(string(c.Key()), "__Host-session"))
 	qt.Check(t, qt.IsTrue(c.HTTPOnly()))
 	qt.Check(t, qt.IsTrue(c.Secure()))
@@ -143,7 +144,7 @@ func TestCookieDefaultSecuritySecurePrefix(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	c := parseCookie(t, resp.Header.Peek("Set-Cookie"))
+	c := parseCookie(t, resp.Header.Peek(http.HeaderSetCookie))
 	qt.Check(t, qt.Equals(string(c.Key()), "__Secure-session"))
 	qt.Check(t, qt.IsTrue(c.Secure()))
 	qt.Check(t, qt.Equals(string(c.Domain()), ""))
@@ -168,16 +169,16 @@ func TestCookieDefaultSecurityDevelopment(t *testing.T) {
 	resp, err := tc.Get("/")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	c := parseCookie(t, resp.Header.Peek("Set-Cookie"))
+	c := parseCookie(t, resp.Header.Peek(http.HeaderSetCookie))
 	qt.Check(t, qt.IsFalse(c.Secure()))
 	qt.Check(t, qt.Equals(string(c.Key()), "session"))
 	qt.Check(t, qt.IsTrue(c.HTTPOnly()))
 
 	// A TLS request (proxy-forwarded) sets Secure and the __Host- prefix even in development.
-	respTLS, err := tc.Get("/", tc.WithHeader("X-Forwarded-Proto", "https"))
+	respTLS, err := tc.Get("/", tc.WithHeader(http.HeaderXForwardedProto, "https"))
 	defer fasthttp.ReleaseResponse(respTLS)
 	qt.Assert(t, qt.IsNil(err))
-	cTLS := parseCookie(t, respTLS.Header.Peek("Set-Cookie"))
+	cTLS := parseCookie(t, respTLS.Header.Peek(http.HeaderSetCookie))
 	qt.Check(t, qt.IsTrue(cTLS.Secure()))
 	qt.Check(t, qt.Equals(string(cTLS.Key()), "__Host-session"))
 }
@@ -203,7 +204,7 @@ func TestCookieDefaultSecurityNoDowngrade(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 
-	c := parseCookie(t, resp.Header.Peek("Set-Cookie"))
+	c := parseCookie(t, resp.Header.Peek(http.HeaderSetCookie))
 	// Tightening is honored.
 	qt.Check(t, qt.Equals(c.SameSite(), fasthttp.CookieSameSiteStrictMode))
 	// Downgrades are ignored: __Host- contract is preserved.
@@ -223,7 +224,7 @@ func TestCookieJar(t *testing.T) {
 	})
 	a.Get("/get", func(ctx *Context) {
 		qt.Check(t, qt.Equals(ctx.Cookie.Get("session"), "abc123"))
-		ctx.StatusCode(fasthttp.StatusNoContent)
+		ctx.StatusCode(http.StatusNoContent)
 	})
 
 	c := a.TestClient()
@@ -236,7 +237,7 @@ func TestCookieJar(t *testing.T) {
 	resp2, err := c.Get("/get")
 	defer fasthttp.ReleaseResponse(resp2)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(resp2.StatusCode(), fasthttp.StatusNoContent))
+	qt.Check(t, qt.Equals(resp2.StatusCode(), http.StatusNoContent))
 }
 
 func TestCookieJarClear(t *testing.T) {
