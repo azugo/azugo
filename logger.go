@@ -24,6 +24,11 @@ func (c *Context) baseLoggerFields(fields []zap.Field) []zap.Field {
 	)
 }
 
+// LogFields returns the fields added to the context logger.
+func (c *Context) LogFields() []zap.Field {
+	return c.loggerFields
+}
+
 // AddLogFields add fields to context logger.
 func (c *Context) AddLogFields(fields ...zap.Field) error {
 	if len(fields) == 0 {

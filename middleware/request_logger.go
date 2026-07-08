@@ -115,7 +115,9 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		_ = msg.WriteByte('"')
 
-		fields := make([]zap.Field, 0, 20)
+		ctxFields := ctx.LogFields()
+
+		fields := make([]zap.Field, 0, 20+len(ctxFields))
 
 		// Request
 		fields = append(fields,
@@ -186,6 +188,22 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 		fields = append(fields,
 			zap.String("source.ip", remoteIP),
 		)
+
+		for _, f := range ctxFields {
+			duplicate := false
+
+			for i := range fields {
+				if fields[i].Key == f.Key {
+					duplicate = true
+
+					break
+				}
+			}
+
+			if !duplicate {
+				fields = append(fields, f)
+			}
+		}
 
 		logger.Info(msg.String(), fields...)
 	}
