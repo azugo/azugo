@@ -10,7 +10,7 @@ require (
 	github.com/go-quicktest/qt v1.102.0
 	github.com/goccy/go-json v0.10.6
 	github.com/lafriks/go-xmldsig/v2 v2.3.0
-	github.com/lafriks/http2 v0.5.0
+	github.com/lafriks/http2 v0.6.1
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/oklog/ulid/v2 v2.1.1
 	github.com/spf13/cobra v1.10.2

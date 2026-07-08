@@ -2,9 +2,11 @@
 package azugo
 
 import (
+	"context"
 	"crypto/rand"
 	"fmt"
 	"sync"
+	"time"
 
 	"azugo.io/azugo/config"
 
@@ -48,6 +50,11 @@ type App struct {
 
 	// Server options
 	ServerOptions ServerOptions
+
+	// Running servers
+	serverLock sync.Mutex
+	server     *fasthttp.Server
+	h2server   *http2.Server
 }
 
 // ServerOptions configures the HTTP server buffer sizes.
@@ -173,6 +180,8 @@ func (a *App) Start() error {
 		return err
 	}
 
+	conf := a.Config().Server
+
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
 		Handler:                      a.Handler,
@@ -181,14 +190,26 @@ func (a *App) Start() error {
 		DisablePreParseMultipartForm: true,
 		ReadBufferSize:               a.ServerOptions.RequestReadBufferSize,
 		WriteBufferSize:              a.ServerOptions.ResponseWriteBufferSize,
+		ReadTimeout:                  conf.ReadTimeout,
+		WriteTimeout:                 conf.WriteTimeout,
+		IdleTimeout:                  conf.IdleTimeout,
+		MaxRequestBodySize:           conf.MaxRequestBodySize,
 	}
 
-	conf := a.Config().Server
+	var h2server *http2.Server
 
 	// HTTP2 is supported only over HTTPS
 	if conf.HTTPS != nil && conf.HTTPS.Enabled {
-		http2.ConfigureServer(server, http2.ServerConfig{})
+		h2server = http2.ConfigureServer(server, http2.ServerConfig{
+			PingInterval:         30 * time.Second,
+			MaxConcurrentStreams: 256,
+		})
 	}
+
+	a.serverLock.Lock()
+	a.server = server
+	a.h2server = h2server
+	a.serverLock.Unlock()
 
 	var wg sync.WaitGroup
 
@@ -247,4 +268,29 @@ func (a *App) Start() error {
 	wg.Wait()
 
 	return nil
+}
+
+// Stop web application and its services waiting for active connections to finish.
+func (a *App) Stop() {
+	a.serverLock.Lock()
+	server, h2server := a.server, a.h2server
+	a.server, a.h2server = nil, nil
+	a.serverLock.Unlock()
+
+	if server != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), a.Config().Server.ShutdownTimeout)
+		defer cancel()
+
+		if h2server != nil {
+			if err := h2server.Shutdown(ctx); err != nil {
+				a.Log().Warn("failed to gracefully shut down HTTP2 connections", zap.Error(err))
+			}
+		}
+
+		if err := server.ShutdownWithContext(ctx); err != nil {
+			a.Log().Warn("failed to gracefully shut down HTTP server", zap.Error(err))
+		}
+	}
+
+	a.App.Stop()
 }

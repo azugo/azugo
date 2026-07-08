@@ -153,8 +153,11 @@ func (m *mux) WrapHandler(path string, handler RequestHandler) fasthttp.RequestH
 
 		defer m.Recv(path, c)
 
-		finish := m.app.Instrumenter().Observe(c, InstrumentationRequest, path)
-		defer finish(nil)
+		// Skip instrumenter if it is not set
+		if instr := m.app.Instrumenter(); !instr.Empty() {
+			finish := instr(c, InstrumentationRequest, path)
+			defer finish(nil)
+		}
 
 		handler(c)
 	}

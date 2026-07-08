@@ -24,7 +24,7 @@ func (n *nodeWildcard) conflict(path, fullPath string) error {
 
 // wildPathConflict raises a panic with some details.
 func (n *node) wildPathConflict(path, fullPath string) error {
-	pathSeg := strings.SplitN(path, "/", 2)[0]
+	pathSeg, _, _ := strings.Cut(path, "/")
 	prefix := fullPath[:strings.LastIndex(fullPath, path)] + n.path
 
 	return newRadixError(errWildPathConflict, pathSeg, fullPath, n.path, prefix)
@@ -61,6 +61,9 @@ func (n *node) clone() *node {
 	if len(n.paramKeys) > 0 {
 		cloneNode.paramKeys = make([]string, len(n.paramKeys))
 		copy(cloneNode.paramKeys, n.paramKeys)
+
+		cloneNode.paramKeyVals = make([]any, len(n.paramKeyVals))
+		copy(cloneNode.paramKeyVals, n.paramKeyVals)
 	}
 
 	cloneNode.paramRegex = n.paramRegex
@@ -73,6 +76,7 @@ func (n *node) split(i int) {
 	cloneChild.nType = static
 	cloneChild.path = cloneChild.path[i:]
 	cloneChild.paramKeys = nil
+	cloneChild.paramKeyVals = nil
 	cloneChild.paramRegex = nil
 
 	n.path = n.path[:i]
@@ -80,6 +84,24 @@ func (n *node) split(i int) {
 	n.tsr = false
 	n.wildcard = nil
 	n.children = append(n.children[:0], cloneChild)
+}
+
+// saveParamValues stores matched parameter values in the request context.
+// A nil values slice means a plain param whose value is the matched segment.
+func (n *node) saveParamValues(ctx *fasthttp.RequestCtx, segment string, values []string) {
+	if ctx == nil {
+		return
+	}
+
+	if values == nil {
+		ctx.SetUserValue(n.paramKeyVals[0], copyString(segment))
+
+		return
+	}
+
+	for i, key := range n.paramKeyVals {
+		ctx.SetUserValue(key, values[i])
+	}
 }
 
 func (n *node) findEndIndexAndValues(path string) (int, []string) {
@@ -164,6 +186,12 @@ func (n *node) insert(path, fullPath string, handler fasthttp.RequestHandler) (*
 
 			child.nType = wp.pType
 			child.paramKeys = wp.keys
+			child.paramKeyVals = make([]any, len(wp.keys))
+
+			for i, key := range wp.keys {
+				child.paramKeyVals[i] = key
+			}
+
 			child.paramRegex = wp.regex
 		case wildcard:
 			if len(path) == end && n.path[len(n.path)-1] != '/' {
@@ -319,7 +347,9 @@ func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.Req
 
 		case param:
 			end := segmentEndIndex(path, false)
-			values := []string{copyString(path[:end])}
+
+			// For non-regex params the value is copied lazily on match.
+			var values []string
 
 			if child.paramRegex != nil {
 				end, values = child.findEndIndexAndValues(path[:end])
@@ -333,11 +363,7 @@ func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.Req
 				if tsr {
 					return nil, tsr
 				} else if h != nil {
-					if ctx != nil {
-						for i, key := range child.paramKeys {
-							ctx.SetUserValue(key, values[i])
-						}
-					}
+					child.saveParamValues(ctx, path[:end], values)
 
 					return h, false
 				}
@@ -348,10 +374,8 @@ func (n *node) getFromChild(path string, ctx *fasthttp.RequestCtx) (fasthttp.Req
 				case child.handler == nil:
 					// try another child
 					continue
-				case ctx != nil:
-					for i, key := range child.paramKeys {
-						ctx.SetUserValue(key, values[i])
-					}
+				default:
+					child.saveParamValues(ctx, path[:end], values)
 				}
 
 				return child.handler, false

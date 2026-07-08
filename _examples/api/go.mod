@@ -29,7 +29,7 @@ require (
 	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
-	github.com/lafriks/http2 v0.5.0 // indirect
+	github.com/lafriks/http2 v0.6.1 // indirect
 	github.com/lafriks/pkcs8 v1.2.3 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect

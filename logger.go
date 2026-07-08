@@ -1,14 +1,11 @@
 package azugo
 
 import (
-	"maps"
-	"slices"
-
 	"go.uber.org/zap"
 )
 
-func (c *Context) initLoggerFields() {
-	method := c.Method()
+// baseLoggerFields appends default request fields to the given slice.
+func (c *Context) baseLoggerFields(fields []zap.Field) []zap.Field {
 	path := c.Path()
 	cleanedPath := path
 
@@ -17,18 +14,14 @@ func (c *Context) initLoggerFields() {
 		cleanedPath = path[len(basePath):]
 	}
 
-	fields := make([]zap.Field, 0, 8)
-
-	fields = append(fields,
+	return append(fields,
 		// Basic request fields
 		zap.String("http.request.id", c.ID()),
-		zap.String("http.request.method", method.String()),
+		zap.String("http.request.method", c.Method().String()),
 		zap.String("url.path", cleanedPath),
 		// Source
 		zap.String("source.ip", c.IP().String()),
 	)
-
-	_ = c.AddLogFields(fields...)
 }
 
 // AddLogFields add fields to context logger.
@@ -38,10 +31,26 @@ func (c *Context) AddLogFields(fields ...zap.Field) error {
 	}
 
 	for _, field := range fields {
-		c.loggerFields[field.Key] = field
+		found := false
+
+		for i := range c.loggerFields {
+			if c.loggerFields[i].Key == field.Key {
+				c.loggerFields[i] = field
+				found = true
+
+				break
+			}
+		}
+
+		if !found {
+			c.loggerFields = append(c.loggerFields, field)
+		}
 	}
 
-	return c.ReplaceLogger(c.loggerCore)
+	// Invalidate the materialized logger so that it is rebuilt on next use.
+	c.logger = nil
+
+	return nil
 }
 
 // ReplaceLogger replaces current context logger with custom.
@@ -51,13 +60,45 @@ func (c *Context) ReplaceLogger(logger *zap.Logger) error {
 	}
 
 	c.loggerCore = logger
-	c.logger = logger.With(slices.AppendSeq(make([]zap.Field, 0, len(c.loggerFields)), maps.Values(c.loggerFields))...)
+	c.logger = nil
 
 	return nil
 }
 
-// Log returns the logger.
+// Log returns the request logger, building it lazily on first use.
 func (c *Context) Log() *zap.Logger {
+	if c.logger != nil {
+		return c.logger
+	}
+
+	if c.loggerCore == nil {
+		c.loggerCore = c.app.Log()
+	}
+
+	fields := make([]zap.Field, 0, len(c.loggerFields)+4)
+	if c.context != nil {
+		fields = c.baseLoggerFields(fields)
+	}
+
+	for _, field := range c.loggerFields {
+		found := false
+
+		for i := range fields {
+			if fields[i].Key == field.Key {
+				fields[i] = field
+				found = true
+
+				break
+			}
+		}
+
+		if !found {
+			fields = append(fields, field)
+		}
+	}
+
+	c.logger = c.loggerCore.With(fields...)
+
 	return c.logger
 }
 

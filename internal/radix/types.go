@@ -9,8 +9,9 @@ import (
 type nodeType uint8
 
 type nodeWildcard struct {
-	path     string
-	paramKey string
+	path string
+	// paramKey is pre-boxed to avoid per-request interface conversion.
+	paramKey any
 	handler  fasthttp.RequestHandler
 }
 
@@ -24,8 +25,10 @@ type node struct {
 	children     []*node
 	wildcard     *nodeWildcard
 
-	paramKeys  []string
-	paramRegex *regexp.Regexp
+	paramKeys []string
+	// paramKeyVals are paramKeys pre-boxed to avoid per-request interface conversion.
+	paramKeyVals []any
+	paramRegex   *regexp.Regexp
 }
 
 type wildPath struct {

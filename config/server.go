@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"azugo.io/core/config"
 	"azugo.io/core/validation"
@@ -113,6 +114,17 @@ type Server struct {
 	HTTP  *ServerHTTP  `mapstructure:"http"`
 	HTTPS *ServerHTTPS `mapstructure:"https"`
 	Path  string       `mapstructure:"path"`
+
+	// Maximum duration for reading the full request including body.
+	ReadTimeout time.Duration `mapstructure:"read_timeout" validate:"omitempty,min=0"`
+	// Maximum duration for writing the response.
+	WriteTimeout time.Duration `mapstructure:"write_timeout" validate:"omitempty,min=0"`
+	// Maximum duration to wait for the next request on a keep-alive connection.
+	IdleTimeout time.Duration `mapstructure:"idle_timeout" validate:"omitempty,min=0"`
+	// Maximum request body size.
+	MaxRequestBodySize int `mapstructure:"max_request_body_size" validate:"omitempty,min=0"`
+	// Maximum duration to wait for active connections to finish on shutdown.
+	ShutdownTimeout time.Duration `mapstructure:"shutdown_timeout" validate:"omitempty,min=0"`
 }
 
 // Bind server configuration section.
@@ -120,15 +132,25 @@ func (s *Server) Bind(prefix string, v *viper.Viper) {
 	// Special functionality for SERVER_URLS defaults
 	path := "/"
 
-	if servu := strings.Split(os.Getenv("SERVER_URLS"), ";"); len(servu) > 0 && len(servu[0]) > 0 {
-		if u, err := url.Parse(servu[0]); err == nil && len(u.Path) > 0 {
+	if servu, _, _ := strings.Cut(os.Getenv("SERVER_URLS"), ";"); len(servu) > 0 {
+		if u, err := url.Parse(servu); err == nil && len(u.Path) > 0 {
 			path = u.Path
 		}
 	}
 
 	v.SetDefault(prefix+".path", path)
+	v.SetDefault(prefix+".read_timeout", 30*time.Second)
+	v.SetDefault(prefix+".write_timeout", 10*time.Second)
+	v.SetDefault(prefix+".idle_timeout", 75*time.Second)
+	v.SetDefault(prefix+".max_request_body_size", 4<<20)
+	v.SetDefault(prefix+".shutdown_timeout", 30*time.Second)
 
 	_ = v.BindEnv(prefix+".path", "BASE_PATH")
+	_ = v.BindEnv(prefix+".read_timeout", "SERVER_READ_TIMEOUT")
+	_ = v.BindEnv(prefix+".write_timeout", "SERVER_WRITE_TIMEOUT")
+	_ = v.BindEnv(prefix+".idle_timeout", "SERVER_IDLE_TIMEOUT")
+	_ = v.BindEnv(prefix+".max_request_body_size", "SERVER_MAX_REQUEST_BODY_SIZE")
+	_ = v.BindEnv(prefix+".shutdown_timeout", "SERVER_SHUTDOWN_TIMEOUT")
 
 	s.HTTP = config.Bind(s.HTTP, prefix+".http", v)
 	s.HTTPS = config.Bind(s.HTTPS, prefix+".https", v)

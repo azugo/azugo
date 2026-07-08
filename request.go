@@ -43,10 +43,11 @@ type Context struct {
 	// reqCtx is the effective request context installed via SetContext.
 	reqCtx context.Context
 
-	method     http.Method // HTTP method
-	path       string      // HTTP path with the modifications by the configuration -> string copy from pathBuffer
-	routerPath string      // HTTP path as registered in the router
-	requestID  ulid.ULID   // Request ID
+	method       http.Method // HTTP method
+	path         string      // HTTP path with the modifications by the configuration -> string copy from pathBuffer
+	routerPath   string      // HTTP path as registered in the router
+	requestID    ulid.ULID   // Request ID
+	requestIDStr string      // Cached string form of the request ID
 
 	// Core data
 	app  *App
@@ -55,8 +56,9 @@ type Context struct {
 
 	// Logger
 	loggerCore   *zap.Logger
-	loggerFields map[string]zap.Field
-	logger       *zap.Logger
+	loggerFields []zap.Field
+	// logger is materialized lazily from loggerCore and loggerFields on first use.
+	logger *zap.Logger
 
 	// alwaysHeaders are response headers re-applied after the response is reset
 	// to render an error (registered via Header.SetAlways).
@@ -92,7 +94,7 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 	if ctx == nil {
 		ctx = new(Context)
 		ctx.app = a
-		ctx.loggerFields = make(map[string]zap.Field, 10)
+		ctx.loggerFields = make([]zap.Field, 0, 8)
 		ctx.Header.ctx = ctx
 		ctx.Cookie.ctx = ctx
 		ctx.Query.ctx = ctx
@@ -126,8 +128,10 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 		}
 	}
 
-	// Ignore error
-	ctx.requestID, _ = ulid.New(ulid.Timestamp(time.Now().UTC()), a.entropy)
+	// Generate request ID in place to avoid ULID escaping to the heap; ignore errors
+	ms := ulid.Timestamp(time.Now().UTC())
+	_ = ctx.requestID.SetTime(ms)
+	_ = a.entropy.MonotonicRead(ms, ctx.requestID[6:])
 
 	// Attach base fastHTTP request context
 	ctx.context = c
@@ -140,10 +144,6 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 
 	// Attach logger to request context
 	_ = ctx.ReplaceLogger(a.Log())
-
-	if c != nil {
-		ctx.initLoggerFields()
-	}
 
 	return ctx
 }
@@ -179,10 +179,11 @@ func (c *Context) reset() {
 	c.context = nil
 	c.reqCtx = nil
 	c.mux = nil
-	clear(c.loggerFields)
+	c.loggerFields = c.loggerFields[:0]
 	c.loggerCore = nil
 	c.logger = nil
 	c.requestID = nilRequestID
+	c.requestIDStr = ""
 	c.alwaysHeaders = c.alwaysHeaders[:0]
 }
 
@@ -216,7 +217,11 @@ func (c *Context) Request() *fasthttp.Request {
 
 // ID returns the unique request identifier.
 func (c *Context) ID() string {
-	return c.requestID.String()
+	if c.requestIDStr == "" {
+		c.requestIDStr = c.requestID.String()
+	}
+
+	return c.requestIDStr
 }
 
 // IP returns the client's network IP address.

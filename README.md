@@ -31,6 +31,11 @@ Opinionated GoLang web framework for microservices based on FastHTTP.
 
 * `SERVER_URLS` - Server URL or multiple URLs separated by semicolons to listen on.
 * `SERVER_HTTPS_CERTIFICATE_PEM_FILE` - Path to PEM file for HTTPS certificate.
+* `SERVER_READ_TIMEOUT` - Maximum duration for reading the full request including body (defaults to `30s`).
+* `SERVER_WRITE_TIMEOUT` - Maximum duration for writing the response (defaults to `10s`).
+* `SERVER_IDLE_TIMEOUT` - Maximum duration to wait for the next request on a keep-alive connection (defaults to `75s`).
+* `SERVER_MAX_REQUEST_BODY_SIZE` - Maximum request body size in bytes (defaults to `4194304` (4MB)).
+* `SERVER_SHUTDOWN_TIMEOUT` - Maximum duration to wait for active connections to finish on graceful shutdown (defaults to `30s`).
 * `BASE_PATH` - Base path for the app if deployed in a subdirectory.
 * `ACCESS_LOG_ENABLED` - Enable access logs (defaults to `true`).
 

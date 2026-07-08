@@ -92,10 +92,8 @@ func findWildPath(path string, fullPath string) *wildPath {
 					panic("the wildcards must be separated by at least 1 char")
 				}
 
-				sn := strings.SplitN(wp.keys[0], ":", 2)
-				if len(sn) > 1 {
-					wp.keys = []string{sn[0]}
-					pattern := sn[1]
+				if name, pattern, found := strings.Cut(wp.keys[0], ":"); found {
+					wp.keys = []string{name}
 
 					if pattern == "*" {
 						wp.pattern = pattern
