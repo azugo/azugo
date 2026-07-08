@@ -152,6 +152,27 @@ func TestQueryOptionalValidParams(t *testing.T) {
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
 
+func TestQueryValuesEmptyAndTrailingComma(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		qt.Check(t, qt.ContentEquals(ctx.Query.Values("empty"), []string{""}),
+			qt.Commentf("Query parameter with no value should yield one empty entry"))
+		qt.Check(t, qt.ContentEquals(ctx.Query.Values("trailing"), []string{"a", ""}),
+			qt.Commentf("Query parameter with trailing comma should yield a trailing empty entry"))
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp, err := a.TestClient().Get("/user?empty=&trailing=a,")
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+}
+
 func TestQueryOptionalNoValues(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)

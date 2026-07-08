@@ -57,17 +57,19 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 		referer := ctx.Referer()
 		userAgent := ctx.UserAgent()
 
+		remoteIP := ctx.IP().String()
+
 		msg := bytebufferpool.Get()
 		defer bytebufferpool.Put(msg)
 
 		// Remote IP address
-		_, _ = msg.WriteString(ctx.IP().String())
+		_, _ = msg.WriteString(remoteIP)
 		// TODO: what is this?
 		_, _ = msg.WriteString(" - -")
 
 		// Request time
 		_, _ = msg.Write([]byte(" ["))
-		_, _ = msg.WriteString(ctx.Time().Format("02/Jan/2006:15:04:05 -0700"))
+		msg.B = ctx.Time().AppendFormat(msg.B, "02/Jan/2006:15:04:05 -0700")
 		_, _ = msg.Write([]byte("] \""))
 
 		// Method
@@ -113,7 +115,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		_ = msg.WriteByte('"')
 
-		fields := make([]zap.Field, 0, 10)
+		fields := make([]zap.Field, 0, 20)
 
 		// Request
 		fields = append(fields,
@@ -182,7 +184,7 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 
 		// Source
 		fields = append(fields,
-			zap.String("source.ip", ctx.IP().String()),
+			zap.String("source.ip", remoteIP),
 		)
 
 		logger.Info(msg.String(), fields...)

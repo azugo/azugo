@@ -22,20 +22,23 @@ func (q *QueryCtx) Raw() string {
 
 // Values returns all values associated with the given key in query.
 func (q *QueryCtx) Values(key string) []string {
-	data := make([]string, 0, 1)
+	var data []string
 
 	for k, val := range q.ctx.Request().URI().QueryArgs().All() {
 		if !strings.EqualFold(key, utils.B2S(k)) {
 			continue
 		}
 
-		if bytes.Contains(val, []byte{','}) {
-			values := bytes.Split(val, []byte{','})
-			for i := range values {
-				data = append(data, utils.B2S(values[i]))
+		for {
+			idx := bytes.IndexByte(val, ',')
+			if idx == -1 {
+				data = append(data, utils.B2S(val))
+
+				break
 			}
-		} else {
-			data = append(data, utils.B2S(val))
+
+			data = append(data, utils.B2S(val[:idx]))
+			val = val[idx+1:]
 		}
 	}
 
