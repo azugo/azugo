@@ -24,20 +24,30 @@ func realIP(ctx *azugo.Context, header string) net.IP {
 }
 
 func forwardedFor(ctx *azugo.Context) net.IP {
-	buf := bytebufferpool.Get()
-	defer bytebufferpool.Put(buf)
+	values := ctx.Request().Header.PeekAll(http.HeaderXForwardedFor)
 
-	for key, value := range ctx.Header.AllInOrder() {
-		if strings.EqualFold(key, http.HeaderXForwardedFor) {
-			if buf.Len() > 0 {
+	var xff []byte
+
+	switch len(values) {
+	case 0:
+		return nil
+	case 1:
+		xff = values[0]
+	default:
+		buf := bytebufferpool.Get()
+		defer bytebufferpool.Put(buf)
+
+		for i, v := range values {
+			if i > 0 {
 				_, _ = buf.Write(xForwardedForSep)
 			}
 
-			_, _ = buf.WriteString(value)
+			_, _ = buf.Write(v)
 		}
+
+		xff = buf.Bytes()
 	}
 
-	xff := buf.Bytes()
 	if len(xff) > 0 {
 		p := 0
 		c := 0
@@ -89,6 +99,8 @@ func realIPOrForwardedFor(ctx *azugo.Context) net.Addr {
 					IP: ip,
 				}
 			}
+
+			continue
 		}
 
 		if ip := realIP(ctx, header); ip != nil {

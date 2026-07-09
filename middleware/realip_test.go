@@ -108,3 +108,32 @@ func TestRealIPMiddleware(t *testing.T) {
 		})
 	}
 }
+
+// TestRealIPMiddlewareMultipleHeaderLines covers X-Forwarded-For sent as
+// multiple separate header lines (as opposed to one comma-separated value),
+// which forwardedFor must join before applying the forward limit.
+func TestRealIPMiddlewareMultipleHeaderLines(t *testing.T) {
+	a := azugo.NewTestApp()
+	defer a.Stop()
+
+	a.RouterOptions().Proxy.Clear()
+	a.RouterOptions().Proxy.Add("*")
+	a.RouterOptions().Proxy.TrustedHeaders = []string{http.HeaderXForwardedFor}
+	a.RouterOptions().Proxy.ForwardLimit = 1
+	a.Use(RealIP)
+
+	a.Get("/", func(ctx *azugo.Context) {
+		qt.Check(t, qt.Equals(ctx.IP().String(), "1.1.1.1"))
+	})
+
+	a.Start(t)
+	defer a.Stop()
+
+	c := a.TestClient()
+	resp, err := c.Get("/",
+		c.WithHeader(http.HeaderXForwardedFor, "1.0.0.1"),
+		c.WithHeader(http.HeaderXForwardedFor, "1.1.1.1"),
+	)
+	qt.Assert(t, qt.IsNil(err))
+	defer fasthttp.ReleaseResponse(resp)
+}

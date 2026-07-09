@@ -13,6 +13,7 @@ import (
 	"github.com/valyala/bytebufferpool"
 	"github.com/valyala/fasthttp"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -57,7 +58,21 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 		referer := ctx.Referer()
 		userAgent := ctx.UserAgent()
 
-		remoteIP := ctx.IP().String()
+		ctxFields := ctx.LogFields()
+
+		var remoteIP string
+
+		for _, f := range ctxFields {
+			if f.Key == "source.ip" && f.Type == zapcore.StringType {
+				remoteIP = f.String
+
+				break
+			}
+		}
+
+		if remoteIP == "" {
+			remoteIP = ctx.IP().String()
+		}
 
 		msg := bytebufferpool.Get()
 		defer bytebufferpool.Put(msg)
@@ -114,8 +129,6 @@ func RequestLogger(next azugo.RequestHandler) azugo.RequestHandler {
 		}
 
 		_ = msg.WriteByte('"')
-
-		ctxFields := ctx.LogFields()
 
 		fields := make([]zap.Field, 0, 20+len(ctxFields))
 
