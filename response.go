@@ -3,6 +3,7 @@ package azugo
 import (
 	"io"
 	"net/url"
+	"path"
 	"strconv"
 	"strings"
 
@@ -36,14 +37,57 @@ func (c *Context) ContentType(contentType string, charset ...string) {
 	}
 }
 
-// Redirect redirects the request to a given URL with status code 302 (Found) if other redirect status code
-// not set already.
-func (c *Context) Redirect(url string) {
+// Redirect the request to target: either a bare path, prefixed with BasePath() or an absolute
+// URL matching the current app base URL.
+func (c *Context) Redirect(target string) {
+	c.RedirectUnsafe(c.sanitizeRedirect(target))
+}
+
+// RedirectUnsafe redirects the request to a given URL with status code 302 (Found) if other redirect
+// status code not set already.
+func (c *Context) RedirectUnsafe(url string) {
 	if !http.StatusCodeIsRedirect(c.Response().StatusCode()) {
 		c.StatusCode(http.StatusFound)
 	}
-	// TODO: Check if it's safe to redirect to provided URL
+
 	c.Header.Set(http.HeaderLocation, url)
+}
+
+// sanitizeRedirect resolves target to a same-origin URL/path safe for Redirect to use.
+func (c *Context) sanitizeRedirect(target string) string {
+	fallback := c.BasePath() + "/"
+
+	if target == "" || strings.ContainsRune(target, '\\') {
+		return fallback
+	}
+
+	u, err := url.Parse(target)
+	if err != nil {
+		return fallback
+	}
+
+	if u.Path == "" {
+		u.Path = "/"
+	} else {
+		u.Path = path.Clean(u.Path)
+	}
+
+	switch {
+	case u.Scheme == "" && u.Host == "" && strings.HasPrefix(target, "/") && !strings.HasPrefix(target, "//"):
+		return c.BasePath() + u.String()
+	case u.Scheme != "" && u.Host != "" && c.isCurrentOrigin(u):
+		return u.String()
+	default:
+		return fallback
+	}
+}
+
+// isCurrentOrigin reports whether u's scheme and host match the current request's, as
+// reflected by BaseURL().
+func (c *Context) isCurrentOrigin(u *url.URL) bool {
+	base, err := url.Parse(c.BaseURL())
+
+	return err == nil && strings.EqualFold(u.Scheme, base.Scheme) && strings.EqualFold(u.Host, base.Host)
 }
 
 // JSON serializes the given struct as JSON and sets it as the response body.
