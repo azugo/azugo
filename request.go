@@ -5,6 +5,7 @@ import (
 	"context"
 	"net"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"azugo.io/azugo/internal/utils"
@@ -42,6 +43,12 @@ type Context struct {
 	context *fasthttp.RequestCtx
 	// reqCtx is the effective request context installed via SetContext.
 	reqCtx context.Context
+
+	// escaped records that something derived a context from this one. The
+	// standard library reads a parent context from a goroutine of its own that
+	// can outlive the handler, so an escaped Context must not be cleared or
+	// reused: see releaseCtx.
+	escaped atomic.Bool
 
 	method       http.Method // HTTP method
 	path         string      // HTTP path with the modifications by the configuration -> string copy from pathBuffer
@@ -149,6 +156,18 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 }
 
 func (a *App) releaseCtx(ctx *Context) {
+	if ctx.escaped.Load() {
+		// Something derived a context from this one, so the standard library may
+		// still read it from a watcher goroutine after the handler has returned.
+		// Clearing the fields would race that read, and recycling the Context
+		// would hand a later request's state to the earlier request's watcher.
+		// Release only what the request owns and let the Context itself go to the
+		// garbage collector: one allocation, for a request that actually needed it.
+		ctx.releaseResources()
+
+		return
+	}
+
 	ctx.reset()
 	a.ctxPool.Put(ctx)
 }
@@ -172,9 +191,15 @@ func Handle(h Handler) RequestHandler {
 	return h.Handler
 }
 
-func (c *Context) reset() {
+// releaseResources frees what the request itself owns (the multipart form's
+// temporary files). It runs whether or not the Context can be reused.
+func (c *Context) releaseResources() {
 	c.Form.form.Reset(c)
 	c.Form.form = nilArgsValuer
+}
+
+func (c *Context) reset() {
+	c.releaseResources()
 	c.user = nil
 	c.context = nil
 	c.reqCtx = nil

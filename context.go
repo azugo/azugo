@@ -41,7 +41,18 @@ func (c *Context) effectiveContext() context.Context {
 // should be canceled. Deadline returns ok==false when no deadline is
 // set. Successive calls to Deadline return the same results.
 func (c *Context) Deadline() (time.Time, bool) {
-	if c == nil || c.context == nil {
+	if c == nil {
+		return time.Time{}, false
+	}
+
+	// Mark the Context as escaped BEFORE reading any per-request field: the
+	// standard library calls Done on a parent again from a watcher goroutine
+	// of its own, which can outlive the handler. This first call happens on
+	// the handler's own goroutine, so the flag is always set before the
+	// Context is released.
+	c.escaped.Store(true)
+
+	if c.context == nil {
 		return time.Time{}, false
 	}
 
@@ -80,7 +91,18 @@ func (c *Context) Deadline() (time.Time, bool) {
 // See https://blog.golang.org/pipelines for more examples of how to use
 // a Done channel for cancellation.
 func (c *Context) Done() <-chan struct{} {
-	if c == nil || c.context == nil {
+	if c == nil {
+		return nil
+	}
+
+	// Mark the Context as escaped BEFORE reading any per-request field: the
+	// standard library calls Done on a parent again from a watcher goroutine
+	// of its own, which can outlive the handler. This first call happens on
+	// the handler's own goroutine, so the flag is always set before the
+	// Context is released.
+	c.escaped.Store(true)
+
+	if c.context == nil {
 		return nil
 	}
 

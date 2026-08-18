@@ -205,3 +205,60 @@ func TestContextDeadlineExtension(t *testing.T) {
 
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 }
+
+// A handler that derives a cancellable context from the request Context hands
+// the standard library a parent it reads from a watcher goroutine of its own
+// (context.propagateCancel), and that goroutine can still be reading after the
+// handler has returned. Clearing the Context and putting it back in the pool at
+// that moment races the read, and can hand the watcher a later request's state.
+// So a Context that has escaped must not be recycled.
+func TestEscapedContextIsNotRecycled(t *testing.T) {
+	app := NewTestApp()
+
+	app.Start(t)
+	defer app.Stop()
+
+	escaped := make(chan *Context, 1)
+
+	app.Get("/test", func(ctx *Context) {
+		child, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		_ = child
+
+		escaped <- ctx
+	})
+
+	resp, err := app.TestClient().Get("/test")
+	qt.Assert(t, qt.IsNil(err))
+	defer fasthttp.ReleaseResponse(resp)
+
+	ctx := <-escaped
+
+	qt.Check(t, qt.IsTrue(ctx.escaped.Load()))
+	// Not cleared: there is nothing for the watcher goroutine to race with, and
+	// the request it belongs to is still the one it describes.
+	qt.Check(t, qt.IsNotNil(ctx.context))
+}
+
+// The same shape end to end, driven often enough that the race detector sees the
+// watcher goroutine and the release overlap. Passes trivially without -race.
+func TestDerivedCancellableContextDoesNotRaceRelease(t *testing.T) {
+	app := NewTestApp()
+
+	app.Start(t)
+	defer app.Stop()
+
+	app.Get("/test", func(ctx *Context) {
+		child, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
+
+		_ = child
+	})
+
+	for range 20 {
+		resp, err := app.TestClient().Get("/test")
+		qt.Assert(t, qt.IsNil(err))
+		fasthttp.ReleaseResponse(resp)
+	}
+}
