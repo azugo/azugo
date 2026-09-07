@@ -3,13 +3,13 @@ module azugo.io/azugo
 go 1.26.0
 
 require (
-	azugo.io/core v0.38.0
+	azugo.io/core v0.38.1
 	github.com/VictoriaMetrics/metrics v1.44.0
-	github.com/beevik/etree v1.7.1
-	github.com/go-playground/validator/v10 v10.30.3
+	github.com/beevik/etree v1.8.0
+	github.com/go-playground/validator/v10 v10.30.4
 	github.com/go-quicktest/qt v1.102.0
 	github.com/goccy/go-json v0.10.6
-	github.com/lafriks/go-xmldsig/v2 v2.3.0
+	github.com/lafriks/go-xmldsig/v2 v2.4.0
 	github.com/lafriks/http2 v0.6.1
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
 	github.com/oklog/ulid/v2 v2.1.2
@@ -54,7 +54,7 @@ require (
 	go.elastic.co/ecszap v1.0.3 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 	golang.org/x/text v0.41.0 // indirect
 )
