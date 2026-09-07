@@ -59,13 +59,17 @@ func TestMetricsHandler(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 	fasthttp.ReleaseResponse(resp)
 
-	resp, err = a.TestClient().Get("/metrics")
+	c := a.TestClient()
+
+	resp, err = c.Get("/metrics", c.WithHeader(http.HeaderAccept, "application/openmetrics-text;version=1.0.0,text/plain;version=0.0.4;q=0.5"))
 
 	qt.Assert(t, qt.IsNil(err))
 	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 
-	i := strings.Index(string(resp.Body()), "requests_total")
+	body := string(resp.Body())
+	contentType := string(resp.Header.ContentType())
 	fasthttp.ReleaseResponse(resp)
 
-	qt.Check(t, qt.IsTrue(i > -1), qt.Commentf("metrics handler not returning expected metrics"))
+	qt.Check(t, qt.IsTrue(strings.Contains(body, "requests_total")), qt.Commentf("metrics handler not returning expected metrics"))
+	qt.Check(t, qt.Equals(contentType, "text/plain; version=0.0.4; charset=utf-8"))
 }

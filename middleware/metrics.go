@@ -118,39 +118,8 @@ func (p *metricsHandler) Handler(h azugo.RequestHandler) azugo.RequestHandler {
 }
 
 func (p *metricsHandler) serveMetrics(ctx *azugo.Context) {
-	accept := ctx.Header.Get(http.HeaderAccept)
-	w := ctx.Response().BodyWriter()
-
-	if negotiateOpenMetrics(accept) {
-		ctx.Header.Set(http.HeaderContentType, "application/openmetrics-text; version=1.0.0; charset=utf-8")
-		metrics.WritePrometheus(w, true)
-		_, _ = w.Write([]byte("# EOF\n"))
-	} else {
-		ctx.Header.Set(http.HeaderContentType, "text/plain; version=0.0.4; charset=utf-8")
-		metrics.WritePrometheus(w, true)
-	}
-}
-
-// negotiateOpenMetrics returns true if the Accept header prefers OpenMetrics format.
-func negotiateOpenMetrics(accept string) bool {
-	for part := range strings.SplitSeq(accept, ",") {
-		part = strings.TrimSpace(part)
-		mediaType, params, _ := strings.Cut(part, ";")
-
-		if strings.TrimSpace(mediaType) != "application/openmetrics-text" {
-			continue
-		}
-
-		for param := range strings.SplitSeq(params, ";") {
-			if strings.TrimSpace(param) == "q=0" {
-				return false
-			}
-		}
-
-		return true
-	}
-
-	return false
+	ctx.Header.Set(http.HeaderContentType, "text/plain; version=0.0.4; charset=utf-8")
+	metrics.WritePrometheus(ctx.Response().BodyWriter(), true)
 }
 
 func (p *metricsHandler) isTrusted(ctx *azugo.Context) bool {
