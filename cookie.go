@@ -2,6 +2,7 @@ package azugo
 
 import (
 	"iter"
+	"strings"
 	"time"
 
 	"azugo.io/azugo/internal/utils"
@@ -99,6 +100,41 @@ func CookieDefaultSecurity() CookieOption {
 	return cookieDefaultSecurity{}
 }
 
+// Cookie-name prefixes (RFC 6265bis §4.1.3) CookieDefaultSecurity may apply.
+const (
+	cookiePrefixHost   = "__Host-"
+	cookiePrefixSecure = "__Secure-"
+)
+
+func hasCookiePrefix(name string) bool {
+	return strings.HasPrefix(name, cookiePrefixHost) || strings.HasPrefix(name, cookiePrefixSecure)
+}
+
+func cookieRank(key string) int {
+	switch {
+	case strings.HasPrefix(key, cookiePrefixHost):
+		return 2
+	case strings.HasPrefix(key, cookiePrefixSecure):
+		return 1
+	default:
+		return 0
+	}
+}
+
+func bareCookieName(name string) string {
+	return strings.TrimPrefix(strings.TrimPrefix(name, cookiePrefixHost), cookiePrefixSecure)
+}
+
+func hasDefaultSecurity(opts []CookieOption) bool {
+	for _, opt := range opts {
+		if _, ok := opt.(cookieDefaultSecurity); ok {
+			return true
+		}
+	}
+
+	return false
+}
+
 // CookieCtx provides cookie read and write helpers on an HTTP context.
 type CookieCtx struct {
 	noCopy noCopy
@@ -107,60 +143,96 @@ type CookieCtx struct {
 }
 
 // Get the value of the request cookie.
+// A cookie written with CookieDefaultSecurity is found under
+// its bare name: a __Host- variant wins over __Secure-, which wins over the bare name.
 //
 // Returns empty value if no cookie is present.
 func (c *CookieCtx) Get(name string) string {
-	return utils.B2S(c.ctx.Request().Header.Cookie(name))
+	_, v := c.resolve(name)
+
+	return utils.B2S(v)
 }
 
-// Keys returns an iterator over all request cookie names.
+func (c *CookieCtx) resolve(name string) (string, []byte) {
+	if hasCookiePrefix(name) {
+		return name, c.ctx.Request().Header.Cookie(name)
+	}
+
+	var (
+		key   string
+		value []byte
+		best  = -1
+	)
+
+	for k, v := range c.ctx.Request().Header.Cookies() {
+		ks := utils.B2S(k)
+		if bareCookieName(ks) != name {
+			continue
+		}
+
+		if r := cookieRank(ks); r > best {
+			best, key, value = r, ks, v
+
+			if r == 2 {
+				break
+			}
+		}
+	}
+
+	return key, value
+}
+
+// Keys returns an iterator over all request cookie names, with the __Host- and __Secure-
+// prefixes stripped and the variants of one cookie collapsed into a single name.
 func (c *CookieCtx) Keys() iter.Seq[string] {
 	return func(yield func(string) bool) {
-		for k := range c.ctx.Request().Header.Cookies() {
-			if !yield(utils.B2S(k)) {
+		for name := range c.All() {
+			if !yield(name) {
 				return
 			}
 		}
 	}
 }
 
-// All returns an iterator over all request cookies as name and value pairs.
+// All returns an iterator over all request cookies as bare name and value pairs, resolving
+// prefixed variants the same way Get does: weaker variants of a cookie are skipped.
 func (c *CookieCtx) All() iter.Seq2[string, string] {
 	return func(yield func(string, string) bool) {
 		for k, v := range c.ctx.Request().Header.Cookies() {
-			if !yield(utils.B2S(k), utils.B2S(v)) {
+			ks := utils.B2S(k)
+			name := bareCookieName(ks)
+
+			if key, _ := c.resolve(name); key != ks {
+				continue
+			}
+
+			if !yield(name, utils.B2S(v)) {
 				return
 			}
 		}
 	}
 }
 
-// writeCookie writes cookie with all options applied.
-func (c *CookieCtx) writeCookie(name string, setup func(*fasthttp.Cookie), opts []CookieOption) {
+// writeCookie writes cookie with all options applied. With CookieDefaultSecurity the name is
+// prefixed per the request's security unless keepName is set or it already carries a prefix;
+// a prefixed name always gets the attributes its prefix mandates.
+func (c *CookieCtx) writeCookie(name string, keepName bool, setup func(*fasthttp.Cookie), opts []CookieOption) {
 	cookie := fasthttp.AcquireCookie()
 	defer fasthttp.ReleaseCookie(cookie)
 
-	defaultSecurity := false
-
-	for _, opt := range opts {
-		if _, ok := opt.(cookieDefaultSecurity); ok {
-			defaultSecurity = true
-
-			break
-		}
-	}
+	defaultSecurity := hasDefaultSecurity(opts)
 
 	var secure bool
 
 	if defaultSecurity {
 		secure = c.ctx.IsTLS() || !c.ctx.Env().IsDevelopment()
-		if secure {
+		if secure && !keepName && !hasCookiePrefix(name) {
 			if c.ctx.BasePath() == "" {
 				// __Host- requires Secure, no Domain and Path="/".
-				name = "__Host-" + name
+				name = cookiePrefixHost + name
 			} else {
 				// __Secure- requires Secure but allows a scoped Path.
-				name = "__Secure-" + name
+				name = cookiePrefixSecure + name
 			}
 		}
 	}
@@ -182,7 +254,11 @@ func (c *CookieCtx) writeCookie(name string, setup func(*fasthttp.Cookie), opts 
 		cookie.SetDomain("")
 		cookie.SetPath(c.ctx.BasePath())
 
-		if secure {
+		if strings.HasPrefix(name, cookiePrefixHost) {
+			cookie.SetPath("/")
+		}
+
+		if secure || hasCookiePrefix(name) {
 			cookie.SetSecure(true)
 		}
 	}
@@ -192,15 +268,36 @@ func (c *CookieCtx) writeCookie(name string, setup func(*fasthttp.Cookie), opts 
 
 // Set a response cookie with the given name and value.
 func (c *CookieCtx) Set(name, value string, opts ...CookieOption) {
-	c.writeCookie(name, func(cookie *fasthttp.Cookie) {
+	c.writeCookie(name, false, func(cookie *fasthttp.Cookie) {
 		cookie.SetValue(value)
 	}, opts)
 }
 
-// Clear the named cookie on the client.
-// Pass the same Path and Domain options that were used when setting the cookie.
+// Clear the named cookie on the client. Pass the same options that were used when setting the
+// cookie. With CookieDefaultSecurity every prefixed variant the request carries is cleared, so
+// a cookie set under a different scheme (e.g. __Host- over TLS) is removed as well.
 func (c *CookieCtx) Clear(name string, opts ...CookieOption) {
-	c.writeCookie(name, func(cookie *fasthttp.Cookie) {
+	expire := func(cookie *fasthttp.Cookie) {
 		cookie.SetExpire(fasthttp.CookieExpireDelete)
-	}, opts)
+	}
+
+	if !hasDefaultSecurity(opts) || hasCookiePrefix(name) {
+		c.writeCookie(name, false, expire, opts)
+
+		return
+	}
+
+	cleared := false
+
+	for k := range c.ctx.Request().Header.Cookies() {
+		if ks := utils.B2S(k); bareCookieName(ks) == name {
+			c.writeCookie(ks, true, expire, opts)
+
+			cleared = true
+		}
+	}
+
+	if !cleared {
+		c.writeCookie(name, false, expire, opts)
+	}
 }

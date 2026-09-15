@@ -265,3 +265,134 @@ func TestCookieJarClear(t *testing.T) {
 	_, hasSession := c.Cookies()["session"]
 	qt.Check(t, qt.IsFalse(hasSession))
 }
+
+func TestCookieGetResolvesPrefixes(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/", func(ctx *Context) {
+		// The prefixed variant wins over a bare cookie an attacker could have planted.
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("session"), "host"))
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("theme"), "secure"))
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("plain"), "bare"))
+		// An explicitly prefixed name is looked up as-is.
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("__Host-session"), "host"))
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("__Secure-session"), ""))
+		ctx.StatusCode(http.StatusNoContent)
+	})
+
+	tc := a.TestClient()
+
+	resp, err := tc.Get("/",
+		tc.WithCookie("session", "bare"), tc.WithCookie("__Host-session", "host"),
+		tc.WithCookie("__Secure-theme", "secure"), tc.WithCookie("plain", "bare"))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
+}
+
+// clearedCookies parses every Set-Cookie header of resp into a map keyed by cookie name.
+func clearedCookies(t *testing.T, resp *fasthttp.Response) map[string]*fasthttp.Cookie {
+	t.Helper()
+
+	out := make(map[string]*fasthttp.Cookie)
+
+	for key, value := range resp.Header.Cookies() {
+		out[string(key)] = parseCookie(t, value)
+	}
+
+	return out
+}
+
+func TestCookieClearDefaultSecurityClearsPresentVariants(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/", func(ctx *Context) {
+		ctx.Cookie.Clear("session", CookieDefaultSecurity())
+	})
+
+	tc := a.TestClient()
+
+	// Both a __Host- cookie (set over TLS) and a bare one (set in development) are removed.
+	resp, err := tc.Get("/", tc.WithCookie("__Host-session", "x"), tc.WithCookie("session", "y"))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+
+	cleared := clearedCookies(t, resp)
+	qt.Assert(t, qt.HasLen(cleared, 2))
+
+	host := cleared["__Host-session"]
+	qt.Assert(t, qt.IsNotNil(host))
+	qt.Check(t, qt.Equals(string(host.Path()), "/"))
+	qt.Check(t, qt.IsTrue(host.Secure()))
+	qt.Check(t, qt.IsTrue(host.Expire().Before(fasthttp.CookieExpireDelete.Add(1))))
+
+	bare := cleared["session"]
+	qt.Assert(t, qt.IsNotNil(bare))
+	qt.Check(t, qt.IsTrue(bare.Expire().Before(fasthttp.CookieExpireDelete.Add(1))))
+
+	// Without any variant in the request the name the request's security would produce is cleared.
+	resp2, err := tc.Get("/")
+	defer fasthttp.ReleaseResponse(resp2)
+	qt.Assert(t, qt.IsNil(err))
+
+	cleared = clearedCookies(t, resp2)
+	qt.Assert(t, qt.HasLen(cleared, 1))
+	qt.Check(t, qt.IsNotNil(cleared["__Host-session"]))
+}
+
+func TestCookieKeysAndAllResolvePrefixes(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/", func(ctx *Context) {
+		names := make([]string, 0, 2)
+		for name := range ctx.Cookie.Keys() {
+			names = append(names, name)
+		}
+		// One bare name per cookie, prefixes stripped, variants collapsed.
+		qt.Check(t, qt.ContentEquals(names, []string{"session", "theme"}))
+
+		all := make(map[string]string)
+		for name, value := range ctx.Cookie.All() {
+			all[name] = value
+		}
+		// The prefixed variant's value wins, as in Get.
+		qt.Check(t, qt.DeepEquals(all, map[string]string{"session": "host", "theme": "dark"}))
+
+		ctx.StatusCode(http.StatusNoContent)
+	})
+
+	tc := a.TestClient()
+
+	resp, err := tc.Get("/",
+		tc.WithCookie("session", "bare"), tc.WithCookie("__Host-session", "host"), tc.WithCookie("__Secure-theme", "dark"))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
+}
+
+func TestCookieSetKeepsExplicitPrefix(t *testing.T) {
+	a := NewTestApp()
+	a.Config().Server.Path = "/test"
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/", func(ctx *Context) {
+		// An already-prefixed name is not prefixed twice and keeps the attributes its prefix mandates.
+		ctx.Cookie.Set("__Host-session", "abc", CookieDefaultSecurity())
+	})
+
+	resp, err := a.TestClient().Get("/test/")
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+
+	c := parseCookie(t, resp.Header.Peek(http.HeaderSetCookie))
+	qt.Check(t, qt.Equals(string(c.Key()), "__Host-session"))
+	qt.Check(t, qt.Equals(string(c.Path()), "/"))
+	qt.Check(t, qt.IsTrue(c.Secure()))
+}
