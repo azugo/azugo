@@ -11,6 +11,7 @@ Opinionated GoLang web framework for microservices based on FastHTTP.
 * JSON serialization [goccy/go-json](https://github.com/goccy/go-json)
 * Data structure validation using [go-playground/validator](https://github.com/go-playground/validator)
 * Built-in web app testing framework
+* Flash messages for POST → redirect → GET flows (`ctx.Flash`), kept in the app cache behind an opaque cookie
 
 ### Special Environment variables used by the Azugo framework
 
@@ -64,6 +65,11 @@ Opinionated GoLang web framework for microservices based on FastHTTP.
 
 * `PAGING_DEFAULT_PAGE_SIZE` - Default page size for paginated responses (defaults to `20`).
 * `PAGING_MAX_PAGE_SIZE` - Maximum allowed page size for paginated responses (defaults to `100`).
+
+#### Flash
+
+* `FLASH_COOKIE_NAME` - Name of the cookie carrying the flash record ID between requests (defaults to `__flash`).
+* `FLASH_TTL` - Duration an unread flash record waits.
 
 #### Cache
 

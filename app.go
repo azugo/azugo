@@ -11,6 +11,7 @@ import (
 	"azugo.io/azugo/config"
 
 	"azugo.io/core"
+	"azugo.io/core/cache"
 	"azugo.io/core/cert"
 	"azugo.io/core/http"
 	"github.com/lafriks/http2"
@@ -54,6 +55,9 @@ type App struct {
 
 	// Server options
 	ServerOptions ServerOptions
+
+	// Flash records between requests, created from the app cache at Start
+	flashCache cache.Instance[flashData]
 
 	// Running servers
 	serverLock sync.Mutex
@@ -179,9 +183,25 @@ func (a *App) Config() *config.Configuration {
 	return a.config
 }
 
+// startCore starts the core application and the request-scoped services built on it.
+func (a *App) startCore() error {
+	if err := a.App.Start(); err != nil {
+		return err
+	}
+
+	flashCache, err := cache.Create[flashData](a.Cache(), "flash")
+	if err != nil {
+		return fmt.Errorf("failed to create flash cache: %w", err)
+	}
+
+	a.flashCache = flashCache
+
+	return nil
+}
+
 // Start web application.
 func (a *App) Start() error {
-	if err := a.App.Start(); err != nil {
+	if err := a.startCore(); err != nil {
 		return err
 	}
 

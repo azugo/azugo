@@ -160,6 +160,8 @@ func (m *mux) WrapHandler(path string, handler RequestHandler) fasthttp.RequestH
 		}
 
 		handler(c)
+
+		c.Flash.commit()
 	}
 }
 

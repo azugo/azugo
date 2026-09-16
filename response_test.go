@@ -261,3 +261,40 @@ func TestResponseRedirectUnsafeAllowsAnyTarget(t *testing.T) {
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusFound))
 	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderLocation)), "http://test/"))
 }
+
+func TestRedirectUsesSeeOtherAfterNonGET(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/form", func(ctx *Context) {
+		ctx.Redirect("/next")
+	})
+	a.Post("/explicit", func(ctx *Context) {
+		ctx.StatusCode(http.StatusTemporaryRedirect)
+		ctx.Redirect("/next")
+	})
+	a.Head("/probe", func(ctx *Context) {
+		ctx.Redirect("/next")
+	})
+
+	tc := a.TestClient()
+
+	resp, err := tc.PostForm("/form", nil)
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusSeeOther))
+	qt.Check(t, qt.Equals(string(resp.Header.Peek(http.HeaderLocation)), "/next"))
+
+	// A status set beforehand is kept.
+	resp2, err := tc.PostForm("/explicit", nil)
+	defer fasthttp.ReleaseResponse(resp2)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp2.StatusCode(), http.StatusTemporaryRedirect))
+
+	// HEAD behaves like GET.
+	resp3, err := tc.Head("/probe")
+	defer fasthttp.ReleaseResponse(resp3)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp3.StatusCode(), http.StatusFound))
+}

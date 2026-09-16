@@ -85,6 +85,8 @@ type Context struct {
 	Header HeaderCtx
 	// Cookie access methods
 	Cookie CookieCtx
+	// Flash carries one-shot state to the next request after redirect.
+	Flash FlashCtx
 	// Query access methods
 	Query QueryCtx
 	// Body access methods
@@ -114,6 +116,7 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 		ctx.loggerFields = make([]zap.Field, 0, 8)
 		ctx.Header.ctx = ctx
 		ctx.Cookie.ctx = ctx
+		ctx.Flash.ctx = ctx
 		ctx.Query.ctx = ctx
 		ctx.Body.ctx = ctx
 		ctx.Form.ctx = ctx
@@ -273,6 +276,7 @@ func (c *Context) reset() {
 
 	c.Form.form.Reset(c)
 	c.Form.form = nilArgsValuer
+	c.Flash.reset()
 	c.user = nil
 	c.context = nil
 	c.reqCtx = nil

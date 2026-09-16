@@ -27,6 +27,8 @@ type Configuration struct {
 	Healthz *Healthz `mapstructure:"healthz"`
 	// RateLimit configuration section.
 	RateLimit *RateLimit `mapstructure:"rate_limit"`
+	// Flash configuration section.
+	Flash *Flash `mapstructure:"flash"`
 	// HTTPClient configuration section.
 	HTTPClient *http.Configuration `mapstructure:"http_client"`
 }
@@ -58,6 +60,7 @@ func (c *Configuration) Bind(_ string, v *viper.Viper) {
 	c.Metrics = config.Bind(c.Metrics, "metrics", v)
 	c.Healthz = config.Bind(c.Healthz, "healthz", v)
 	c.RateLimit = config.Bind(c.RateLimit, "rate_limit", v)
+	c.Flash = config.Bind(c.Flash, "flash", v)
 	c.HTTPClient = config.Bind(c.HTTPClient, "http_client", v)
 }
 
@@ -95,6 +98,10 @@ func (c *Configuration) Validate(validate *validation.Validate) error {
 	}
 
 	if err := c.RateLimit.Validate(validate); err != nil {
+		return err
+	}
+
+	if err := c.Flash.Validate(validate); err != nil {
 		return err
 	}
 

@@ -38,16 +38,22 @@ func (c *Context) ContentType(contentType string, charset ...string) {
 }
 
 // Redirect the request to target: either a bare path, prefixed with BasePath() or an absolute
-// URL matching the current app base URL.
+// URL matching the current app base URL. Unless a redirect status was already set, GET and
+// HEAD requests answer 302 (Found) and every other method 303 (See Other), so a form POST
+// is always followed by a GET.
 func (c *Context) Redirect(target string) {
 	c.RedirectUnsafe(c.sanitizeRedirect(target))
 }
 
-// RedirectUnsafe redirects the request to a given URL with status code 302 (Found) if other redirect
-// status code not set already.
+// RedirectUnsafe redirects the request to a given URL, choosing the status like Redirect.
 func (c *Context) RedirectUnsafe(url string) {
 	if !http.StatusCodeIsRedirect(c.Response().StatusCode()) {
-		c.StatusCode(http.StatusFound)
+		status := http.StatusFound
+		if c.method != http.MethodGet && c.method != http.MethodHead {
+			status = http.StatusSeeOther
+		}
+
+		c.StatusCode(status)
 	}
 
 	c.Header.Set(http.HeaderLocation, url)

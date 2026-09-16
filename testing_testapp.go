@@ -66,7 +66,7 @@ func (a *TestApp) Start(t *testing.T) {
 
 	a.applyConfig()
 	a.initLogs()
-	qt.Assert(t, qt.IsNil(a.App.App.Start()), qt.Commentf("Failed to start test app"))
+	qt.Assert(t, qt.IsNil(a.startCore()), qt.Commentf("Failed to start test app"))
 
 	server := &fasthttp.Server{
 		NoDefaultServerHeader:        true,
@@ -91,7 +91,7 @@ func (a *TestApp) StartBenchmark() {
 	a.applyConfig()
 	a.initLogs()
 
-	if err := a.App.App.Start(); err != nil {
+	if err := a.startCore(); err != nil {
 		panic(err)
 	}
 
