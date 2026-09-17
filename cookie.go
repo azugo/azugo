@@ -85,17 +85,16 @@ func (cookieDefaultSecurity) apply(_ *fasthttp.Cookie) {}
 // CookieDefaultSecurity applies secure-by-default attributes to a response cookie
 // and automatically selects the strongest cookie-name prefix the request allows:
 //
-//   - __Host- when the cookie is Secure and the application is served from the
-//     root base path: forces Secure, Path="/" and no Domain.
-//   - __Secure- when the cookie is Secure but served under a non-root base path:
-//     forces Secure and scopes Path to the base path.
+//   - __Host- when the cookie is Secure and scoped to the root path: forces Secure,
+//     Path="/" and no Domain.
+//   - __Secure- when the cookie is Secure but scoped below the root, either by a
+//     non-root base path or an explicit CookiePath: forces Secure and keeps that Path.
 //   - no prefix when the cookie is not Secure (development over plain HTTP).
 //
 // It also sets HttpOnly, an empty Domain (host-only) and SameSite=Lax.
 //
-// SameSite may be overridden by passing an explicit option. The prefix-mandated
-// attributes (Secure, Path, Domain) and HttpOnly are enforced after all other
-// options and cannot be downgraded.
+// SameSite and Path may be overridden by passing an explicit option. Secure, Domain and
+// HttpOnly are enforced after all other options and cannot be downgraded.
 func CookieDefaultSecurity() CookieOption {
 	return cookieDefaultSecurity{}
 }
@@ -224,10 +223,18 @@ func (c *CookieCtx) writeCookie(name string, keepName bool, setup func(*fasthttp
 
 	var secure bool
 
+	path := c.ctx.BasePath()
+
 	if defaultSecurity {
+		for _, opt := range opts {
+			if p, ok := opt.(CookiePath); ok {
+				path = string(p)
+			}
+		}
+
 		secure = c.ctx.IsTLS() || !c.ctx.Env().IsDevelopment()
 		if secure && !keepName && !hasCookiePrefix(name) {
-			if c.ctx.BasePath() == "" {
+			if path == "" || path == "/" {
 				// __Host- requires Secure, no Domain and Path="/".
 				name = cookiePrefixHost + name
 			} else {
@@ -252,7 +259,7 @@ func (c *CookieCtx) writeCookie(name string, keepName bool, setup func(*fasthttp
 		// Enforce secure defaults
 		cookie.SetHTTPOnly(true)
 		cookie.SetDomain("")
-		cookie.SetPath(c.ctx.BasePath())
+		cookie.SetPath(path)
 
 		if strings.HasPrefix(name, cookiePrefixHost) {
 			cookie.SetPath("/")

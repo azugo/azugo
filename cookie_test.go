@@ -183,6 +183,42 @@ func TestCookieDefaultSecurityDevelopment(t *testing.T) {
 	qt.Check(t, qt.Equals(string(cTLS.Key()), "__Host-session"))
 }
 
+func TestCookieDefaultSecurityExplicitPath(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/", func(ctx *Context) {
+		// A scoped Path cannot satisfy __Host-, so the __Secure- prefix keeps the Path.
+		ctx.Cookie.Set("session", "abc123", CookieDefaultSecurity(), CookiePath("/auth"))
+	})
+
+	a.Get("/root", func(ctx *Context) {
+		ctx.Cookie.Set("session", "abc123", CookieDefaultSecurity(), CookiePath("/"))
+	})
+
+	tc := a.TestClient()
+
+	resp, err := tc.Get("/")
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+
+	c := parseCookie(t, resp.Header.Peek(http.HeaderSetCookie))
+	qt.Check(t, qt.Equals(string(c.Key()), "__Secure-session"))
+	qt.Check(t, qt.IsTrue(c.Secure()))
+	qt.Check(t, qt.IsTrue(c.HTTPOnly()))
+	qt.Check(t, qt.Equals(string(c.Domain()), ""))
+	qt.Check(t, qt.Equals(string(c.Path()), "/auth"))
+
+	respRoot, err := tc.Get("/root")
+	defer fasthttp.ReleaseResponse(respRoot)
+	qt.Assert(t, qt.IsNil(err))
+
+	cRoot := parseCookie(t, respRoot.Header.Peek(http.HeaderSetCookie))
+	qt.Check(t, qt.Equals(string(cRoot.Key()), "__Host-session"))
+	qt.Check(t, qt.Equals(string(cRoot.Path()), "/"))
+}
+
 func TestCookieDefaultSecurityNoDowngrade(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)
@@ -195,7 +231,6 @@ func TestCookieDefaultSecurityNoDowngrade(t *testing.T) {
 			CookieDefaultSecurity(),
 			CookieSameSiteStrict,
 			CookieSecure(false),
-			CookiePath("/custom"),
 			CookieDomain("example.com"),
 		)
 	})
