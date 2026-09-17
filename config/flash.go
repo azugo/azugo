@@ -22,7 +22,7 @@ func (c *Flash) Validate(valid *validation.Validate) error {
 
 // Bind Flash configuration section.
 func (c *Flash) Bind(prefix string, v *viper.Viper) {
-	v.SetDefault(prefix+".cookie_name", "__flash")
+	v.SetDefault(prefix+".cookie_name", "flash")
 	v.SetDefault(prefix+".ttl", time.Duration(0))
 
 	_ = v.BindEnv(prefix+".cookie_name", "FLASH_COOKIE_NAME")

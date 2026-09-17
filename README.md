@@ -68,7 +68,7 @@ Opinionated GoLang web framework for microservices based on FastHTTP.
 
 #### Flash
 
-* `FLASH_COOKIE_NAME` - Name of the cookie carrying the flash record ID between requests (defaults to `__flash`).
+* `FLASH_COOKIE_NAME` - Name of the cookie carrying the flash record ID between requests (defaults to `flash`).
 * `FLASH_TTL` - Duration an unread flash record waits.
 
 #### Cache
