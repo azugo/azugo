@@ -4,6 +4,7 @@ package nonce
 import (
 	"context"
 	"crypto/rand"
+	"errors"
 	"fmt"
 	"time"
 
@@ -37,19 +38,23 @@ func (s *CacheNonceStore) Create(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("nonce can not be stored in cache: %w", err)
 	}
 
+	if err := s.cache.Sync(ctx); err != nil {
+		return "", fmt.Errorf("nonce can not be stored in cache: %w", err)
+	}
+
 	return key, nil
 }
 
 // Verify checks and consumes a nonce from the cache.
 func (s *CacheNonceStore) Verify(ctx context.Context, nonce string) (bool, error) {
-	i, err := s.cache.Get(ctx, nonce)
+	i, err := s.cache.Pop(ctx, nonce)
 	if err != nil {
-		return false, err
-	}
+		var knf cache.KeyNotFoundError
+		if errors.As(err, &knf) {
+			return false, nil
+		}
 
-	if i {
-		// Ignore error if nonce can not be deleted from cache
-		_ = s.cache.Delete(ctx, nonce)
+		return false, err
 	}
 
 	return i, nil

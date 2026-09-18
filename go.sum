@@ -1,5 +1,5 @@
-azugo.io/core v0.39.0 h1:oPW3aevbYu0Frggs8P+LbTG7BaY10CBzsdHB5CAl3r4=
-azugo.io/core v0.39.0/go.mod h1:fu/wLc0iIjcBhs9f5U9uS/QX7jVJlwZyBe4bidmsIHA=
+azugo.io/core v0.39.1 h1:wRbXfDqTMjXQSzdH9356yRrS00jNc/dteuVPRxWEwFA=
+azugo.io/core v0.39.1/go.mod h1:fu/wLc0iIjcBhs9f5U9uS/QX7jVJlwZyBe4bidmsIHA=
 github.com/VictoriaMetrics/metrics v1.44.0 h1:Fr8yqQSV+ZfYaDD/anqk1E8e9YPgfleSleJmAI0M0Tw=
 github.com/VictoriaMetrics/metrics v1.44.0/go.mod h1:xDM82ULLYCYdFRgQ2JBxi8Uf1+8En1So9YUwlGTOqTc=
 github.com/beevik/etree v1.8.0 h1:TOfpQtMZ3ZuG9f2ZnLvsbOOVxrjTvE0qbYb5D0p44j0=
