@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	azugo.io/azugo v0.0.0
-	azugo.io/core v0.39.1
+	azugo.io/core v0.39.2
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	go.uber.org/zap v1.28.0

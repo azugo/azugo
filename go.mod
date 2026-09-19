@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.26.0
 
 require (
-	azugo.io/core v0.39.1
+	azugo.io/core v0.39.2
 	github.com/VictoriaMetrics/metrics v1.44.0
 	github.com/beevik/etree v1.8.0
 	github.com/go-playground/validator/v10 v10.30.4
