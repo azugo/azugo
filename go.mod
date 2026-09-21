@@ -3,10 +3,10 @@ module azugo.io/azugo
 go 1.26.0
 
 require (
-	azugo.io/core v0.39.2
+	azugo.io/core v0.39.3
 	github.com/VictoriaMetrics/metrics v1.44.0
 	github.com/beevik/etree v1.8.0
-	github.com/go-playground/validator/v10 v10.30.4
+	github.com/go-playground/validator/v10 v10.30.5
 	github.com/go-quicktest/qt v1.102.0
 	github.com/goccy/go-json v0.10.6
 	github.com/lafriks/go-xmldsig/v2 v2.4.0
