@@ -59,8 +59,7 @@ func NewErrorResponse(err error) *http.ErrorResponse {
 	errs := make([]*http.ErrorResponseError, 0, 1)
 
 	// Detect validation errors
-	var verr validator.ValidationErrors
-	if errors.As(err, &verr) {
+	if verr, ok := errors.AsType[validator.ValidationErrors](err); ok {
 		for _, e := range verr {
 			errs = append(errs, &http.ErrorResponseError{
 				Type:    "FieldError",

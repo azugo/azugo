@@ -49,8 +49,7 @@ func (s *CacheNonceStore) Create(ctx context.Context) (string, error) {
 func (s *CacheNonceStore) Verify(ctx context.Context, nonce string) (bool, error) {
 	i, err := s.cache.Pop(ctx, nonce)
 	if err != nil {
-		var knf cache.KeyNotFoundError
-		if errors.As(err, &knf) {
+		if _, ok := errors.AsType[cache.KeyNotFoundError](err); ok {
 			return false, nil
 		}
 

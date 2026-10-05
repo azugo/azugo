@@ -3,12 +3,12 @@ module azugo.io/azugo
 go 1.26.0
 
 require (
-	azugo.io/core v0.39.3
-	github.com/VictoriaMetrics/metrics v1.44.0
-	github.com/beevik/etree v1.8.0
+	azugo.io/core v0.40.0
+	github.com/VictoriaMetrics/metrics v1.44.1
+	github.com/beevik/etree v1.8.1
 	github.com/go-playground/validator/v10 v10.30.5
 	github.com/go-quicktest/qt v1.102.0
-	github.com/goccy/go-json v0.10.6
+	github.com/goccy/go-json v0.11.2
 	github.com/lafriks/go-xmldsig/v2 v2.4.0
 	github.com/lafriks/http2 v0.6.1
 	github.com/mattermost/xml-roundtrip-validator v0.1.0
@@ -16,12 +16,12 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/valyala/bytebufferpool v1.0.0
-	github.com/valyala/fasthttp v1.74.0
+	github.com/valyala/fasthttp v1.75.0
 	go.uber.org/zap v1.28.0
 )
 
 require (
-	github.com/cenkalti/backoff/v7 v7.0.0 // indirect
+	github.com/cenkalti/backoff/v7 v7.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.4.2 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
@@ -32,14 +32,14 @@ require (
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/klauspost/compress v1.20.0 // indirect
+	github.com/klauspost/compress v1.20.1 // indirect
 	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lafriks/pkcs8 v1.2.4 // indirect
 	github.com/leodido/go-urn v1.5.0 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
-	github.com/molecule-man/go-brrr v1.0.1 // indirect
+	github.com/molecule-man/go-brrr v1.1.1 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/rogpeppe/go-internal v1.16.0 // indirect

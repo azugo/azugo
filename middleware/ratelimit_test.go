@@ -229,8 +229,7 @@ func TestRateLimitCustomErrorHandler(t *testing.T) {
 	a := azugo.NewTestApp()
 
 	a.RouterOptions().ErrorHandler = func(ctx *azugo.Context, err error) bool {
-		var rle *RateLimitError
-		if !errors.As(err, &rle) {
+		if _, ok := errors.AsType[*RateLimitError](err); !ok {
 			return false
 		}
 

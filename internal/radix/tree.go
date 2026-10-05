@@ -40,9 +40,7 @@ func (t *Tree) Add(path string, handler fasthttp.RequestHandler) {
 
 	n, err := t.root.add(path, fullPath, handler)
 	if err != nil {
-		var radixErr radixError
-
-		if errors.As(err, &radixErr) && t.Mutable && !n.tsr {
+		if radixErr, ok := errors.AsType[radixError](err); ok && t.Mutable && !n.tsr {
 			switch radixErr.msg {
 			case errSetHandler:
 				n.handler = handler

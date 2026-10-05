@@ -251,8 +251,7 @@ func (f *FlashCtx) load() {
 
 	d, err := store.Pop(f.ctx, id)
 	if err != nil {
-		var knf cache.KeyNotFoundError
-		if !errors.As(err, &knf) {
+		if _, ok := errors.AsType[cache.KeyNotFoundError](err); !ok {
 			f.ctx.Log().Error("failed to load flash data", zap.Error(err))
 		}
 
