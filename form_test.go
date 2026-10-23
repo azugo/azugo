@@ -38,6 +38,10 @@ func TestFormValidParams(t *testing.T) {
 		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter bb should be present"))
 		qt.Check(t, qt.IsFalse(b), qt.Commentf("Form parameter bb should be false"))
 
+		cb, err := ctx.Form.BoolOptional("cb")
+		qt.Check(t, qt.IsNil(err), qt.Commentf("Form parameter cb should be present"))
+		qt.Check(t, qt.DeepEquals(cb, new(true)), qt.Commentf("Checkbox value on should be true"))
+
 		ctx.StatusCode(http.StatusOK)
 	})
 
@@ -48,6 +52,7 @@ func TestFormValidParams(t *testing.T) {
 		"l":     500,
 		"b":     true,
 		"bb":    0,
+		"cb":    "on",
 	})
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))

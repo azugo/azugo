@@ -210,7 +210,7 @@ func (f *FormCtx) IntOptional(key string) (*int, error) {
 
 // Bool returns the value of the parameter as bool.
 //
-// Valid values ar "true", "false", "1" and "0".
+// "true", "on" and "1" are true; any other value is false.
 func (f *FormCtx) Bool(key string) (bool, error) {
 	v, err := f.String(key)
 	if err != nil {
@@ -222,7 +222,7 @@ func (f *FormCtx) Bool(key string) (bool, error) {
 
 // BoolOptional returns the value of the parameter as optional bool or null if value is empty.
 //
-// Valid values ar "true", "false", "1" and "0".
+// "true", "on" and "1" are true; any other value is false.
 func (f *FormCtx) BoolOptional(key string) (*bool, error) {
 	v := f.StringOptional(key)
 	if v == nil {
