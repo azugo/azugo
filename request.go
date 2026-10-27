@@ -3,6 +3,7 @@ package azugo
 import (
 	"bytes"
 	"context"
+	"math"
 	"net"
 	"strings"
 	"sync"
@@ -489,6 +490,9 @@ func (c *Context) Paging() *paginator.Paginator {
 	if pageSize > c.MaxPageSize() {
 		pageSize = c.MaxPageSize()
 	}
+
+	// Cap page so page*pageSize can't overflow (pageSize >= 1 via config validation).
+	page = min(page, math.MaxInt/pageSize)
 
 	return paginator.New(page*pageSize, pageSize, page)
 }

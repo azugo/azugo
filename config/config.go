@@ -101,6 +101,10 @@ func (c *Configuration) Validate(validate *validation.Validate) error {
 		return err
 	}
 
+	if err := c.Paging.Validate(validate); err != nil {
+		return err
+	}
+
 	if err := c.Flash.Validate(validate); err != nil {
 		return err
 	}

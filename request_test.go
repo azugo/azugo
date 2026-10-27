@@ -1,6 +1,7 @@
 package azugo
 
 import (
+	"math"
 	"net"
 	"net/netip"
 	"testing"
@@ -244,6 +245,28 @@ func TestRequestPagingCustomMaxPageSize(t *testing.T) {
 	resp, err := c.Get("/user", c.WithQuery(map[string]any{
 		paginator.QueryParameterPage:    2,
 		paginator.QueryParameterPerPage: 10000,
+	}))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+}
+
+func TestRequestPagingPageOverflow(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Get("/user", func(ctx *Context) {
+		p := ctx.Paging()
+		qt.Check(t, qt.Equals(p.Current(), math.MaxInt/20))
+		qt.Check(t, qt.Equals(p.PageSize(), 20))
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	c := a.TestClient()
+	resp, err := c.Get("/user", c.WithQuery(map[string]any{
+		paginator.QueryParameterPage:    math.MaxInt,
+		paginator.QueryParameterPerPage: 20,
 	}))
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
