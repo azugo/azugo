@@ -310,6 +310,18 @@ func (c *Context) Context() *fasthttp.RequestCtx {
 	return c.context
 }
 
+// SetReadDeadline sets when reading the rest of the request body times out, replacing the server
+// ReadTimeout for this request.
+func (c *Context) SetReadDeadline(deadline time.Time) error {
+	return c.context.SetReadDeadline(deadline)
+}
+
+// SetWriteDeadline sets when writing the response times out, replacing the server WriteTimeout
+// for this request.
+func (c *Context) SetWriteDeadline(deadline time.Time) error {
+	return c.context.SetWriteDeadline(deadline)
+}
+
 // Request return the *fasthttp.Request object
 // This allows you to use all fasthttp request methods
 // https://godoc.org/github.com/valyala/fasthttp#Request
