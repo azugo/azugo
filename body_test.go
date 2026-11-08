@@ -2,6 +2,9 @@ package azugo
 
 import (
 	"bytes"
+	"io"
+	"mime/multipart"
+	"strings"
 	"testing"
 
 	"azugo.io/core/http"
@@ -202,4 +205,168 @@ func TestBodyXML(t *testing.T) {
 
 	qt.Assert(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	qt.Assert(t, qt.DeepEquals(expect, user))
+}
+
+func TestBodyJSONTooLarge(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/user", func(ctx *Context) {
+		var u testBodyUser
+		if err := ctx.Body.JSON(&u); err != nil {
+			ctx.Error(err)
+			return
+		}
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	big := bytes.Repeat([]byte("a"), fasthttp.DefaultMaxRequestBodySize+1024)
+
+	resp, err := a.TestClient().Post("/user", big)
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusRequestEntityTooLarge))
+}
+
+func TestFormLazyAndTooLarge(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	var formErr error
+
+	a.Post("/ignored", func(ctx *Context) {
+		ctx.StatusCode(http.StatusOK)
+	})
+	a.Post("/form", func(ctx *Context) {
+		formErr = ctx.Form.Err()
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	params := map[string]any{"v": strings.Repeat("a", fasthttp.DefaultMaxRequestBodySize+1024)}
+
+	resp, err := a.TestClient().PostForm("/ignored", params)
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+
+	resp2, err := a.TestClient().PostForm("/form", params)
+	defer fasthttp.ReleaseResponse(resp2)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp2.StatusCode(), http.StatusOK))
+	qt.Check(t, qt.ErrorIs(formErr, RequestEntityTooLargeError{}))
+}
+
+func TestBodyMultipartStreamLargeUpload(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	size := 3 * fasthttp.DefaultMaxRequestBodySize
+	var got int64
+
+	a.Post("/upload", func(ctx *Context) {
+		ctx.SetMaxBodySize(size * 2)
+
+		mr, err := ctx.Body.MultipartReader()
+		if err != nil {
+			ctx.Error(err)
+			return
+		}
+
+		for {
+			p, err := mr.NextPart()
+			if err != nil {
+				break
+			}
+
+			n, err := io.Copy(io.Discard, p)
+			if err != nil {
+				ctx.Error(err)
+				return
+			}
+
+			got += n
+		}
+
+		ctx.StatusCode(http.StatusOK)
+	})
+	a.Post("/limited", func(ctx *Context) {
+		mr, err := ctx.Body.MultipartReader()
+		if err != nil {
+			ctx.Error(err)
+			return
+		}
+
+		for {
+			p, err := mr.NextPart()
+			if err != nil {
+				ctx.Error(err)
+				return
+			}
+
+			if _, err = io.Copy(io.Discard, p); err != nil {
+				ctx.Error(err)
+				return
+			}
+		}
+	})
+
+	form := &multipart.Form{Value: map[string][]string{"f": {strings.Repeat("a", size)}}}
+
+	resp, err := a.TestClient().PostMultiPartForm("/upload", form)
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+	qt.Check(t, qt.Equals(got, int64(size)))
+
+	resp2, err := a.TestClient().PostMultiPartForm("/limited", form)
+	defer fasthttp.ReleaseResponse(resp2)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp2.StatusCode(), http.StatusRequestEntityTooLarge))
+}
+
+func TestFormGetterReturnsTooLarge(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/form", func(ctx *Context) {
+		if _, err := ctx.Form.String("v"); err != nil {
+			ctx.Error(err)
+			return
+		}
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp, err := a.TestClient().PostForm("/form", map[string]any{"v": strings.Repeat("a", fasthttp.DefaultMaxRequestBodySize+1024)})
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusRequestEntityTooLarge))
+}
+
+func TestBodyBufferedRespectsLowerLimit(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/user", func(ctx *Context) {
+		ctx.SetMaxBodySize(3)
+
+		if _, err := ctx.Body.ReadAll(); err != nil {
+			ctx.Error(err)
+			return
+		}
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp, err := a.TestClient().Post("/user", []byte("hello world"))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusRequestEntityTooLarge))
 }

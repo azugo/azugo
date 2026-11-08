@@ -5,8 +5,10 @@ import (
 	"mime/multipart"
 	"strconv"
 	"strings"
+	"sync"
 
 	"azugo.io/azugo/internal/utils"
+	"azugo.io/core/http"
 
 	"github.com/valyala/fasthttp"
 )
@@ -23,9 +25,51 @@ type formKeyValuer interface {
 type FormCtx struct {
 	noCopy noCopy
 
+	once sync.Once
 	form formKeyValuer
+	err  error
 
 	ctx *Context
+}
+
+// Err returns the error that occurred while reading the request form.
+func (f *FormCtx) Err() error {
+	f.values()
+
+	return f.err
+}
+
+// values parses the request form on first access.
+func (f *FormCtx) values() formKeyValuer {
+	f.once.Do(func() {
+		switch f.ctx.method {
+		case http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodQuery:
+		default:
+			return
+		}
+
+		req := f.ctx.Request()
+		contentType := req.Header.ContentType()
+
+		isURLEncoded := bytes.HasPrefix(contentType, contentTypeFormURLEncoded)
+		if !isURLEncoded && !bytes.HasPrefix(contentType, contentTypeMultipartFormData) {
+			return
+		}
+
+		if _, f.err = f.ctx.readBody(); f.err != nil {
+			return
+		}
+
+		if isURLEncoded {
+			f.form = &postArgs{args: req.PostArgs()}
+		} else if form, err := req.MultipartForm(); err == nil {
+			f.form = &multiPartArgs{args: form}
+		} else {
+			f.err = BadRequestError{"invalid form", err}
+		}
+	})
+
+	return f.form
 }
 
 // nilArgs represents noop form key-value pairs.
@@ -128,14 +172,18 @@ func (a *multiPartArgs) Reset(ctx *Context) {
 
 // Values returns all values associated with the given key in query.
 func (f *FormCtx) Values(key string) []string {
-	return f.form.Values(key)
+	return f.values().Values(key)
 }
 
 // String gets the first value associated with the given key in form.
 // If there are no values associated with the key or value is empty returns ParamRequiredError error.
 func (f *FormCtx) String(key string) (string, error) {
-	v := f.form.Value(key)
+	v := f.values().Value(key)
 	if len(v) == 0 {
+		if f.err != nil {
+			return "", f.err
+		}
+
 		return "", ParamRequiredError{key}
 	}
 
@@ -144,7 +192,7 @@ func (f *FormCtx) String(key string) (string, error) {
 
 // StringOptional gets the first value associated with the given key in query or null if value is empty.
 func (f *FormCtx) StringOptional(key string) *string {
-	v := f.form.Value(key)
+	v := f.values().Value(key)
 	if len(v) == 0 {
 		return nil
 	}
@@ -171,7 +219,7 @@ func (f *FormCtx) Int64(key string) (int64, error) {
 func (f *FormCtx) Int64Optional(key string) (*int64, error) {
 	s := f.StringOptional(key)
 	if s == nil {
-		return nil, nil
+		return nil, f.err
 	}
 
 	v, err := strconv.ParseInt(*s, 10, 64)
@@ -226,7 +274,7 @@ func (f *FormCtx) Bool(key string) (bool, error) {
 func (f *FormCtx) BoolOptional(key string) (*bool, error) {
 	v := f.StringOptional(key)
 	if v == nil {
-		return nil, nil
+		return nil, f.err
 	}
 
 	iv := utils.ParseBoolValue(*v)
@@ -236,8 +284,12 @@ func (f *FormCtx) BoolOptional(key string) (*bool, error) {
 
 // File returns uploaded file data.
 func (f *FormCtx) File(key string) (*multipart.FileHeader, error) {
-	v := f.form.File(key)
+	v := f.values().File(key)
 	if v == nil {
+		if f.err != nil {
+			return nil, f.err
+		}
+
 		return nil, ParamRequiredError{key}
 	}
 
@@ -246,10 +298,10 @@ func (f *FormCtx) File(key string) (*multipart.FileHeader, error) {
 
 // FileOptional returns uploaded file data if it's provided.
 func (f *FormCtx) FileOptional(key string) *multipart.FileHeader {
-	return f.form.File(key)
+	return f.values().File(key)
 }
 
 // Files returns uploaded files.
 func (f *FormCtx) Files(key string) []*multipart.FileHeader {
-	return f.form.Files(key)
+	return f.values().Files(key)
 }

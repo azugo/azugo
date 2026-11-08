@@ -155,3 +155,21 @@ func (e BadRequestError) Error() string {
 func (BadRequestError) StatusCode() int {
 	return http.StatusBadRequest
 }
+
+// RequestEntityTooLargeError is an error that occurs when request body
+// exceeds the maximum allowed size.
+type RequestEntityTooLargeError struct{}
+
+// SafeError returns a safe error message for RequestEntityTooLargeError.
+func (RequestEntityTooLargeError) SafeError() string {
+	return "request body too large"
+}
+
+func (e RequestEntityTooLargeError) Error() string {
+	return e.SafeError()
+}
+
+// StatusCode returns the HTTP status code for RequestEntityTooLargeError.
+func (RequestEntityTooLargeError) StatusCode() int {
+	return http.StatusRequestEntityTooLarge
+}
