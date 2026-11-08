@@ -3,10 +3,10 @@ module azugo.io/azugo
 go 1.26.0
 
 require (
-	azugo.io/core v0.41.0
-	github.com/VictoriaMetrics/metrics v1.44.1
+	azugo.io/core v0.41.1
+	github.com/VictoriaMetrics/metrics v1.45.0
 	github.com/beevik/etree v1.8.1
-	github.com/go-playground/validator/v10 v10.30.5
+	github.com/go-playground/validator/v10 v10.30.6
 	github.com/go-quicktest/qt v1.102.0
 	github.com/goccy/go-json v0.12.0
 	github.com/lafriks/go-xmldsig/v2 v2.4.0
@@ -21,7 +21,7 @@ require (
 )
 
 require (
-	github.com/cenkalti/backoff/v7 v7.0.1 // indirect
+	github.com/cenkalti/backoff/v7 v7.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgraph-io/ristretto/v2 v2.4.2 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
@@ -46,7 +46,7 @@ require (
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/valkey-io/valkey-go v1.0.79 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
