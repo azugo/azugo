@@ -370,3 +370,224 @@ func TestBodyBufferedRespectsLowerLimit(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusRequestEntityTooLarge))
 }
+
+func postChunked(t *testing.T, a *TestApp, endpoint string, body []byte, options ...TestClientOption) *fasthttp.Response {
+	t.Helper()
+
+	req := fasthttp.AcquireRequest()
+	defer fasthttp.ReleaseRequest(req)
+
+	req.Header.SetMethod(fasthttp.MethodPost)
+	req.SetRequestURI("http://test" + endpoint)
+	req.SetBodyStream(bytes.NewReader(body), -1)
+
+	c := a.TestClient()
+	c.applyOptions(req, options)
+
+	resp := fasthttp.AcquireResponse()
+	qt.Assert(t, qt.IsNil(c.Client().Do(req, resp)))
+
+	return resp
+}
+
+func TestBodyJSONChunkedTooLarge(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/user", func(ctx *Context) {
+		ctx.SetMaxBodySize(16)
+
+		var u testBodyUser
+		if err := ctx.Body.JSON(&u); err != nil {
+			ctx.Error(err)
+			return
+		}
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp := postChunked(t, a, "/user", []byte(`{"name":"`+strings.Repeat("a", 1024)+`"}`))
+	defer fasthttp.ReleaseResponse(resp)
+
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusRequestEntityTooLarge))
+}
+
+func TestBodyReadAfterTooLarge(t *testing.T) {
+	tests := []struct {
+		name  string
+		first func(ctx *Context)
+	}{
+		{
+			name:  "Bytes",
+			first: func(ctx *Context) { _ = ctx.Body.Bytes() },
+		},
+		{
+			name: "Reader",
+			first: func(ctx *Context) {
+				if r, err := ctx.Body.Reader(); err == nil {
+					_, _ = io.ReadAll(r)
+				}
+			},
+		},
+		{
+			name: "Bytes then Request.Body",
+			first: func(ctx *Context) {
+				_ = ctx.Body.Bytes()
+				_ = ctx.Request().Body()
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := NewTestApp()
+			a.Start(t)
+			defer a.Stop()
+
+			var (
+				body []byte
+				err  error
+			)
+
+			a.Post("/user", func(ctx *Context) {
+				ctx.SetMaxBodySize(16)
+
+				tt.first(ctx)
+				body, err = ctx.Body.ReadAll()
+
+				ctx.StatusCode(http.StatusOK)
+			})
+
+			resp := postChunked(t, a, "/user", bytes.Repeat([]byte("a"), 24))
+			defer fasthttp.ReleaseResponse(resp)
+
+			qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+			qt.Check(t, qt.IsNil(body))
+		})
+	}
+}
+
+func TestBodyStreamedReadIsCachedWithoutWarning(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	var cached string
+
+	a.Post("/user", func(ctx *Context) {
+		var u testBodyUser
+		if err := ctx.Body.JSON(&u); err != nil {
+			ctx.Error(err)
+			return
+		}
+
+		cached = string(ctx.Request().Body())
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp, err := a.TestClient().Post("/user", []byte(`{"name":"test"}`))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Assert(t, qt.IsNil(err))
+
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+	qt.Check(t, qt.Equals(cached, `{"name":"test"}`))
+	qt.Check(t, qt.Equals(a.logs.FilterMessageSnippet("Request.Body()").Len(), 0))
+}
+
+func TestBodyReadersShareLimit(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	var (
+		read int64
+		err  error
+	)
+
+	a.Post("/user", func(ctx *Context) {
+		ctx.SetMaxBodySize(16)
+
+		for range 2 {
+			var r io.Reader
+			if r, err = ctx.Body.Reader(); err != nil {
+				break
+			}
+
+			var n int64
+
+			n, err = io.Copy(io.Discard, io.LimitReader(r, 16))
+			read += n
+
+			if err != nil {
+				break
+			}
+		}
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp := postChunked(t, a, "/user", bytes.Repeat([]byte("a"), 32))
+	defer fasthttp.ReleaseResponse(resp)
+
+	qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+	qt.Check(t, qt.Equals(read, int64(16)))
+}
+
+func TestFormAfterBodyTooLarge(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	var (
+		role string
+		err  error
+	)
+
+	a.Post("/form", func(ctx *Context) {
+		ctx.SetMaxBodySize(16)
+
+		var u testBodyUser
+
+		_ = ctx.Body.JSON(&u)
+
+		role, err = ctx.Form.String("role")
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	body := []byte("v=" + strings.Repeat("a", 15) + "&role=admin")
+
+	resp := postChunked(t, a, "/form", body, a.TestClient().WithHeader("Content-Type", "application/x-www-form-urlencoded"))
+	defer fasthttp.ReleaseResponse(resp)
+
+	qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+	qt.Check(t, qt.Equals(role, ""))
+}
+
+func TestBodyWriteToAfterTooLarge(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	var (
+		buf bytes.Buffer
+		err error
+	)
+
+	a.Post("/user", func(ctx *Context) {
+		ctx.SetMaxBodySize(16)
+
+		_ = ctx.Body.Bytes()
+		_, err = ctx.Body.WriteTo(&buf)
+
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp := postChunked(t, a, "/user", bytes.Repeat([]byte("a"), 24))
+	defer fasthttp.ReleaseResponse(resp)
+
+	qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+	qt.Check(t, qt.Equals(buf.Len(), 0))
+}

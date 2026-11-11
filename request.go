@@ -51,6 +51,8 @@ type Context struct {
 
 	// bodyLimit overrides the maximum request body size when positive.
 	bodyLimit int
+	// bodyReader is the single limited reader of the streamed request body.
+	bodyReader *limitedBody
 
 	// Request lifecycle state, canceled by releaseCtx so that everything
 	// derived from this Context ends with the request
@@ -270,6 +272,7 @@ func (c *Context) reset() {
 	c.Form.once = sync.Once{}
 	c.Form.err = nil
 	c.bodyLimit = 0
+	c.bodyReader = nil
 	c.Flash.reset()
 	c.user = nil
 	c.context = nil
@@ -607,6 +610,10 @@ func (c *Context) maxBodySize() int {
 // readBody returns the request body enforcing the body size limit.
 func (c *Context) readBody() ([]byte, error) {
 	req := c.Request()
+	if c.bodyReader != nil && c.bodyReader.over {
+		return nil, RequestEntityTooLargeError{}
+	}
+
 	if !req.IsBodyStream() {
 		if buf := req.Body(); len(buf) <= c.maxBodySize() {
 			return buf, nil
@@ -637,32 +644,43 @@ func (c *Context) readBody() ([]byte, error) {
 // limitedBodyStream returns the streamed request body limited by the body size limit.
 func (c *Context) limitedBodyStream() (io.Reader, error) {
 	limit := c.maxBodySize()
-	if c.Request().Header.ContentLength() > limit {
+	if c.Request().Header.ContentLength() > limit || (c.bodyReader != nil && c.bodyReader.over) {
 		return nil, RequestEntityTooLargeError{}
 	}
 
-	return &limitedBody{r: c.Request().BodyStream(), n: int64(limit)}, nil
+	if c.bodyReader == nil {
+		c.bodyReader = &limitedBody{r: c.Request().BodyStream()}
+	}
+
+	c.bodyReader.limit = int64(limit)
+
+	return c.bodyReader, nil
 }
 
 // limitedBody fails with RequestEntityTooLargeError when read past the limit.
 type limitedBody struct {
-	r io.Reader
-	n int64
+	r     io.Reader
+	limit int64
+	read  int64
+	over  bool
 }
 
 func (l *limitedBody) Read(p []byte) (int, error) {
-	if l.n < 0 {
+	left := l.limit - l.read
+	if l.over || left < 0 {
+		l.over = true
+
 		return 0, RequestEntityTooLargeError{}
 	}
 
-	n, err := l.r.Read(p[:min(int64(len(p)), l.n+1)])
-	if int64(n) > l.n {
-		n, l.n = int(l.n), -1
+	n, err := l.r.Read(p[:min(int64(len(p)), left+1)])
+	l.read += int64(n)
 
-		return n, RequestEntityTooLargeError{}
+	if int64(n) > left {
+		l.over = true
+
+		return int(left), RequestEntityTooLargeError{}
 	}
-
-	l.n -= int64(n)
 
 	return n, err
 }

@@ -37,6 +37,10 @@ func (b *BodyCtx) Bytes() []byte {
 // Warning: Always returns 0 as not possible to determine
 // the number of bytes written.
 func (b *BodyCtx) WriteTo(w io.Writer) (int64, error) {
+	if r := b.ctx.bodyReader; r != nil && r.over {
+		return 0, RequestEntityTooLargeError{}
+	}
+
 	return 0, b.ctx.context.Request.BodyWriteTo(w)
 }
 
