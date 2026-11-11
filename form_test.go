@@ -10,6 +10,53 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+func TestFormMediaTypes(t *testing.T) {
+	var multipartBody bytes.Buffer
+	writer := multipart.NewWriter(&multipartBody)
+	qt.Assert(t, qt.IsNil(writer.WriteField("name", "test")))
+	qt.Assert(t, qt.IsNil(writer.Close()))
+
+	tests := []struct {
+		name        string
+		contentType string
+		body        []byte
+		wantValue   bool
+	}{
+		{"urlencoded", "Application/X-Www-Form-Urlencoded; charset=utf-8", []byte("name=test"), true},
+		{"multipart", "Multipart/Form-Data; BOUNDARY=" + writer.Boundary(), multipartBody.Bytes(), true},
+		{"invalid-urlencoded-prefix", "application/x-www-form-urlencoded-extra", []byte("name=test"), false},
+		{"invalid-multipart-prefix", "multipart/form-data-extra; boundary=" + writer.Boundary(), multipartBody.Bytes(), false},
+	}
+
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+	a.Post("/form", func(ctx *Context) {
+		value, err := ctx.Form.String("name")
+		if err != nil {
+			ctx.Error(err)
+			return
+		}
+		ctx.Text(value)
+	})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			resp, err := a.TestClient().Post("/form", tt.body,
+				a.TestClient().WithHeader(http.HeaderContentType, tt.contentType))
+			qt.Assert(t, qt.IsNil(err))
+			defer fasthttp.ReleaseResponse(resp)
+
+			if tt.wantValue {
+				qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+				qt.Check(t, qt.Equals(string(resp.Body()), "test"))
+			} else {
+				qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusBadRequest))
+			}
+		})
+	}
+}
+
 func TestFormValidParams(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)

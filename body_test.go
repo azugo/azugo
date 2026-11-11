@@ -13,6 +13,71 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
+type failingBodyReader struct {
+	err error
+}
+
+func (r failingBodyReader) Read(p []byte) (int, error) {
+	copy(p, "x")
+
+	return 1, r.err
+}
+
+type failingBodyWriter struct {
+	err error
+}
+
+func (w failingBodyWriter) Write([]byte) (int, error) {
+	return 0, w.err
+}
+
+func TestStreamedBodyReadAndWriteErrors(t *testing.T) {
+	sourceErr := io.ErrUnexpectedEOF
+	for _, read := range []struct {
+		name string
+		fn   func(*BodyCtx) error
+	}{
+		{"reader", func(body *BodyCtx) error {
+			r, err := body.Reader()
+			if err != nil {
+				return err
+			}
+			_, err = io.ReadAll(r)
+			return err
+		}},
+		{"write-to", func(body *BodyCtx) error {
+			_, err := body.WriteTo(io.Discard)
+			return err
+		}},
+		{"read-all", func(body *BodyCtx) error {
+			_, err := body.ReadAll()
+			return err
+		}},
+	} {
+		t.Run(read.name, func(t *testing.T) {
+			var raw fasthttp.RequestCtx
+			raw.Request.SetBodyStream(failingBodyReader{sourceErr}, -1)
+			defer raw.Request.Reset()
+			ctx := &Context{context: &raw, bodyLimit: 10}
+			ctx.Body.ctx = ctx
+
+			err := read.fn(&ctx.Body)
+			var badRequest BadRequestError
+			qt.Check(t, qt.ErrorAs(err, &badRequest))
+			qt.Check(t, qt.ErrorIs(err, sourceErr))
+		})
+	}
+
+	var raw fasthttp.RequestCtx
+	raw.Request.SetBodyStream(strings.NewReader("body"), -1)
+	defer raw.Request.Reset()
+	ctx := &Context{context: &raw, bodyLimit: 10}
+	ctx.Body.ctx = ctx
+	destinationErr := errors.New("destination failed")
+	_, err := ctx.Body.WriteTo(failingBodyWriter{destinationErr})
+	qt.Check(t, qt.Equals(err, destinationErr))
+}
+
 func TestStreamedBodyReadersShareLimit(t *testing.T) {
 	var raw fasthttp.RequestCtx
 	raw.Request.SetBodyStream(strings.NewReader("abcdefgh"), -1)

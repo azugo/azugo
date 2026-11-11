@@ -3,7 +3,6 @@ package azugo
 import (
 	"bytes"
 	"context"
-	"errors"
 	"io"
 	"math"
 	"net"
@@ -31,9 +30,6 @@ var (
 
 	headerXForwardedProto = []byte(http.HeaderXForwardedProto)
 	headerXForwardedHost  = []byte(http.HeaderXForwardedHost)
-
-	contentTypeFormURLEncoded    = []byte(http.ContentTypeFormURLEncoded)
-	contentTypeMultipartFormData = []byte(http.ContentTypeMultipartFormData)
 
 	nilArgsValuer formKeyValuer = &nilArgs{}
 	nilRequestID                = ulid.ULID{}
@@ -632,11 +628,7 @@ func (c *Context) readBody() ([]byte, error) {
 
 	buf, err := io.ReadAll(r)
 	if err != nil {
-		if errors.Is(err, RequestEntityTooLargeError{}) {
-			return nil, err
-		}
-
-		return nil, BadRequestError{"unable to read request body", err}
+		return nil, err
 	}
 
 	req.SetBodyRaw(buf)
@@ -687,6 +679,10 @@ func (l *limitedBody) Read(p []byte) (int, error) {
 	}
 
 	l.read += int64(n)
+
+	if err != nil && err != io.EOF {
+		return n, BadRequestError{"unable to read request body", err}
+	}
 
 	return n, err
 }

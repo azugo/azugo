@@ -41,10 +41,11 @@ func (f *FormCtx) values() formKeyValuer {
 		}
 
 		req := f.ctx.Request()
-		contentType := req.Header.ContentType()
+		contentType, _, _ := strings.Cut(utils.B2S(req.Header.ContentType()), ";")
+		contentType = strings.TrimSpace(contentType)
 
-		isURLEncoded := bytes.HasPrefix(contentType, contentTypeFormURLEncoded)
-		if !isURLEncoded && !bytes.HasPrefix(contentType, contentTypeMultipartFormData) {
+		isURLEncoded := strings.EqualFold(contentType, http.ContentTypeFormURLEncoded)
+		if !isURLEncoded && !strings.EqualFold(contentType, http.ContentTypeMultipartFormData) {
 			return
 		}
 

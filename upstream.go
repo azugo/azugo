@@ -3,6 +3,8 @@ package azugo
 import (
 	"bytes"
 	"crypto/tls"
+	"errors"
+	"io"
 	"net/url"
 	"strings"
 
@@ -133,6 +135,24 @@ func (p *Proxy) Handler(ctx *Context) {
 
 	ctx.Request().CopyTo(req)
 
+	if ctx.Request().IsBodyStream() {
+		if ctx.bodyReader != nil && ctx.bodyReader.read > 0 {
+			ctx.Error(BadRequestError{Description: "request body already consumed"})
+
+			return
+		}
+
+		body, err := ctx.Body.Reader()
+		if err != nil {
+			ctx.Error(err)
+
+			return
+		}
+
+		length := ctx.Request().Header.ContentLength()
+		req.SetBodyStream(&proxyBodyReader{reader: body, remaining: int64(length)}, length)
+	}
+
 	resp := ctx.Response()
 
 	uri := bytebufferpool.Get()
@@ -160,6 +180,13 @@ func (p *Proxy) Handler(ctx *Context) {
 	proxy.StripHeaders(&req.Header)
 
 	if err := p.client.Do(req, resp); err != nil {
+		var badRequest BadRequestError
+		if errors.As(err, &badRequest) || errors.Is(err, RequestEntityTooLargeError{}) {
+			ctx.Error(err)
+
+			return
+		}
+
 		ctx.Log().With(zap.Error(err)).Warn("proxy upstream failed")
 		ctx.StatusCode(http.StatusBadGateway)
 		ctx.Text(http.StatusMessage(http.StatusBadGateway))
@@ -173,4 +200,33 @@ func (p *Proxy) Handler(ctx *Context) {
 	if p.options.BodyRewriter != nil && p.options.BodyRewriter.Enabled() {
 		p.options.BodyRewriter.RewriteResponse(append([]byte(ctx.BaseURL()), []byte(p.options.BasePath)...), upstream.BaseURL, resp)
 	}
+}
+
+// proxyBodyReader preserves errors returned with data for fasthttp's chunked writer.
+type proxyBodyReader struct {
+	reader    io.Reader
+	remaining int64
+	err       error
+}
+
+func (r *proxyBodyReader) Read(p []byte) (int, error) {
+	if r.err != nil {
+		return 0, r.err
+	}
+
+	n, err := r.reader.Read(p)
+	if r.remaining >= 0 {
+		r.remaining -= int64(n)
+		if err == io.EOF && r.remaining > 0 {
+			err = BadRequestError{"unable to read request body", io.ErrUnexpectedEOF}
+		}
+	}
+
+	if n > 0 && err != nil {
+		r.err = err
+
+		return n, nil //nolint:nilerr // Deliver the error on the next read, after the data.
+	}
+
+	return n, err
 }

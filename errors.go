@@ -151,6 +151,11 @@ func (e BadRequestError) Error() string {
 	return e.SafeError()
 }
 
+// Unwrap returns the underlying error.
+func (e BadRequestError) Unwrap() error {
+	return e.Err
+}
+
 // StatusCode returns the HTTP status code for BadRequestError.
 func (BadRequestError) StatusCode() int {
 	return http.StatusBadRequest
