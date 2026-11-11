@@ -359,6 +359,7 @@ func TestBodyBufferedRespectsLowerLimit(t *testing.T) {
 
 		if _, err := ctx.Body.ReadAll(); err != nil {
 			ctx.Error(err)
+
 			return
 		}
 
