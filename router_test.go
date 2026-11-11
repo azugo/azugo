@@ -1,8 +1,11 @@
 package azugo
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"math/rand"
+	"strings"
 	"testing"
 
 	"azugo.io/azugo/internal/utils"
@@ -267,6 +270,119 @@ func TestRouterQueryContentType(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
 	fasthttp.ReleaseResponse(resp)
+}
+
+type queryCountingReader struct {
+	reader io.Reader
+	read   int
+}
+
+func (r *queryCountingReader) Read(p []byte) (int, error) {
+	n, err := r.reader.Read(p)
+	r.read += n
+	return n, err
+}
+
+type queryFailingReader struct{}
+
+func (queryFailingReader) Read([]byte) (int, error) {
+	return 0, errors.New("request stream failed")
+}
+
+func TestRouterQueryStreamingContentType(t *testing.T) {
+	tests := []struct {
+		name        string
+		body        string
+		size        int
+		contentType string
+		fail        bool
+		status      int
+		read        int
+	}{
+		{"typed", "abcdef", -1, "text/plain", false, http.StatusOK, 0},
+		{"known-length", "abcdef", 6, "", false, http.StatusBadRequest, 0},
+		{"chunked", "abcdef", -1, "", false, http.StatusBadRequest, 1},
+		{"empty-chunked", "", -1, "", false, http.StatusOK, 0},
+		{"read-error", "", -1, "", true, http.StatusBadRequest, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			a := NewTestApp()
+			a.Start(t)
+			defer a.Stop()
+
+			reader := &queryCountingReader{reader: strings.NewReader(tt.body)}
+			if tt.fail {
+				reader.reader = queryFailingReader{}
+			}
+
+			a.Query("/search", func(ctx *Context) {
+				qt.Check(t, qt.Equals(reader.read, 0))
+				ctx.StatusCode(http.StatusOK)
+			})
+
+			var raw fasthttp.RequestCtx
+			raw.Request.Header.SetMethod("QUERY")
+			raw.Request.SetRequestURI("/search")
+			raw.Request.Header.SetNoDefaultContentType(true)
+			if tt.contentType != "" {
+				raw.Request.Header.SetContentType(tt.contentType)
+			}
+			raw.Request.SetBodyStream(reader, tt.size)
+			defer raw.Request.Reset()
+
+			a.Handler(&raw)
+			qt.Check(t, qt.Equals(raw.Response.StatusCode(), tt.status))
+			qt.Check(t, qt.Equals(reader.read, tt.read))
+		})
+	}
+}
+
+func TestRouterQueryChunkedContentType(t *testing.T) {
+	a := NewTestApp()
+	a.Query("/search", func(ctx *Context) {
+		body, err := ctx.Body.ReadAll()
+		if err != nil {
+			ctx.Error(err)
+			return
+		}
+		ctx.Raw(body)
+	})
+	a.Start(t)
+	defer a.Stop()
+
+	for _, tt := range []struct {
+		name        string
+		body        string
+		contentType string
+		status      int
+	}{
+		{"typed", "abcdef", "text/plain", http.StatusOK},
+		{"missing-type", "abcdef", "", http.StatusBadRequest},
+		{"empty", "", "", http.StatusOK},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := fasthttp.AcquireRequest()
+			defer fasthttp.ReleaseRequest(req)
+			req.Header.SetMethod("QUERY")
+			req.Header.SetNoDefaultContentType(true)
+			if tt.contentType != "" {
+				req.Header.SetContentType(tt.contentType)
+			}
+			req.SetRequestURI("http://test/search")
+			req.SetBodyStream(strings.NewReader(tt.body), -1)
+
+			resp := fasthttp.AcquireResponse()
+			defer fasthttp.ReleaseResponse(resp)
+			err := a.TestClient().Client().Do(req, resp)
+			qt.Assert(t, qt.IsNil(err))
+			qt.Check(t, qt.Equals(resp.StatusCode(), tt.status))
+			if tt.status == http.StatusOK {
+				qt.Check(t, qt.Equals(string(resp.Body()), tt.body))
+			}
+		})
+	}
 }
 
 func TestRouterBasePath(t *testing.T) {

@@ -15,9 +15,10 @@ func B2S(b []byte) string {
 }
 
 // ParseBoolValue reports whether the string value represents a truthy boolean.
-// Accepted truthy values: "true" (case-insensitive) and "1".
+// Accepted truthy values: "true" and "on" (case-insensitive, "on" being what an HTML checkbox
+// without a value sends) and "1".
 func ParseBoolValue(v string) bool {
-	return strings.EqualFold(v, "true") || v == "1"
+	return strings.EqualFold(v, "true") || strings.EqualFold(v, "on") || v == "1"
 }
 
 // MapToURLValues converts a map to url.Values.

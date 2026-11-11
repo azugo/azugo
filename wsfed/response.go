@@ -193,18 +193,28 @@ func (p *WsFederation) decodeResponse(resp []byte, opts *tokenParseOptions) (*To
 }
 
 // IsSignoutResponse checks if the request is a signout response.
-func (p *WsFederation) IsSignoutResponse(ctx *azugo.Context) bool {
+func (p *WsFederation) IsSignoutResponse(ctx *azugo.Context) (bool, error) {
 	wa := ctx.Query.StringOptional("wa")
 	if wa == nil {
-		wa = ctx.Form.StringOptional("wa")
+		var err error
+
+		wa, err = ctx.Form.StringOptional("wa")
+		if err != nil {
+			return false, err
+		}
 	}
 
-	return wa != nil && (*wa == "wsignoutcleanup1.0" || *wa == "wsignout1.0")
+	return wa != nil && (*wa == "wsignoutcleanup1.0" || *wa == "wsignout1.0"), nil
 }
 
 // ReadResponse reads the IDP response from the request.
 func (p *WsFederation) ReadResponse(ctx *azugo.Context, opt ...TokenParseOption) (*Token, error) {
-	if p.IsSignoutResponse(ctx) {
+	signout, err := p.IsSignoutResponse(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if signout {
 		return nil, nil
 	}
 

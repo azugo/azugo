@@ -3,6 +3,8 @@ package azugo
 import (
 	"bytes"
 	"context"
+	"errors"
+	"io"
 	"math"
 	"net"
 	"strings"
@@ -47,6 +49,10 @@ type Context struct {
 	reqCtx context.Context
 	// reqCtxStop detaches the cancellation bridge installed by SetContext.
 	reqCtxStop func() bool
+
+	// bodyLimit overrides the maximum request body size when positive.
+	bodyLimit  int
+	bodyReader *limitedBody
 
 	// Request lifecycle state, canceled by releaseCtx so that everything
 	// derived from this Context ends with the request
@@ -140,20 +146,6 @@ func (a *App) acquireCtx(m *mux, path string, c *fasthttp.RequestCtx) *Context {
 	}
 
 	ctx.routerPath = path
-
-	if ctx.method == http.MethodPost || ctx.method == http.MethodPut || ctx.method == http.MethodPatch || ctx.method == http.MethodQuery {
-		if bytes.HasPrefix(c.Request.Header.ContentType(), contentTypeFormURLEncoded) {
-			ctx.Form.form = &postArgs{
-				args: c.Request.PostArgs(),
-			}
-		} else if bytes.HasPrefix(c.Request.Header.ContentType(), contentTypeMultipartFormData) {
-			if form, err := c.Request.MultipartForm(); err == nil {
-				ctx.Form.form = &multiPartArgs{
-					args: form,
-				}
-			}
-		}
-	}
 
 	// Generate request ID in place to avoid ULID escaping to the heap; ignore errors
 	ms := ulid.Timestamp(time.Now().UTC())
@@ -277,6 +269,10 @@ func (c *Context) reset() {
 
 	c.Form.form.Reset(c)
 	c.Form.form = nilArgsValuer
+	c.Form.once = sync.Once{}
+	c.Form.err = nil
+	c.bodyLimit = 0
+	c.bodyReader = nil
 	c.Flash.reset()
 	c.user = nil
 	c.context = nil
@@ -309,6 +305,18 @@ func (c *Context) RouterOptions() *RouterOptions {
 // a cancellation signal, and other values across API boundaries.
 func (c *Context) Context() *fasthttp.RequestCtx {
 	return c.context
+}
+
+// SetReadDeadline sets when reading the rest of the request body times out, replacing the server
+// ReadTimeout for this request.
+func (c *Context) SetReadDeadline(deadline time.Time) error {
+	return c.context.SetReadDeadline(deadline)
+}
+
+// SetWriteDeadline sets when writing the response times out, replacing the server WriteTimeout
+// for this request.
+func (c *Context) SetWriteDeadline(deadline time.Time) error {
+	return c.context.SetWriteDeadline(deadline)
 }
 
 // Request return the *fasthttp.Request object
@@ -579,4 +587,106 @@ func (c *Context) AcceptsExplicit(contentType string) bool {
 	}
 
 	return false
+}
+
+// SetMaxBodySize overrides the maximum request body size for the current request.
+//
+// Use Body.Reader, Body.WriteTo or Body.MultipartReader for large uploads
+// to avoid buffering the whole body in memory.
+func (c *Context) SetMaxBodySize(n int) {
+	c.bodyLimit = n
+}
+
+// maxBodySize returns the effective maximum request body size.
+func (c *Context) maxBodySize() int {
+	if c.bodyLimit > 0 {
+		return c.bodyLimit
+	}
+
+	if conf := c.app.Config(); conf != nil && conf.Server != nil && conf.Server.MaxRequestBodySize > 0 {
+		return conf.Server.MaxRequestBodySize
+	}
+
+	return fasthttp.DefaultMaxRequestBodySize
+}
+
+// readBody returns the request body enforcing the body size limit.
+func (c *Context) readBody() ([]byte, error) {
+	req := c.Request()
+	if c.bodyReader != nil && c.bodyReader.read < 0 {
+		return nil, RequestEntityTooLargeError{}
+	}
+
+	if !req.IsBodyStream() {
+		if buf := req.Body(); len(buf) <= c.maxBodySize() {
+			return buf, nil
+		}
+
+		return nil, RequestEntityTooLargeError{}
+	}
+
+	r, err := c.limitedBodyStream()
+	if err != nil {
+		return nil, err
+	}
+
+	buf, err := io.ReadAll(r)
+	if err != nil {
+		if errors.Is(err, RequestEntityTooLargeError{}) {
+			return nil, err
+		}
+
+		return nil, BadRequestError{"unable to read request body", err}
+	}
+
+	req.SetBodyRaw(buf)
+
+	return buf, nil
+}
+
+// limitedBodyStream returns the streamed request body limited by the body size limit.
+func (c *Context) limitedBodyStream() (io.Reader, error) {
+	limit := c.maxBodySize()
+	if c.Request().Header.ContentLength() > limit || (c.bodyReader != nil && c.bodyReader.read < 0) {
+		return nil, RequestEntityTooLargeError{}
+	}
+
+	if c.bodyReader == nil {
+		c.bodyReader = &limitedBody{r: c.Request().BodyStream()}
+	}
+
+	c.bodyReader.limit = int64(limit)
+
+	return c.bodyReader, nil
+}
+
+// limitedBody fails with RequestEntityTooLargeError when read past the limit.
+type limitedBody struct {
+	r     io.Reader
+	limit int64
+	read  int64 // Negative after the limit is exceeded.
+}
+
+func (l *limitedBody) Read(p []byte) (int, error) {
+	if l.read < 0 || l.read > l.limit {
+		l.read = -1
+
+		return 0, RequestEntityTooLargeError{}
+	}
+
+	left := l.limit - l.read
+	if int64(len(p)) > left {
+		p = p[:left+1]
+	}
+
+	n, err := l.r.Read(p)
+	if int64(n) > left {
+		l.read = -1
+
+		return int(left), RequestEntityTooLargeError{}
+	}
+
+	l.read += int64(n)
+
+	return n, err
 }

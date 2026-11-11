@@ -7,14 +7,14 @@ import (
 
 // RewriteCookies rewrites cookies in the response.
 func RewriteCookies(tls bool, host string, resp *fasthttp.Response) {
-	for k, v := range resp.Header.Cookies() {
-		cookie := fasthttp.AcquireCookie()
-		defer fasthttp.ReleaseCookie(cookie)
+	cookie := fasthttp.AcquireCookie()
+	defer fasthttp.ReleaseCookie(cookie)
 
+	for k, v := range resp.Header.Cookies() {
 		cookie.SetKeyBytes(k)
 
 		if err := cookie.ParseBytes(v); err != nil {
-			return
+			continue
 		}
 		// Downgrade cookie to not secure
 		if !tls && cookie.Secure() {

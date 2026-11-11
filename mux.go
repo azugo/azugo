@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 	"sync"
 
@@ -445,12 +446,35 @@ func (m *mux) HandleError(ctx *Context, err error, p bool) {
 
 // rejectInvalidQuery rejects QUERY request content without a media type as required by RFC 10008, Section 2.1.
 func (m *mux) rejectInvalidQuery(ctx *fasthttp.RequestCtx) bool {
-	if len(ctx.Request.Body()) == 0 || len(ctx.Request.Header.ContentType()) > 0 {
+	req := &ctx.Request
+	if len(req.Header.ContentType()) > 0 {
+		return false
+	}
+
+	var err error
+
+	if req.IsBodyStream() {
+		switch {
+		case req.Header.ContentLength() == 0:
+			return false
+		case req.Header.ContentLength() < 0:
+			var b [1]byte
+
+			_, err = io.ReadFull(req.BodyStream(), b[:])
+			if errors.Is(err, io.EOF) {
+				return false
+			}
+		}
+	} else if len(req.Body()) == 0 {
 		return false
 	}
 
 	m.WrapHandler("", m.Chain(func(c *Context) {
-		c.Error(BadRequestError{Description: "QUERY request content requires a media type"})
+		if err != nil {
+			c.Error(BadRequestError{Description: "unable to read request body", Err: err})
+		} else {
+			c.Error(BadRequestError{Description: "QUERY request content requires a media type"})
+		}
 	}))(ctx)
 
 	return true

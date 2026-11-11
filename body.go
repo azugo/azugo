@@ -1,8 +1,13 @@
 package azugo
 
 import (
+	"bytes"
 	"encoding/xml"
 	"io"
+	"mime"
+	"mime/multipart"
+
+	"azugo.io/azugo/internal/utils"
 
 	"github.com/goccy/go-json"
 )
@@ -14,29 +19,70 @@ type BodyCtx struct {
 	ctx *Context
 }
 
-// Bytes returns the request body as raw bytes.
-func (b *BodyCtx) Bytes() []byte {
-	return b.ctx.Request().Body()
+// ReadAll returns the request body as raw bytes enforcing the body size limit.
+func (b *BodyCtx) ReadAll() ([]byte, error) {
+	return b.ctx.readBody()
 }
 
-// WriteTo copies the request raw body to the provided writer.
-//
-// Warning: Always returns 0 as not possible to determine
-// the number of bytes written.
+// Bytes returns the request body as raw bytes enforcing the body size limit.
+func (b *BodyCtx) Bytes() ([]byte, error) {
+	return b.ctx.readBody()
+}
+
+// WriteTo copies the request body to w, enforcing the body size limit.
+// It may write partial data before returning an error.
 func (b *BodyCtx) WriteTo(w io.Writer) (int64, error) {
-	return 0, b.ctx.context.Request.BodyWriteTo(w)
+	r, err := b.Reader()
+	if err != nil {
+		return 0, err
+	}
+
+	return io.Copy(w, r)
+}
+
+// Reader returns the request body as a stream limited by the body size limit.
+func (b *BodyCtx) Reader() (io.Reader, error) {
+	if !b.ctx.Request().IsBodyStream() {
+		buf, err := b.ctx.readBody()
+		if err != nil {
+			return nil, err
+		}
+
+		return bytes.NewReader(buf), nil
+	}
+
+	return b.ctx.limitedBodyStream()
+}
+
+// MultipartReader returns a streaming multipart reader for the request body.
+func (b *BodyCtx) MultipartReader() (*multipart.Reader, error) {
+	_, params, err := mime.ParseMediaType(utils.B2S(b.ctx.Request().Header.ContentType()))
+	if err != nil || params["boundary"] == "" {
+		return nil, BadRequestError{"invalid multipart content type", err}
+	}
+
+	r, err := b.Reader()
+	if err != nil {
+		return nil, err
+	}
+
+	return multipart.NewReader(r, params["boundary"]), nil
 }
 
 // JSON unmarshals the request body into provided structure.
 // Optionally calls Validate method of the structure if it
 // implements validation.Validator interface.
 func (b *BodyCtx) JSON(v any) error {
-	buf := b.Bytes()
+	buf, err := b.ctx.readBody()
+	if err != nil {
+		return err
+	}
+
 	if len(buf) == 0 {
 		return ParamRequiredError{"body"}
 	}
 
-	if err := json.Unmarshal(buf, v); err != nil {
+	if err = json.Unmarshal(buf, v); err != nil {
 		return BadRequestError{"invalid content", err}
 	}
 
@@ -49,12 +95,16 @@ func (b *BodyCtx) JSON(v any) error {
 
 // XML unmarshals the request body into provided structure.
 func (b *BodyCtx) XML(v any) error {
-	buf := b.Bytes()
+	buf, err := b.ctx.readBody()
+	if err != nil {
+		return err
+	}
+
 	if len(buf) == 0 {
 		return ParamRequiredError{"body"}
 	}
 
-	if err := xml.Unmarshal(buf, v); err != nil {
+	if err = xml.Unmarshal(buf, v); err != nil {
 		return BadRequestError{"invalid content", err}
 	}
 
