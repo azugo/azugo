@@ -2,6 +2,7 @@ package azugo
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"mime/multipart"
 	"strings"
@@ -11,6 +12,86 @@ import (
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
+
+func TestStreamedBodyReadersShareLimit(t *testing.T) {
+	var raw fasthttp.RequestCtx
+	raw.Request.SetBodyStream(strings.NewReader("abcdefgh"), -1)
+	defer raw.Request.Reset()
+
+	ctx := &Context{context: &raw, bodyLimit: 4}
+	ctx.Body.ctx = ctx
+
+	first, err := ctx.Body.Reader()
+	qt.Assert(t, qt.IsNil(err))
+	buf := make([]byte, 3)
+	_, err = io.ReadFull(first, buf)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(string(buf), "abc"))
+
+	second, err := ctx.Body.Reader()
+	qt.Assert(t, qt.IsNil(err))
+	remaining, err := io.ReadAll(second)
+	qt.Check(t, qt.Equals(string(remaining), "d"))
+	qt.Check(t, qt.IsTrue(errors.Is(err, RequestEntityTooLargeError{})))
+
+	ctx.SetMaxBodySize(100)
+	_, err = ctx.Body.Reader()
+	qt.Check(t, qt.IsTrue(errors.Is(err, RequestEntityTooLargeError{})))
+	_, err = ctx.Body.ReadAll()
+	qt.Check(t, qt.IsTrue(errors.Is(err, RequestEntityTooLargeError{})))
+	_, err = ctx.Body.WriteTo(io.Discard)
+	qt.Check(t, qt.IsTrue(errors.Is(err, RequestEntityTooLargeError{})))
+
+	// Bypassing the reader must not clear the error for later framework reads.
+	_ = raw.Request.Body()
+	_, err = ctx.Body.ReadAll()
+	qt.Check(t, qt.IsTrue(errors.Is(err, RequestEntityTooLargeError{})))
+}
+
+func TestStreamedBodyLimitChange(t *testing.T) {
+	var raw fasthttp.RequestCtx
+	raw.Request.SetBodyStream(strings.NewReader("abcdefgh"), -1)
+	defer raw.Request.Reset()
+
+	ctx := &Context{context: &raw, bodyLimit: 4}
+	ctx.Body.ctx = ctx
+
+	r, err := ctx.Body.Reader()
+	qt.Assert(t, qt.IsNil(err))
+	_, err = io.ReadFull(r, make([]byte, 3))
+	qt.Assert(t, qt.IsNil(err))
+
+	ctx.SetMaxBodySize(8)
+	r, err = ctx.Body.Reader()
+	qt.Assert(t, qt.IsNil(err))
+	body, err := io.ReadAll(r)
+	qt.Assert(t, qt.IsNil(err))
+	qt.Check(t, qt.Equals(string(body), "defgh"))
+}
+
+func TestStreamedBodyLoweredLimit(t *testing.T) {
+	var raw fasthttp.RequestCtx
+	raw.Request.SetBodyStream(strings.NewReader("abcdefgh"), -1)
+	defer raw.Request.Reset()
+
+	ctx := &Context{context: &raw, bodyLimit: 8}
+	ctx.Body.ctx = ctx
+
+	r, err := ctx.Body.Reader()
+	qt.Assert(t, qt.IsNil(err))
+	_, err = io.ReadFull(r, make([]byte, 3))
+	qt.Assert(t, qt.IsNil(err))
+
+	ctx.SetMaxBodySize(2)
+	r, err = ctx.Body.Reader()
+	qt.Assert(t, qt.IsNil(err))
+	_, err = r.Read(make([]byte, 1))
+	qt.Check(t, qt.IsTrue(errors.Is(err, RequestEntityTooLargeError{})))
+
+	ctx.SetMaxBodySize(8)
+	_, err = ctx.Body.Reader()
+	qt.Check(t, qt.IsTrue(errors.Is(err, RequestEntityTooLargeError{})))
+}
 
 type testBodyUser struct {
 	Name string `json:"name" validate:"required,max=10"`
@@ -48,13 +129,15 @@ func TestBodyStream(t *testing.T) {
 	var received []byte
 
 	a.Post("/user", func(ctx *Context) {
+		ctx.SetMaxBodySize(len(expect))
 		var buf bytes.Buffer
-		_, err := ctx.Body.WriteTo(&buf)
+		n, err := ctx.Body.WriteTo(&buf)
 		if err != nil {
 			ctx.Error(err)
 			return
 		}
 
+		qt.Check(t, qt.Equals(n, int64(len(expect))))
 		received = buf.Bytes()
 
 		ctx.StatusCode(http.StatusOK)
@@ -69,6 +152,61 @@ func TestBodyStream(t *testing.T) {
 	if !bytes.Equal(received, expect) {
 		t.Fatal("Received request body should be equal to sent body")
 	}
+}
+
+func TestBodyWriteToLimit(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		streamSize int
+		limit      int
+		want       string
+		tooLarge   bool
+	}{
+		{"buffered", 0, 4, "", true},
+		{"known-length", 8, 4, "", true},
+		{"chunked", -1, 4, "abcd", true},
+		{"within-limit", -1, 8, "abcdefgh", false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var raw fasthttp.RequestCtx
+			if tt.name == "buffered" {
+				raw.Request.SetBodyString("abcdefgh")
+			} else {
+				raw.Request.SetBodyStream(strings.NewReader("abcdefgh"), tt.streamSize)
+			}
+			defer raw.Request.Reset()
+
+			ctx := &Context{context: &raw, bodyLimit: tt.limit}
+			ctx.Body.ctx = ctx
+			var dst bytes.Buffer
+			n, err := ctx.Body.WriteTo(&dst)
+			qt.Check(t, qt.Equals(dst.String(), tt.want))
+			qt.Check(t, qt.Equals(n, int64(len(tt.want))))
+			qt.Check(t, qt.Equals(errors.Is(err, RequestEntityTooLargeError{}), tt.tooLarge))
+			if !tt.tooLarge {
+				qt.Check(t, qt.IsNil(err))
+			}
+		})
+	}
+}
+
+func TestBodyWriteToAfterPartialRead(t *testing.T) {
+	var raw fasthttp.RequestCtx
+	raw.Request.SetBodyStream(strings.NewReader("abcdefgh"), -1)
+	defer raw.Request.Reset()
+
+	ctx := &Context{context: &raw, bodyLimit: 4}
+	ctx.Body.ctx = ctx
+	r, err := ctx.Body.Reader()
+	qt.Assert(t, qt.IsNil(err))
+	_, err = io.ReadFull(r, make([]byte, 3))
+	qt.Assert(t, qt.IsNil(err))
+
+	var dst bytes.Buffer
+	n, err := ctx.Body.WriteTo(&dst)
+	qt.Check(t, qt.Equals(n, int64(1)))
+	qt.Check(t, qt.Equals(dst.String(), "d"))
+	qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
 }
 
 func TestBodyPostJSON(t *testing.T) {

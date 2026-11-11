@@ -32,12 +32,15 @@ func (b *BodyCtx) Bytes() []byte {
 	return buf
 }
 
-// WriteTo copies the request raw body to the provided writer.
-//
-// Warning: Always returns 0 as not possible to determine
-// the number of bytes written.
+// WriteTo copies the request body to w, enforcing the body size limit.
+// It may write partial data before returning an error.
 func (b *BodyCtx) WriteTo(w io.Writer) (int64, error) {
-	return 0, b.ctx.context.Request.BodyWriteTo(w)
+	r, err := b.Reader()
+	if err != nil {
+		return 0, err
+	}
+
+	return io.Copy(w, r)
 }
 
 // Reader returns the request body as a stream limited by the body size limit.
