@@ -650,6 +650,7 @@ func (c *Context) limitedBodyStream() (io.Reader, error) {
 	if c.bodyReader == nil {
 		c.bodyReader = &limitedBody{r: c.Request().BodyStream()}
 	}
+
 	c.bodyReader.limit = int64(limit)
 
 	return c.bodyReader, nil
@@ -665,6 +666,7 @@ type limitedBody struct {
 func (l *limitedBody) Read(p []byte) (int, error) {
 	if l.read < 0 || l.read > l.limit {
 		l.read = -1
+
 		return 0, RequestEntityTooLargeError{}
 	}
 
@@ -672,6 +674,7 @@ func (l *limitedBody) Read(p []byte) (int, error) {
 	if int64(len(p)) > left {
 		p = p[:left+1]
 	}
+
 	n, err := l.r.Read(p)
 	if int64(n) > left {
 		l.read = -1

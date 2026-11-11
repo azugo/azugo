@@ -2,11 +2,10 @@ package azugo
 
 import (
 	"bytes"
-	"mime"
-	"mime/multipart"
-
 	"encoding/xml"
 	"io"
+	"mime"
+	"mime/multipart"
 
 	"azugo.io/azugo/internal/utils"
 
@@ -25,11 +24,9 @@ func (b *BodyCtx) ReadAll() ([]byte, error) {
 	return b.ctx.readBody()
 }
 
-// Bytes returns the request body as raw bytes or nil if it can't be read.
-func (b *BodyCtx) Bytes() []byte {
-	buf, _ := b.ctx.readBody()
-
-	return buf
+// Bytes returns the request body as raw bytes enforcing the body size limit.
+func (b *BodyCtx) Bytes() ([]byte, error) {
+	return b.ctx.readBody()
 }
 
 // WriteTo copies the request body to w, enforcing the body size limit.

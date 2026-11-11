@@ -452,12 +452,14 @@ func (m *mux) rejectInvalidQuery(ctx *fasthttp.RequestCtx) bool {
 	}
 
 	var err error
+
 	if req.IsBodyStream() {
 		switch {
 		case req.Header.ContentLength() == 0:
 			return false
 		case req.Header.ContentLength() < 0:
 			var b [1]byte
+
 			_, err = io.ReadFull(req.BodyStream(), b[:])
 			if errors.Is(err, io.EOF) {
 				return false

@@ -109,7 +109,9 @@ func TestBodyBytes(t *testing.T) {
 	expect := []byte("test")
 
 	a.Post("/user", func(ctx *Context) {
-		qt.Check(t, qt.ContentEquals(ctx.Body.Bytes(), expect), qt.Commentf("Body should be equal to test"))
+		body, err := ctx.Body.Bytes()
+		qt.Check(t, qt.IsNil(err))
+		qt.Check(t, qt.ContentEquals(body, expect), qt.Commentf("Body should be equal to test"))
 		ctx.StatusCode(http.StatusOK)
 	})
 
@@ -118,6 +120,26 @@ func TestBodyBytes(t *testing.T) {
 	qt.Assert(t, qt.IsNil(err))
 
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK), qt.Commentf("wrong status code"))
+}
+
+func TestBodyBytesReturnsTooLarge(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+	a.Post("/user", func(ctx *Context) {
+		ctx.SetMaxBodySize(4)
+		_, err := ctx.Body.Bytes()
+		if err != nil {
+			ctx.Error(err)
+			return
+		}
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp, err := a.TestClient().Post("/user", []byte("hello"))
+	qt.Assert(t, qt.IsNil(err))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusRequestEntityTooLarge))
 }
 
 func TestBodyStream(t *testing.T) {
@@ -380,7 +402,7 @@ func TestFormLazyAndTooLarge(t *testing.T) {
 		ctx.StatusCode(http.StatusOK)
 	})
 	a.Post("/form", func(ctx *Context) {
-		formErr = ctx.Form.Err()
+		_, formErr = ctx.Form.Values("v")
 		ctx.StatusCode(http.StatusOK)
 	})
 

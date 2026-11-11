@@ -1,6 +1,7 @@
 package azugo
 
 import (
+	"bytes"
 	"mime/multipart"
 	"testing"
 
@@ -15,7 +16,8 @@ func TestFormValidParams(t *testing.T) {
 	defer a.Stop()
 
 	a.Post("/user", func(ctx *Context) {
-		v := ctx.Form.Values("multi")
+		v, err := ctx.Form.Values("multi")
+		qt.Check(t, qt.IsNil(err))
 		qt.Check(t, qt.ContentEquals(v, []string{"a", "b", "c"}), qt.Commentf("Form parameter multi values should match"))
 
 		s, err := ctx.Form.String("s")
@@ -60,6 +62,103 @@ func TestFormValidParams(t *testing.T) {
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK), qt.Commentf("wrong response status code"))
 }
 
+func TestFormOptionalGetters(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/user", func(ctx *Context) {
+		value, err := ctx.Form.StringOptional("name")
+		qt.Assert(t, qt.IsNil(err))
+		qt.Assert(t, qt.IsNotNil(value))
+		qt.Check(t, qt.Equals(*value, "test"))
+
+		missing, err := ctx.Form.StringOptional("missing")
+		qt.Check(t, qt.IsNil(err))
+		qt.Check(t, qt.IsNil(missing))
+
+		file, err := ctx.Form.FileOptional("upload")
+		qt.Assert(t, qt.IsNil(err))
+		qt.Assert(t, qt.IsNotNil(file))
+		qt.Check(t, qt.Equals(file.Filename, "test.txt"))
+		files, err := ctx.Form.Files("upload")
+		qt.Check(t, qt.IsNil(err))
+		qt.Check(t, qt.Equals(len(files), 1))
+		missingFile, err := ctx.Form.FileOptional("missing")
+		qt.Check(t, qt.IsNil(err))
+		qt.Check(t, qt.IsNil(missingFile))
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	qt.Assert(t, qt.IsNil(writer.WriteField("name", "test")))
+	part, err := writer.CreateFormFile("upload", "test.txt")
+	qt.Assert(t, qt.IsNil(err))
+	_, err = part.Write([]byte("content"))
+	qt.Assert(t, qt.IsNil(err))
+	qt.Assert(t, qt.IsNil(writer.Close()))
+
+	resp, err := a.TestClient().Post("/user", body.Bytes(), a.TestClient().WithHeader(http.HeaderContentType, writer.FormDataContentType()))
+	qt.Assert(t, qt.IsNil(err))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+}
+
+func TestFormOptionalGettersReturnParseError(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/user", func(ctx *Context) {
+		ctx.SetMaxBodySize(4)
+
+		values, err := ctx.Form.Values("name")
+		qt.Check(t, qt.IsNil(values))
+		qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+		value, err := ctx.Form.StringOptional("name")
+		qt.Check(t, qt.IsNil(value))
+		qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+		file, err := ctx.Form.FileOptional("upload")
+		qt.Check(t, qt.IsNil(file))
+		qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+		files, err := ctx.Form.Files("upload")
+		qt.Check(t, qt.IsNil(files))
+		qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+		_, err = ctx.Form.Int64Optional("number")
+		qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+		_, err = ctx.Form.BoolOptional("flag")
+		qt.Check(t, qt.ErrorIs(err, RequestEntityTooLargeError{}))
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp, err := a.TestClient().PostForm("/user", map[string]any{"name": "test"})
+	qt.Assert(t, qt.IsNil(err))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+}
+
+func TestFormOptionalGettersReturnMalformedMultipartError(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/user", func(ctx *Context) {
+		_, err := ctx.Form.StringOptional("name")
+		var badRequest BadRequestError
+		qt.Check(t, qt.ErrorAs(err, &badRequest))
+		_, err = ctx.Form.Files("upload")
+		qt.Check(t, qt.ErrorAs(err, &badRequest))
+		ctx.StatusCode(http.StatusOK)
+	})
+
+	resp, err := a.TestClient().Post("/user", []byte("not multipart"),
+		a.TestClient().WithHeader(http.HeaderContentType, "multipart/form-data; boundary=test"))
+	qt.Assert(t, qt.IsNil(err))
+	defer fasthttp.ReleaseResponse(resp)
+	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusOK))
+}
+
 func TestQueryMethodFormParams(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)
@@ -88,7 +187,8 @@ func TestMultiPartFormValidParams(t *testing.T) {
 	defer a.Stop()
 
 	a.Post("/user", func(ctx *Context) {
-		v := ctx.Form.Values("multi")
+		v, err := ctx.Form.Values("multi")
+		qt.Check(t, qt.IsNil(err))
 		qt.Check(t, qt.ContentEquals(v, []string{"a", "b", "c"}), qt.Commentf("Form parameter multi values should match"))
 
 		s, err := ctx.Form.String("s")
