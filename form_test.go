@@ -2,13 +2,94 @@ package azugo
 
 import (
 	"bytes"
+	"compress/gzip"
 	"mime/multipart"
+	"strings"
 	"testing"
 
 	"azugo.io/core/http"
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
+
+func TestGzipMultipartFormBodyLimit(t *testing.T) {
+	const limit = 4096
+
+	makeBody := func(size int) []byte {
+		t.Helper()
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
+		qt.Assert(t, qt.IsNil(writer.SetBoundary("boundary")))
+		qt.Assert(t, qt.IsNil(writer.WriteField("name", "")))
+		qt.Assert(t, qt.IsNil(writer.Close()))
+		empty := body.String()
+		result := []byte(strings.Replace(empty, "\r\n--boundary--", strings.Repeat("x", size-len(empty))+"\r\n--boundary--", 1))
+		qt.Assert(t, qt.HasLen(result, size))
+
+		return result
+	}
+
+	compress := func(body []byte) []byte {
+		t.Helper()
+		var compressed bytes.Buffer
+		writer := gzip.NewWriter(&compressed)
+		_, err := writer.Write(body)
+		qt.Assert(t, qt.IsNil(err))
+		qt.Assert(t, qt.IsNil(writer.Close()))
+		return compressed.Bytes()
+	}
+
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+	a.Post("/form", func(ctx *Context) {
+		ctx.SetMaxBodySize(limit)
+		value, err := ctx.Form.String("name")
+		if err != nil {
+			ctx.Error(err)
+			return
+		}
+		ctx.Text(value)
+	})
+
+	bomb := compress(makeBody(limit * 100))
+	qt.Assert(t, qt.IsTrue(len(bomb) < limit))
+
+	for _, tt := range []struct {
+		name   string
+		body   []byte
+		status int
+	}{
+		{"at-limit", compress(makeBody(limit)), http.StatusOK},
+		{"over-limit", compress(makeBody(limit + 1)), http.StatusRequestEntityTooLarge},
+		{"compressed-bomb", bomb, http.StatusRequestEntityTooLarge},
+		{"trailing-decoded-data", compress(append(makeBody(limit), 'x')), http.StatusRequestEntityTooLarge},
+		{"wire-over-limit", bytes.Repeat([]byte("x"), limit+1), http.StatusRequestEntityTooLarge},
+		{"invalid-gzip", []byte("not gzip"), http.StatusBadRequest},
+		{"invalid-multipart", compress([]byte("not multipart")), http.StatusBadRequest},
+	} {
+		for _, mode := range []string{"buffered", "streamed", "known-length-stream"} {
+			t.Run(tt.name+"/"+mode, func(t *testing.T) {
+				var raw fasthttp.RequestCtx
+				raw.Request.Header.SetMethod("POST")
+				raw.Request.SetRequestURI("/form")
+				raw.Request.Header.SetContentType("multipart/form-data; boundary=boundary")
+				raw.Request.Header.Set(http.HeaderContentEncoding, "gzip")
+				if mode == "streamed" {
+					raw.Request.SetBodyStream(bytes.NewReader(tt.body), -1)
+				} else if mode == "known-length-stream" {
+					raw.Request.SetBodyStream(bytes.NewReader(tt.body), len(tt.body))
+				} else {
+					raw.Request.SetBody(tt.body)
+				}
+				defer raw.Request.Reset()
+
+				a.Handler(&raw)
+				qt.Check(t, qt.Equals(raw.Response.StatusCode(), tt.status), qt.Commentf("%s", raw.Response.Body()))
+			})
+		}
+	}
+}
 
 func TestFormMediaTypes(t *testing.T) {
 	var multipartBody bytes.Buffer

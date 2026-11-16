@@ -2,6 +2,7 @@ package azugo
 
 import (
 	"bytes"
+	"errors"
 	"mime/multipart"
 	"strconv"
 	"strings"
@@ -55,8 +56,10 @@ func (f *FormCtx) values() formKeyValuer {
 
 		if isURLEncoded {
 			f.form = &postArgs{args: req.PostArgs()}
-		} else if form, err := req.MultipartForm(); err == nil {
+		} else if form, err := req.MultipartFormWithLimit(f.ctx.maxBodySize()); err == nil {
 			f.form = &multiPartArgs{args: form}
+		} else if errors.Is(err, fasthttp.ErrBodyTooLarge) {
+			f.err = RequestEntityTooLargeError{}
 		} else {
 			f.err = BadRequestError{"invalid form", err}
 		}
