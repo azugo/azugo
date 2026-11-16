@@ -76,13 +76,14 @@ func (o proxyUpstreams) apply(opts *proxyOptions) {
 }
 
 // ProxyUpstream adds one or more upstream URLs.
+// Request paths retain their original escaping and are not normalized.
 func ProxyUpstream(upstream ...*url.URL) ProxyOption {
 	upstr := make(proxyUpstreams, len(upstream))
 	for i, v := range upstream {
 		upstr[i] = &proxyUpstream{
 			Scheme:  []byte(v.Scheme),
 			Host:    []byte(v.Host),
-			Path:    []byte(strings.TrimRight(v.Path, "/")),
+			Path:    []byte(strings.TrimRight(v.EscapedPath(), "/")),
 			BaseURL: []byte(strings.TrimRight(v.String(), "/")),
 		}
 	}
@@ -105,6 +106,7 @@ func (m *mux) newUpstreamProxy(basePath string, options ...ProxyOption) *Proxy {
 	return &Proxy{
 		client: &fasthttp.Client{
 			NoDefaultUserAgentHeader: true,
+			DisablePathNormalizing:   true,
 			TLSConfig: &tls.Config{
 				//nolint:gosec
 				InsecureSkipVerify: opt.InsecureSkipVerify,
@@ -158,17 +160,21 @@ func (p *Proxy) Handler(ctx *Context) {
 	uri := bytebufferpool.Get()
 	defer bytebufferpool.Put(uri)
 
-	_, _ = uri.Write(upstream.Path)
-	_, _ = uri.WriteString(strings.TrimPrefix(strings.TrimPrefix(ctx.Path(), ctx.BasePath()), p.options.BasePath))
+	path := string(ctx.Request().URI().PathOriginal())
 
-	// Forward also query string to upstream
-	q := req.URI().QueryString()
-	if len(q) > 0 {
-		_ = uri.WriteByte('?')
-		_, _ = uri.Write(q)
+	basePath := ctx.BasePath()
+	if len(basePath) > 0 && len(path) >= len(basePath) && strings.EqualFold(path[:len(basePath)], basePath) {
+		path = path[len(basePath):]
+		if len(path) == 0 || path[0] != '/' {
+			path = "/" + path
+		}
 	}
 
-	req.SetRequestURIBytes(uri.Bytes())
+	_, _ = uri.Write(upstream.Path)
+	_, _ = uri.WriteString(strings.TrimPrefix(path, p.options.BasePath))
+
+	req.URI().SetPathBytes(uri.Bytes())
+	req.URI().SetQueryStringBytes(ctx.Request().URI().QueryString())
 	req.URI().SetSchemeBytes(upstream.Scheme)
 	req.SetHostBytes(upstream.Host)
 

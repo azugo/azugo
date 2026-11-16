@@ -1,6 +1,8 @@
 package azugo
 
 import (
+	"bufio"
+	"fmt"
 	"io"
 	nethttp "net/http"
 	"net/http/httptest"
@@ -11,6 +13,67 @@ import (
 	"github.com/go-quicktest/qt"
 	"github.com/valyala/fasthttp"
 )
+
+func TestProxyPreservesEscapedRequestPath(t *testing.T) {
+	type receivedRequest struct {
+		target string
+		host   string
+	}
+
+	requests := make(chan receivedRequest, 1)
+	upstream := httptest.NewServer(nethttp.HandlerFunc(func(_ nethttp.ResponseWriter, r *nethttp.Request) {
+		requests <- receivedRequest{r.RequestURI, r.Host}
+	}))
+	defer upstream.Close()
+	target, err := url.Parse(upstream.URL + "/api%2Fv1")
+	qt.Assert(t, qt.IsNil(err))
+
+	a := NewTestApp()
+	a.Config().Server.Path = "/base"
+	a.Start(t)
+	defer a.Stop()
+	a.Use(func(next RequestHandler) RequestHandler {
+		return func(ctx *Context) {
+			_ = ctx.Query.StringOptional("x")
+			next(ctx)
+		}
+	})
+	a.Proxy("/proxy", ProxyUpstream(target))
+	a.Group("/group").Proxy("/proxy", ProxyUpstream(target))
+	root, err := url.Parse(upstream.URL)
+	qt.Assert(t, qt.IsNil(err))
+	a.Proxy("/plain", ProxyUpstream(root))
+
+	for _, tt := range []struct {
+		path string
+		want string
+	}{
+		{"/base/proxy", "/api%2Fv1"},
+		{"/base/proxy/a%2Fb?x=1", "/api%2Fv1/a%2Fb?x=1"},
+		{"/base/proxy/a%3Fb?x=%2523&x=2", "/api%2Fv1/a%3Fb?x=%2523&x=2"},
+		{"/base/proxy/a%23b?x=1", "/api%2Fv1/a%23b?x=1"},
+		{"/base/proxy/a%25b/%E2%82%AC", "/api%2Fv1/a%25b/%E2%82%AC"},
+		{"/base/proxy/%2e%2e/a%2fb", "/api%2Fv1/%2e%2e/a%2fb"},
+		{"/base/proxy/a//b/../c", "/api%2Fv1/a//b/../c"},
+		{"/BASE/proxy/a%2Fb", "/api%2Fv1/a%2Fb"},
+		{"/base/group/proxy/a%3Fb?x=1", "/api%2Fv1/a%3Fb?x=1"},
+		{"http://different.example/base/proxy/a%2Fb?x=1", "/api%2Fv1/a%2Fb?x=1"},
+		{"/base/plain//http://example.test/a%2Fb?x=1", "//http://example.test/a%2Fb?x=1"},
+	} {
+		t.Run(tt.path, func(t *testing.T) {
+			conn, err := a.ln.Dial()
+			qt.Assert(t, qt.IsNil(err))
+			defer conn.Close()
+			_, err = fmt.Fprintf(conn, "GET %s HTTP/1.1\r\nHost: test\r\nConnection: close\r\n\r\n", tt.path)
+			qt.Assert(t, qt.IsNil(err))
+			resp, err := nethttp.ReadResponse(bufio.NewReader(conn), nil)
+			qt.Assert(t, qt.IsNil(err))
+			defer resp.Body.Close()
+			qt.Assert(t, qt.Equals(resp.StatusCode, nethttp.StatusOK))
+			qt.Check(t, qt.Equals(<-requests, receivedRequest{tt.want, target.Host}))
+		})
+	}
+}
 
 func TestProxyRequestBodyStreams(t *testing.T) {
 	type received struct {

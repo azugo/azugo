@@ -112,7 +112,7 @@ func (g *RouteGroup) Trace(path string, handler RequestHandler) {
 
 // Proxy is helper to proxy requests to another host.
 func (g *RouteGroup) Proxy(path string, options ...ProxyOption) {
-	p := g.mux.newUpstreamProxy(path, options...)
+	p := g.mux.newUpstreamProxy(g.prefix+path, options...)
 	handler := g.chain(Handle(p))
 
 	g.Any(path, handler)
