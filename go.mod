@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.26.0
 
 require (
-	azugo.io/core v0.50.0
+	azugo.io/core v0.50.1
 	github.com/VictoriaMetrics/metrics v1.45.0
 	github.com/beevik/etree v1.8.1
 	github.com/go-playground/validator/v10 v10.30.6
@@ -16,7 +16,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/valyala/bytebufferpool v1.0.0
-	github.com/valyala/fasthttp v1.78.0
+	github.com/valyala/fasthttp v1.79.0
 	go.uber.org/zap v1.28.0
 )
 
