@@ -275,7 +275,7 @@ func (f *FlashCtx) commit() {
 	name := conf.Flash.CookieName
 
 	if f.pending.empty() {
-		f.ctx.Cookie.Clear(name, CookieDefaultSecurity())
+		f.ctx.Cookie.Clear(name)
 
 		return
 	}
@@ -302,7 +302,7 @@ func (f *FlashCtx) commit() {
 		return
 	}
 
-	f.ctx.Cookie.Set(name, id, CookieDefaultSecurity(), CookieMaxAge(ttl))
+	f.ctx.Cookie.Set(name, id, CookieMaxAge(ttl))
 }
 
 func (d *flashData) merge(kept *flashData) {

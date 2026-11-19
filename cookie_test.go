@@ -29,7 +29,8 @@ func TestCookieGet(t *testing.T) {
 		ctx.StatusCode(http.StatusNoContent)
 	})
 
-	resp, err := a.TestClient().Get("/", a.TestClient().WithCookie("session", "abc123"))
+	// A secure request carries the cookie under the __Host- name Set writes.
+	resp, err := a.TestClient().Get("/", a.TestClient().WithCookie("__Host-session", "abc123"))
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
@@ -58,7 +59,7 @@ func TestCookieKeysAndAll(t *testing.T) {
 
 	tc := a.TestClient()
 
-	resp, err := tc.Get("/", tc.WithCookie("session", "abc123"), tc.WithCookie("theme", "dark"))
+	resp, err := tc.Get("/", tc.WithCookie("__Host-session", "abc123"), tc.WithCookie("__Host-theme", "dark"))
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
@@ -70,7 +71,7 @@ func TestCookieSet(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
-		ctx.Cookie.Set("session", "abc123", CookieHTTPOnly(true), CookieSecure(true), CookieSameSiteLax)
+		ctx.Cookie.Set("session", "abc123", CookieInsecure(), CookieHTTPOnly(true), CookieSecure(true), CookieSameSiteLax)
 	})
 
 	resp, err := a.TestClient().Get("/")
@@ -91,7 +92,7 @@ func TestCookieClear(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
-		ctx.Cookie.Clear("session", CookiePath("/"))
+		ctx.Cookie.Clear("session", CookieInsecure(), CookiePath("/"))
 	})
 
 	resp, err := a.TestClient().Get("/")
@@ -104,7 +105,7 @@ func TestCookieClear(t *testing.T) {
 	qt.Check(t, qt.IsTrue(c.Expire().Before(fasthttp.CookieExpireDelete.Add(1))))
 }
 
-func TestCookieDefaultSecurityHostPrefix(t *testing.T) {
+func TestCookieSecureHostPrefix(t *testing.T) {
 	// Default test app runs in Production from the root base path, so the
 	// strongest __Host- prefix is selected.
 	a := NewTestApp()
@@ -112,7 +113,7 @@ func TestCookieDefaultSecurityHostPrefix(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
-		ctx.Cookie.Set("session", "abc123", CookieDefaultSecurity())
+		ctx.Cookie.Set("session", "abc123")
 	})
 
 	resp, err := a.TestClient().Get("/")
@@ -128,7 +129,7 @@ func TestCookieDefaultSecurityHostPrefix(t *testing.T) {
 	qt.Check(t, qt.Equals(c.SameSite(), fasthttp.CookieSameSiteLaxMode))
 }
 
-func TestCookieDefaultSecuritySecurePrefix(t *testing.T) {
+func TestCookieSecureSecurePrefix(t *testing.T) {
 	// A non-root base path cannot satisfy __Host- (Path must be "/"), so the
 	// __Secure- prefix is selected with the base path as scope.
 	a := NewTestApp()
@@ -137,7 +138,7 @@ func TestCookieDefaultSecuritySecurePrefix(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
-		ctx.Cookie.Set("session", "abc123", CookieDefaultSecurity())
+		ctx.Cookie.Set("session", "abc123")
 	})
 
 	resp, err := a.TestClient().Get("/test/")
@@ -151,7 +152,7 @@ func TestCookieDefaultSecuritySecurePrefix(t *testing.T) {
 	qt.Check(t, qt.Equals(string(c.Path()), "/test"))
 }
 
-func TestCookieDefaultSecurityDevelopment(t *testing.T) {
+func TestCookieSecureDevelopment(t *testing.T) {
 	// Environment is read at app construction, so set it before NewTestApp.
 	t.Setenv("ENVIRONMENT", string(core.EnvironmentDevelopment))
 
@@ -160,7 +161,7 @@ func TestCookieDefaultSecurityDevelopment(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
-		ctx.Cookie.Set("session", "abc123", CookieDefaultSecurity())
+		ctx.Cookie.Set("session", "abc123")
 	})
 
 	tc := a.TestClient()
@@ -183,18 +184,18 @@ func TestCookieDefaultSecurityDevelopment(t *testing.T) {
 	qt.Check(t, qt.Equals(string(cTLS.Key()), "__Host-session"))
 }
 
-func TestCookieDefaultSecurityExplicitPath(t *testing.T) {
+func TestCookieSecureExplicitPath(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
 		// A scoped Path cannot satisfy __Host-, so the __Secure- prefix keeps the Path.
-		ctx.Cookie.Set("session", "abc123", CookieDefaultSecurity(), CookiePath("/auth"))
+		ctx.Cookie.Set("session", "abc123", CookiePath("/auth"))
 	})
 
 	a.Get("/root", func(ctx *Context) {
-		ctx.Cookie.Set("session", "abc123", CookieDefaultSecurity(), CookiePath("/"))
+		ctx.Cookie.Set("session", "abc123", CookiePath("/"))
 	})
 
 	tc := a.TestClient()
@@ -219,7 +220,7 @@ func TestCookieDefaultSecurityExplicitPath(t *testing.T) {
 	qt.Check(t, qt.Equals(string(cRoot.Path()), "/"))
 }
 
-func TestCookieDefaultSecurityNoDowngrade(t *testing.T) {
+func TestCookieSecureNoDowngrade(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)
 	defer a.Stop()
@@ -228,7 +229,6 @@ func TestCookieDefaultSecurityNoDowngrade(t *testing.T) {
 		// SameSite may be tightened, but the prefix-mandated attributes must not
 		// be downgraded by explicit options.
 		ctx.Cookie.Set("session", "abc123",
-			CookieDefaultSecurity(),
 			CookieSameSiteStrict,
 			CookieSecure(false),
 			CookieDomain("example.com"),
@@ -267,7 +267,7 @@ func TestCookieJar(t *testing.T) {
 	resp, err := c.Get("/set")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(c.Cookies()["session"], "abc123"))
+	qt.Check(t, qt.Equals(c.Cookies()["__Host-session"], "abc123"))
 
 	resp2, err := c.Get("/get")
 	defer fasthttp.ReleaseResponse(resp2)
@@ -292,28 +292,32 @@ func TestCookieJarClear(t *testing.T) {
 	resp, err := c.Get("/set")
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
-	qt.Check(t, qt.Equals(c.Cookies()["session"], "abc123"))
+	qt.Check(t, qt.Equals(c.Cookies()["__Host-session"], "abc123"))
 
 	resp2, err := c.Get("/clear")
 	defer fasthttp.ReleaseResponse(resp2)
 	qt.Assert(t, qt.IsNil(err))
-	_, hasSession := c.Cookies()["session"]
+	_, hasSession := c.Cookies()["__Host-session"]
 	qt.Check(t, qt.IsFalse(hasSession))
 }
 
-func TestCookieGetResolvesPrefixes(t *testing.T) {
+func TestCookieGetReadsExactName(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
-		// The prefixed variant wins over a bare cookie an attacker could have planted.
+		// Only the name Set writes for this request is read.
 		qt.Check(t, qt.Equals(ctx.Cookie.Get("session"), "host"))
-		qt.Check(t, qt.Equals(ctx.Cookie.Get("theme"), "secure"))
-		qt.Check(t, qt.Equals(ctx.Cookie.Get("plain"), "bare"))
-		// An explicitly prefixed name is looked up as-is.
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("scoped", CookiePath("/auth")), "scoped"))
+		// A planted variant under another prefix, or none, is not read in its place.
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("theme"), ""))
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("plain"), ""))
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("other", CookiePath("/auth")), ""))
+		// An explicitly prefixed or insecure name is read as given.
 		qt.Check(t, qt.Equals(ctx.Cookie.Get("__Host-session"), "host"))
 		qt.Check(t, qt.Equals(ctx.Cookie.Get("__Secure-session"), ""))
+		qt.Check(t, qt.Equals(ctx.Cookie.Get("plain", CookieInsecure()), "bare"))
 		ctx.StatusCode(http.StatusNoContent)
 	})
 
@@ -321,7 +325,8 @@ func TestCookieGetResolvesPrefixes(t *testing.T) {
 
 	resp, err := tc.Get("/",
 		tc.WithCookie("session", "bare"), tc.WithCookie("__Host-session", "host"),
-		tc.WithCookie("__Secure-theme", "secure"), tc.WithCookie("plain", "bare"))
+		tc.WithCookie("__Secure-theme", "secure"), tc.WithCookie("plain", "bare"),
+		tc.WithCookie("__Secure-scoped", "scoped"), tc.WithCookie("__Host-other", "host"))
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 	qt.Check(t, qt.Equals(resp.StatusCode(), http.StatusNoContent))
@@ -346,7 +351,7 @@ func TestCookieClearDefaultSecurityClearsPresentVariants(t *testing.T) {
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
-		ctx.Cookie.Clear("session", CookieDefaultSecurity())
+		ctx.Cookie.Clear("session")
 	})
 
 	tc := a.TestClient()
@@ -379,25 +384,25 @@ func TestCookieClearDefaultSecurityClearsPresentVariants(t *testing.T) {
 	qt.Check(t, qt.IsNotNil(cleared["__Host-session"]))
 }
 
-func TestCookieKeysAndAllResolvePrefixes(t *testing.T) {
+func TestCookieKeysAndAllMatchGet(t *testing.T) {
 	a := NewTestApp()
 	a.Start(t)
 	defer a.Stop()
 
 	a.Get("/", func(ctx *Context) {
-		names := make([]string, 0, 2)
+		names := make([]string, 0, 1)
 		for name := range ctx.Cookie.Keys() {
 			names = append(names, name)
 		}
-		// One bare name per cookie, prefixes stripped, variants collapsed.
-		qt.Check(t, qt.ContentEquals(names, []string{"session", "theme"}))
+		// Only what Get reads, under its bare name; planted variants are skipped.
+		qt.Check(t, qt.DeepEquals(names, []string{"session"}))
 
 		all := make(map[string]string)
 		for name, value := range ctx.Cookie.All() {
 			all[name] = value
+			qt.Check(t, qt.Equals(ctx.Cookie.Get(name), value))
 		}
-		// The prefixed variant's value wins, as in Get.
-		qt.Check(t, qt.DeepEquals(all, map[string]string{"session": "host", "theme": "dark"}))
+		qt.Check(t, qt.DeepEquals(all, map[string]string{"session": "host"}))
 
 		ctx.StatusCode(http.StatusNoContent)
 	})
@@ -419,7 +424,7 @@ func TestCookieSetKeepsExplicitPrefix(t *testing.T) {
 
 	a.Get("/", func(ctx *Context) {
 		// An already-prefixed name is not prefixed twice and keeps the attributes its prefix mandates.
-		ctx.Cookie.Set("__Host-session", "abc", CookieDefaultSecurity())
+		ctx.Cookie.Set("__Host-session", "abc")
 	})
 
 	resp, err := a.TestClient().Get("/test/")

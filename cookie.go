@@ -77,29 +77,18 @@ func (o CookieSecure) apply(c *fasthttp.Cookie) {
 	c.SetSecure(bool(o))
 }
 
-// cookieDefaultSecurity is the underlying type for the CookieDefaultSecurity option.
-type cookieDefaultSecurity struct{}
+// cookieInsecure is the underlying type for the CookieInsecure option.
+type cookieInsecure struct{}
 
-func (cookieDefaultSecurity) apply(_ *fasthttp.Cookie) {}
+func (cookieInsecure) apply(_ *fasthttp.Cookie) {}
 
-// CookieDefaultSecurity applies secure-by-default attributes to a response cookie
-// and automatically selects the strongest cookie-name prefix the request allows:
-//
-//   - __Host- when the cookie is Secure and scoped to the root path: forces Secure,
-//     Path="/" and no Domain.
-//   - __Secure- when the cookie is Secure but scoped below the root, either by a
-//     non-root base path or an explicit CookiePath: forces Secure and keeps that Path.
-//   - no prefix when the cookie is not Secure (development over plain HTTP).
-//
-// It also sets HttpOnly, an empty Domain (host-only) and SameSite=Lax.
-//
-// SameSite and Path may be overridden by passing an explicit option. Secure, Domain and
-// HttpOnly are enforced after all other options and cannot be downgraded.
-func CookieDefaultSecurity() CookieOption {
-	return cookieDefaultSecurity{}
+// CookieInsecure opts a cookie out of the default security CookieCtx applies: the name is used as
+// given and only the options passed set its attributes. Pass it to Get and Clear as well.
+func CookieInsecure() CookieOption {
+	return cookieInsecure{}
 }
 
-// Cookie-name prefixes (RFC 6265bis §4.1.3) CookieDefaultSecurity may apply.
+// Cookie-name prefixes (RFC 6265bis section 4.1.3) applied by default.
 const (
 	cookiePrefixHost   = "__Host-"
 	cookiePrefixSecure = "__Secure-"
@@ -109,24 +98,13 @@ func hasCookiePrefix(name string) bool {
 	return strings.HasPrefix(name, cookiePrefixHost) || strings.HasPrefix(name, cookiePrefixSecure)
 }
 
-func cookieRank(key string) int {
-	switch {
-	case strings.HasPrefix(key, cookiePrefixHost):
-		return 2
-	case strings.HasPrefix(key, cookiePrefixSecure):
-		return 1
-	default:
-		return 0
-	}
-}
-
 func bareCookieName(name string) string {
 	return strings.TrimPrefix(strings.TrimPrefix(name, cookiePrefixHost), cookiePrefixSecure)
 }
 
-func hasDefaultSecurity(opts []CookieOption) bool {
+func isInsecure(opts []CookieOption) bool {
 	for _, opt := range opts {
-		if _, ok := opt.(cookieDefaultSecurity); ok {
+		if _, ok := opt.(cookieInsecure); ok {
 			return true
 		}
 	}
@@ -135,54 +113,36 @@ func hasDefaultSecurity(opts []CookieOption) bool {
 }
 
 // CookieCtx provides cookie read and write helpers on an HTTP context.
+//
+// Unless CookieInsecure is passed, a cookie is secure by default and its name gets the strongest
+// prefix the request allows:
+//
+//   - __Host- when the request is TLS (or the app is not in development) and the cookie is scoped
+//     to the root path: forces Secure, Path="/" and no Domain.
+//   - __Secure- when the request is TLS (or the app is not in development) and the cookie is
+//     scoped below the root, by a non-root base path or a CookiePath: forces Secure.
+//   - no prefix in development over plain HTTP.
+//
+// It also sets HttpOnly, an empty Domain (host-only) and SameSite=Lax. SameSite and Path may be
+// set by passing an option; Secure, Domain and HttpOnly cannot be downgraded. Get and Clear read
+// and clear exactly the name Set writes, so pass them the same CookiePath.
 type CookieCtx struct {
 	noCopy noCopy
 
 	ctx *Context
 }
 
-// Get the value of the request cookie.
-// A cookie written with CookieDefaultSecurity is found under
-// its bare name: a __Host- variant wins over __Secure-, which wins over the bare name.
+// Get the value of the request cookie named as Set would name it with the same options; another
+// prefix variant, or the bare name, is never read in its place.
 //
 // Returns empty value if no cookie is present.
-func (c *CookieCtx) Get(name string) string {
-	_, v := c.resolve(name)
+func (c *CookieCtx) Get(name string, opts ...CookieOption) string {
+	name, _, _ = c.cookieName(name, opts)
 
-	return utils.B2S(v)
+	return utils.B2S(c.ctx.Request().Header.Cookie(name))
 }
 
-func (c *CookieCtx) resolve(name string) (string, []byte) {
-	if hasCookiePrefix(name) {
-		return name, c.ctx.Request().Header.Cookie(name)
-	}
-
-	var (
-		key   string
-		value []byte
-		best  = -1
-	)
-
-	for k, v := range c.ctx.Request().Header.Cookies() {
-		ks := utils.B2S(k)
-		if bareCookieName(ks) != name {
-			continue
-		}
-
-		if r := cookieRank(ks); r > best {
-			best, key, value = r, ks, v
-
-			if r == 2 {
-				break
-			}
-		}
-	}
-
-	return key, value
-}
-
-// Keys returns an iterator over all request cookie names, with the __Host- and __Secure-
-// prefixes stripped and the variants of one cookie collapsed into a single name.
+// Keys returns an iterator over the bare names of the request cookies Get reads without options.
 func (c *CookieCtx) Keys() iter.Seq[string] {
 	return func(yield func(string) bool) {
 		for name := range c.All() {
@@ -193,15 +153,15 @@ func (c *CookieCtx) Keys() iter.Seq[string] {
 	}
 }
 
-// All returns an iterator over all request cookies as bare name and value pairs, resolving
-// prefixed variants the same way Get does: weaker variants of a cookie are skipped.
+// All returns an iterator over the request cookies Get reads without options, as bare name and
+// value pairs; a variant under another prefix, or none, is skipped as Get skips it.
 func (c *CookieCtx) All() iter.Seq2[string, string] {
 	return func(yield func(string, string) bool) {
 		for k, v := range c.ctx.Request().Header.Cookies() {
-			ks := utils.B2S(k)
-			name := bareCookieName(ks)
+			key := utils.B2S(k)
+			name := bareCookieName(key)
 
-			if key, _ := c.resolve(name); key != ks {
+			if written, _, _ := c.cookieName(name, nil); written != key {
 				continue
 			}
 
@@ -212,42 +172,52 @@ func (c *CookieCtx) All() iter.Seq2[string, string] {
 	}
 }
 
-// writeCookie writes cookie with all options applied. With CookieDefaultSecurity the name is
-// prefixed per the request's security unless keepName is set or it already carries a prefix;
-// a prefixed name always gets the attributes its prefix mandates.
+// cookieName returns the name, path and Secure flag a cookie is written with: unless opts hold
+// CookieInsecure, the name gets the prefix the request and path allow, if it has none yet.
+func (c *CookieCtx) cookieName(name string, opts []CookieOption) (string, string, bool) {
+	if isInsecure(opts) {
+		return name, "", false
+	}
+
+	path := c.ctx.BasePath()
+
+	for _, opt := range opts {
+		if p, ok := opt.(CookiePath); ok {
+			path = string(p)
+		}
+	}
+
+	secure := c.ctx.IsTLS() || !c.ctx.Env().IsDevelopment()
+
+	switch {
+	case !secure || hasCookiePrefix(name):
+		return name, path, secure
+	case path == "" || path == "/":
+		// __Host- requires Secure, no Domain and Path="/".
+		return cookiePrefixHost + name, path, secure
+	default:
+		// __Secure- requires Secure but allows a scoped Path.
+		return cookiePrefixSecure + name, path, secure
+	}
+}
+
+// writeCookie writes cookie with all options applied. Unless keepName is set the name is the one
+// cookieName returns; a secured cookie always gets the attributes its prefix mandates.
 func (c *CookieCtx) writeCookie(name string, keepName bool, setup func(*fasthttp.Cookie), opts []CookieOption) {
 	cookie := fasthttp.AcquireCookie()
 	defer fasthttp.ReleaseCookie(cookie)
 
-	defaultSecurity := hasDefaultSecurity(opts)
+	secured := !isInsecure(opts)
 
-	var secure bool
-
-	path := c.ctx.BasePath()
-
-	if defaultSecurity {
-		for _, opt := range opts {
-			if p, ok := opt.(CookiePath); ok {
-				path = string(p)
-			}
-		}
-
-		secure = c.ctx.IsTLS() || !c.ctx.Env().IsDevelopment()
-		if secure && !keepName && !hasCookiePrefix(name) {
-			if path == "" || path == "/" {
-				// __Host- requires Secure, no Domain and Path="/".
-				name = cookiePrefixHost + name
-			} else {
-				// __Secure- requires Secure but allows a scoped Path.
-				name = cookiePrefixSecure + name
-			}
-		}
+	prefixed, path, secure := c.cookieName(name, opts)
+	if !keepName {
+		name = prefixed
 	}
 
 	cookie.SetKey(name)
 	setup(cookie)
 
-	if defaultSecurity {
+	if secured {
 		cookie.SetSameSite(fasthttp.CookieSameSiteLaxMode)
 	}
 
@@ -255,7 +225,7 @@ func (c *CookieCtx) writeCookie(name string, keepName bool, setup func(*fasthttp
 		opt.apply(cookie)
 	}
 
-	if defaultSecurity {
+	if secured {
 		// Enforce secure defaults
 		cookie.SetHTTPOnly(true)
 		cookie.SetDomain("")
@@ -281,14 +251,14 @@ func (c *CookieCtx) Set(name, value string, opts ...CookieOption) {
 }
 
 // Clear the named cookie on the client. Pass the same options that were used when setting the
-// cookie. With CookieDefaultSecurity every prefixed variant the request carries is cleared, so
-// a cookie set under a different scheme (e.g. __Host- over TLS) is removed as well.
+// cookie. A secure cookie is cleared under every prefix variant the request carries, so one set
+// under a different scheme (e.g. __Host- over TLS) is removed as well.
 func (c *CookieCtx) Clear(name string, opts ...CookieOption) {
 	expire := func(cookie *fasthttp.Cookie) {
 		cookie.SetExpire(fasthttp.CookieExpireDelete)
 	}
 
-	if !hasDefaultSecurity(opts) || hasCookiePrefix(name) {
+	if isInsecure(opts) || hasCookiePrefix(name) {
 		c.writeCookie(name, false, expire, opts)
 
 		return
