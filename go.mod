@@ -3,7 +3,7 @@ module azugo.io/azugo
 go 1.26.0
 
 require (
-	azugo.io/core v0.50.1
+	azugo.io/core v0.51.0
 	github.com/VictoriaMetrics/metrics v1.45.0
 	github.com/beevik/etree v1.8.1
 	github.com/go-playground/validator/v10 v10.30.6
@@ -48,7 +48,7 @@ require (
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/valkey-io/valkey-go v1.0.79 // indirect
+	github.com/valkey-io/valkey-go v1.0.80 // indirect
 	github.com/valyala/fastrand v1.1.0 // indirect
 	github.com/valyala/histogram v1.2.0 // indirect
 	go.elastic.co/ecszap v1.0.3 // indirect

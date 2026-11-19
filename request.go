@@ -361,6 +361,47 @@ func (c *Context) IsTLS() bool {
 	return c.context.IsTLS()
 }
 
+// origin reports whether a page of this origin sent the request, and whether the browser said at
+// all, by Fetch Metadata or, failing that, the Origin header against IsTLS and Host.
+func (c *Context) origin() (bool, bool) {
+	switch c.Header.Get(http.HeaderSecFetchSite) {
+	case "":
+	case "same-origin", "none":
+		return true, true
+	default:
+		return false, true
+	}
+
+	origin := c.Header.Get(http.HeaderOrigin)
+	if origin == "" {
+		return false, false
+	}
+
+	scheme := "http://"
+	if c.IsTLS() {
+		scheme = "https://"
+	}
+
+	host, ok := strings.CutPrefix(origin, scheme)
+
+	return ok && strings.EqualFold(host, c.Host()), true
+}
+
+// IsSameOrigin reports whether the browser vouches that a page of this origin sent the request.
+func (c *Context) IsSameOrigin() bool {
+	same, known := c.origin()
+
+	return known && same
+}
+
+// IsCrossOrigin reports whether the browser marks the request as sent by a page of another origin
+// or site.
+func (c *Context) IsCrossOrigin() bool {
+	same, known := c.origin()
+
+	return known && !same
+}
+
 // Host returns requested host.
 //
 // If the request comes from trusted proxy it will use X-Forwarded-Host header.

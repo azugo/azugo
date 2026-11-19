@@ -309,3 +309,54 @@ func TestRequestAcceptsExplicit(t *testing.T) {
 	defer fasthttp.ReleaseResponse(resp)
 	qt.Assert(t, qt.IsNil(err))
 }
+
+func TestRequestSameAndCrossOrigin(t *testing.T) {
+	a := NewTestApp()
+	a.Start(t)
+	defer a.Stop()
+
+	a.Post("/form", func(ctx *Context) {
+		switch {
+		case ctx.IsSameOrigin():
+			ctx.Text("same")
+		case ctx.IsCrossOrigin():
+			ctx.Text("cross")
+		default:
+			ctx.Text("unknown")
+		}
+	})
+
+	c := a.TestClient()
+
+	for name, tc := range map[string]struct {
+		headers map[string]string
+		want    string
+	}{
+		"no headers":                  {nil, "unknown"},
+		"fetch same-origin":           {map[string]string{http.HeaderSecFetchSite: "same-origin"}, "same"},
+		"fetch none":                  {map[string]string{http.HeaderSecFetchSite: "none"}, "same"},
+		"fetch same-site":             {map[string]string{http.HeaderSecFetchSite: "same-site"}, "cross"},
+		"fetch cross-site":            {map[string]string{http.HeaderSecFetchSite: "cross-site"}, "cross"},
+		"fetch wins over origin":      {map[string]string{http.HeaderSecFetchSite: "same-origin", http.HeaderOrigin: "http://evil.example"}, "same"},
+		"origin matches":              {map[string]string{http.HeaderOrigin: "http://test"}, "same"},
+		"origin host case":            {map[string]string{http.HeaderOrigin: "http://TEST"}, "same"},
+		"origin other scheme":         {map[string]string{http.HeaderOrigin: "https://test"}, "cross"},
+		"origin other host":           {map[string]string{http.HeaderOrigin: "http://evil.example"}, "cross"},
+		"origin host prefix":          {map[string]string{http.HeaderOrigin: "http://test.evil.example"}, "cross"},
+		"origin null":                 {map[string]string{http.HeaderOrigin: "null"}, "cross"},
+		"origin behind trusted proxy": {map[string]string{http.HeaderXForwardedProto: "https", http.HeaderXForwardedHost: "test.local", http.HeaderOrigin: "https://test.local"}, "same"},
+		"origin skips proxy scheme":   {map[string]string{http.HeaderXForwardedProto: "https", http.HeaderXForwardedHost: "test.local", http.HeaderOrigin: "http://test.local"}, "cross"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			opts := make([]TestClientOption, 0, len(tc.headers))
+			for k, v := range tc.headers {
+				opts = append(opts, c.WithHeader(k, v))
+			}
+
+			resp, err := c.Post("/form", nil, opts...)
+			defer fasthttp.ReleaseResponse(resp)
+			qt.Assert(t, qt.IsNil(err))
+			qt.Check(t, qt.Equals(string(resp.Body()), tc.want))
+		})
+	}
+}
